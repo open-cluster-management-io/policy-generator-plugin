@@ -39,6 +39,22 @@ type policyConfig struct {
 	Standards         []string `json:"standards,omitempty" yaml:"standards,omitempty"`
 }
 
+type policyDefaults struct {
+	Categories        []string          `json:"categories,omitempty" yaml:"categories,omitempty"`
+	ComplianceType    string            `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
+	Controls          []string          `json:"controls,omitempty" yaml:"controls,omitempty"`
+	Namespace         string            `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	NamespaceSelector namespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
+	// This is named Placement so that eventually PlacementRules and Placements will be supported
+	Placement struct {
+		ClusterSelectors  map[string]string `json:"clusterSelectors,omitempty" yaml:"clusterSelectors,omitempty"`
+		PlacementRulePath string            `json:"placementRulePath,omitempty" yaml:"placementRulePath,omitempty"`
+	} `json:"placement,omitempty" yaml:"placement,omitempty"`
+	RemediationAction string   `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
+	Severity          string   `json:"severity,omitempty" yaml:"severity,omitempty"`
+	Standards         []string `json:"standards,omitempty" yaml:"standards,omitempty"`
+}
+
 // Plugin is used to store the PolicyGenerator configuration and the methods to generate the
 // desired policies.
 type Plugin struct {
@@ -48,22 +64,17 @@ type Plugin struct {
 	PlacementBindingDefaults struct {
 		Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	} `json:"placementBindingDefaults,omitempty" yaml:"placementBindingDefaults,omitempty"`
-	PolicyDefaults struct {
-		Categories        []string          `json:"categories,omitempty" yaml:"categories,omitempty"`
-		ComplianceType    string            `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
-		Controls          []string          `json:"controls,omitempty" yaml:"controls,omitempty"`
-		Namespace         string            `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-		NamespaceSelector namespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
-		// This is named Placement so that eventually PlacementRules and Placements will be supported
-		Placement struct {
-			ClusterSelectors  map[string]string `json:"clusterSelectors,omitempty" yaml:"clusterSelectors,omitempty"`
-			PlacementRulePath string            `json:"placementRulePath,omitempty" yaml:"placementRulePath,omitempty"`
-		} `json:"placement,omitempty" yaml:"placement,omitempty"`
-		RemediationAction string   `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
-		Severity          string   `json:"severity,omitempty" yaml:"severity,omitempty"`
-		Standards         []string `json:"standards,omitempty" yaml:"standards,omitempty"`
-	} `json:"policyDefaults,omitempty" yaml:"policyDefaults,omitempty"`
-	Policies []policyConfig `json:"policies" yaml:"policies"`
+	PolicyDefaults policyDefaults `json:"policyDefaults,omitempty" yaml:"policyDefaults,omitempty"`
+	Policies       []policyConfig `json:"policies" yaml:"policies"`
+}
+
+var defaults = policyDefaults{
+	Categories:        []string{"CM Configuration Management"},
+	ComplianceType:    "musthave",
+	Controls:          []string{"CM-2 Baseline Configuration"},
+	RemediationAction: "inform",
+	Severity:          "low",
+	Standards:         []string{"NIST SP 800-53"},
 }
 
 // Config validates the input PolicyGenerator configuration, applies any missing defaults, and
@@ -92,27 +103,27 @@ func (p *Plugin) applyDefaults() {
 	}
 
 	if p.PolicyDefaults.Categories == nil {
-		p.PolicyDefaults.Categories = []string{"CM Configuration Management"}
+		p.PolicyDefaults.Categories = defaults.Categories
 	}
 
 	if p.PolicyDefaults.ComplianceType == "" {
-		p.PolicyDefaults.ComplianceType = "musthave"
+		p.PolicyDefaults.ComplianceType = defaults.ComplianceType
 	}
 
 	if p.PolicyDefaults.Controls == nil {
-		p.PolicyDefaults.Controls = []string{"CM-2 Baseline Configuration"}
+		p.PolicyDefaults.Controls = defaults.Controls
 	}
 
 	if p.PolicyDefaults.RemediationAction == "" {
-		p.PolicyDefaults.RemediationAction = "inform"
+		p.PolicyDefaults.RemediationAction = defaults.RemediationAction
 	}
 
 	if p.PolicyDefaults.Severity == "" {
-		p.PolicyDefaults.Severity = "low"
+		p.PolicyDefaults.Severity = defaults.Severity
 	}
 
 	if p.PolicyDefaults.Standards == nil {
-		p.PolicyDefaults.Standards = []string{"NIST SP 800-53"}
+		p.PolicyDefaults.Standards = defaults.Standards
 	}
 
 	for i := range p.Policies {
