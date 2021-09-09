@@ -1,0 +1,33 @@
+name: Unit Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go:
+          - '1.16'
+    name: Unit Tests
+    steps:
+    - name: Checkout the repo
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0 # Fetch all history for all tags and branches
+
+    - name: Set up Go - ${{ matrix.go }}
+      uses: actions/setup-go@v2
+      id: go
+      with:
+        go-version: ${{ matrix.go }}
+
+    - name: Unit Tests
+      run: |
+        make test
