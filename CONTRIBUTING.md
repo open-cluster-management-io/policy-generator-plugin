@@ -62,7 +62,6 @@ comment on the issue or pull request (PR).
 
 ## Pre-check before submitting a PR
 
-
 Before submitting a PR, please perform the following steps:
 
 ```shell
