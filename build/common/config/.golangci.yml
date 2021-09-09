@@ -43,6 +43,8 @@ linters:
     - exhaustivestruct
     - goerr113
     - testpackage
+    - gocognit
+    - cyclop
   fast: false
 
 linters-settings:
