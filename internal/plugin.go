@@ -2,11 +2,19 @@
 package internal
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
+)
+
+const (
+	configPolicyKind = "ConfigurationPolicy"
+	policyAPIVersion = "policy.open-cluster-management.io/v1"
+	policyKind       = "Policy"
 )
 
 type manifest struct {
@@ -66,6 +74,7 @@ type Plugin struct {
 	} `json:"placementBindingDefaults,omitempty" yaml:"placementBindingDefaults,omitempty"`
 	PolicyDefaults policyDefaults `json:"policyDefaults,omitempty" yaml:"policyDefaults,omitempty"`
 	Policies       []policyConfig `json:"policies" yaml:"policies"`
+	outputBuffer   bytes.Buffer
 }
 
 var defaults = policyDefaults{
@@ -87,6 +96,17 @@ func (p *Plugin) Config(config []byte) error {
 	p.applyDefaults()
 
 	return p.assertValidConfig()
+}
+
+func (p *Plugin) Generate() ([]byte, error) {
+	for i := range p.Policies {
+		err := p.createPolicy(&p.Policies[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return p.outputBuffer.Bytes(), nil
 }
 
 // applyDefaults applies any missing defaults under Policy.PlacementBindingDefaults and
@@ -233,6 +253,47 @@ func (p *Plugin) assertValidConfig() error {
 
 		seen[policy.Name] = true
 	}
+
+	return nil
+}
+
+// createPolicy will generate the root policy based on the PolicyGenerator configuration.
+// The generated policy is written to the plugin's output buffer. An error is returned if the
+// manifests specified in the configuration are invalid or can't be read.
+func (p *Plugin) createPolicy(policyConf *policyConfig) error {
+	policyTemplate, err := getPolicyTemplate(policyConf)
+	if err != nil {
+		return err
+	}
+
+	policy := map[string]interface{}{
+		"apiVersion": policyAPIVersion,
+		"kind":       policyKind,
+		"metadata": map[string]interface{}{
+			"annotations": map[string]string{
+				"policy.open-cluster-management.io/categories": strings.Join(policyConf.Categories, ","),
+				"policy.open-cluster-management.io/controls":   strings.Join(policyConf.Controls, ","),
+				"policy.open-cluster-management.io/standards":  strings.Join(policyConf.Standards, ","),
+			},
+			"name":      policyConf.Name,
+			"namespace": p.PolicyDefaults.Namespace,
+		},
+		"spec": map[string]interface{}{
+			"disabled":          policyConf.Disabled,
+			"policy-templates":  []map[string]map[string]interface{}{*policyTemplate},
+			"remediationAction": policyConf.RemediationAction,
+		},
+	}
+
+	policyYAML, err := yaml.Marshal(policy)
+	if err != nil {
+		return fmt.Errorf(
+			"an unexpected error occurred when converting the policy to YAML: %w", err,
+		)
+	}
+
+	p.outputBuffer.Write([]byte("---\n"))
+	p.outputBuffer.Write(policyYAML)
 
 	return nil
 }
