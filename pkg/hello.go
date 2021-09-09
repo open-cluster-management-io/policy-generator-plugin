@@ -7,5 +7,5 @@ func Print(name string) string {
 }
 
 func Hello() string {
-	return Print("RedHater")
+	return Print("RedHatter")
 }
