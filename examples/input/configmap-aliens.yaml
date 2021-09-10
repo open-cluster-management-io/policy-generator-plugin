@@ -1,0 +1,12 @@
+# Taken from https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: game-config-aliens
+  namespace: default
+data:
+  game.properties: |
+    enemies=aliens
+  ui.properties: |
+    color.good=purple

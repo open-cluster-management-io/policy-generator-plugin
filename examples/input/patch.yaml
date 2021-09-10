@@ -1,0 +1,13 @@
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  annotations:
+    policy.open-cluster-management.io/categories: PR.DS Data Security
+  labels:
+    app: super-secure-app
+  name: policy-app-config-aliens
+  namespace: my-policies
+spec:
+  remediationAction: enforce
+  disabled: false

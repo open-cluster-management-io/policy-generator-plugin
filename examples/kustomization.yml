@@ -1,0 +1,6 @@
+generators:
+- ./policyGenerator.yaml
+patchesStrategicMerge:
+- input/patch.yaml
+commonLabels:
+  custom: myApp
