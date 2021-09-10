@@ -6,15 +6,21 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
-	configPolicyKind = "ConfigurationPolicy"
-	policyAPIVersion = "policy.open-cluster-management.io/v1"
-	policyKind       = "Policy"
+	configPolicyKind           = "ConfigurationPolicy"
+	policyAPIVersion           = "policy.open-cluster-management.io/v1"
+	policyKind                 = "Policy"
+	placementBindingAPIVersion = "policy.open-cluster-management.io/v1"
+	placementBindingKind       = "PlacementBinding"
+	placementRuleAPIVersion    = "apps.open-cluster-management.io/v1"
+	placementRuleKind          = "PlacementRule"
 )
 
 type manifest struct {
@@ -98,11 +104,53 @@ func (p *Plugin) Config(config []byte) error {
 	return p.assertValidConfig()
 }
 
+// Generate generates the policies, placement rules, and placement bindings and returns them as
+// a single YAML file as a byte array. An error is returned if they cannot be created.
 func (p *Plugin) Generate() ([]byte, error) {
 	for i := range p.Policies {
 		err := p.createPolicy(&p.Policies[i])
 		if err != nil {
 			return nil, err
+		}
+	}
+
+	// Keep track of which placement rule maps to which policy. This will be used to determine
+	// how many placement bindings are required since one per placement rule is required.
+	plrNameToPolicyIdxs := map[string][]int{}
+	// seen keeps track of which placement rules have been seen by name. This is so that if the
+	// same placementRulePath is provided for multiple policies, it's not reincluded in the
+	// generated output of the plugin.
+	seen := map[string]bool{}
+	for i := range p.Policies {
+		plrName, err := p.createPlacementRule(&p.Policies[i], seen)
+		if err != nil {
+			return nil, err
+		}
+		plrNameToPolicyIdxs[plrName] = append(plrNameToPolicyIdxs[plrName], i)
+		seen[plrName] = true
+	}
+
+	plcBindingCount := 0
+	for plrName, policyIdxs := range plrNameToPolicyIdxs {
+		plcBindingCount++
+		// Determine which policies to be included in the placement binding.
+		policyConfs := []*policyConfig{}
+		for i := range policyIdxs {
+			policyConfs = append(policyConfs, &p.Policies[i])
+		}
+
+		// If there are multiple policies, still use the default placement binding name
+		// but append a number to it so it's a unique name.
+		var bindingName string
+		if plcBindingCount == 1 {
+			bindingName = p.PlacementBindingDefaults.Name
+		} else {
+			bindingName = fmt.Sprintf("%s%d", p.PlacementBindingDefaults.Name, plcBindingCount)
+		}
+
+		err := p.createPlacementBinding(bindingName, plrName, policyConfs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create a placement binding: %w", err)
 		}
 	}
 
@@ -294,6 +342,178 @@ func (p *Plugin) createPolicy(policyConf *policyConfig) error {
 
 	p.outputBuffer.Write([]byte("---\n"))
 	p.outputBuffer.Write(policyYAML)
+
+	return nil
+}
+
+// getPlrFromPath finds the placement rule manifest in the input manifest file. It will return
+// the name of the placement rule, the unmarshaled placement rule manifest, and an error. An error
+// is returned if the placement rule manifest cannot be found or is invalid.
+func (p *Plugin) getPlrFromPath(plrPath string) (string, map[string]interface{}, error) {
+	manifests, err := unmarshalManifestFile(plrPath)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to read the placement rule: %w", err)
+	}
+
+	var name string
+	var rule map[string]interface{}
+	for _, manifest := range *manifests {
+		if kind, _, _ := unstructured.NestedString(manifest, "kind"); kind != placementRuleKind {
+			continue
+		}
+
+		var found bool
+		name, found, err = unstructured.NestedString(manifest, "metadata", "name")
+		if !found || err != nil {
+			return "", nil, fmt.Errorf("the placement %s must have a name set", plrPath)
+		}
+
+		var namespace string
+		namespace, found, err = unstructured.NestedString(manifest, "metadata", "namespace")
+		if !found || err != nil {
+			return "", nil, fmt.Errorf("the placement %s must have a namespace set", plrPath)
+		}
+
+		if namespace != p.PolicyDefaults.Namespace {
+			err = fmt.Errorf(
+				"the placement %s must have the same namespace as the policy (%s)",
+				plrPath,
+				p.PolicyDefaults.Namespace,
+			)
+
+			return "", nil, err
+		}
+
+		rule = manifest
+
+		break
+	}
+
+	if name == "" {
+		err = fmt.Errorf(
+			"the placement manifest %s did not have a placement rule", plrPath,
+		)
+
+		return "", nil, err
+	}
+
+	return name, rule, nil
+}
+
+// createPlacementRule creates a placement rule for the input policy configuration by writing it to
+// the policy generator's output buffer. The name of the placement rule or an error is returned.
+// If the placement rule name is in the skip map and is set to true, it will not be added to the
+// policy generator's output buffer. An error is returned if the placement rule cannot be created.
+func (p *Plugin) createPlacementRule(policyConf *policyConfig, skip map[string]bool) (
+	name string, err error,
+) {
+	plrPath := policyConf.Placement.PlacementRulePath
+	var rule map[string]interface{}
+	// If a path to a placement rule is provided, find the placement rule and reuse it.
+	if plrPath != "" {
+		name, rule, err = p.getPlrFromPath(plrPath)
+		if err != nil {
+			return
+		}
+
+		if skip[name] {
+			return
+		}
+	} else {
+		// Sort the keys so that the match expressions can be ordered based on the label name
+		keys := make([]string, 0, len(policyConf.Placement.ClusterSelectors))
+		for key := range policyConf.Placement.ClusterSelectors {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		matchExpressions := []map[string]interface{}{}
+		for _, label := range keys {
+			matchExpression := map[string]interface{}{
+				"key":      label,
+				"operator": "In",
+				"values":   []string{policyConf.Placement.ClusterSelectors[label]},
+			}
+			matchExpressions = append(matchExpressions, matchExpression)
+		}
+
+		name = "placement-" + policyConf.Name
+		rule = map[string]interface{}{
+			"apiVersion": placementRuleAPIVersion,
+			"kind":       placementRuleKind,
+			"metadata": map[string]interface{}{
+				"name":      name,
+				"namespace": p.PolicyDefaults.Namespace,
+			},
+			"spec": map[string]interface{}{
+				"clusterConditions": []map[string]string{
+					{"status": "True", "type": "ManagedClusterConditionAvailable"},
+				},
+				"clusterSelector": map[string]interface{}{
+					"matchExpressions": matchExpressions,
+				},
+			},
+		}
+	}
+
+	var ruleYAML []byte
+	ruleYAML, err = yaml.Marshal(rule)
+	if err != nil {
+		err = fmt.Errorf(
+			"an unexpected error occurred when converting the placement rule to YAML: %w", err,
+		)
+
+		return
+	}
+
+	p.outputBuffer.Write([]byte("---\n"))
+	p.outputBuffer.Write(ruleYAML)
+
+	return
+}
+
+// createPlacementBinding creates a placement binding for the input placement rule and policies by
+// writing it to the policy generator's output buffer. An error is returned if the placement binding
+// cannot be created.
+func (p *Plugin) createPlacementBinding(
+	bindingName, plrName string, policyConfs []*policyConfig,
+) error {
+	subjects := make([]map[string]string, 0, len(policyConfs))
+	for _, policyConf := range policyConfs {
+		subject := map[string]string{
+			// Remove the version at the end
+			"apiGroup": strings.Split(policyAPIVersion, "/")[0],
+			"kind":     policyKind,
+			"name":     policyConf.Name,
+		}
+		subjects = append(subjects, subject)
+	}
+
+	binding := map[string]interface{}{
+		"apiVersion": placementBindingAPIVersion,
+		"kind":       placementBindingKind,
+		"metadata": map[string]interface{}{
+			"name":      bindingName,
+			"namespace": p.PolicyDefaults.Namespace,
+		},
+		"placementRef": map[string]string{
+			// Remove the version at the end
+			"apiGroup": strings.Split(placementRuleAPIVersion, "/")[0],
+			"name":     plrName,
+			"kind":     placementRuleKind,
+		},
+		"subjects": subjects,
+	}
+
+	bindingYAML, err := yaml.Marshal(binding)
+	if err != nil {
+		return fmt.Errorf(
+			"an unexpected error occurred when converting the placement binding to YAML: %w", err,
+		)
+	}
+
+	p.outputBuffer.Write([]byte("---\n"))
+	p.outputBuffer.Write(bindingYAML)
 
 	return nil
 }
