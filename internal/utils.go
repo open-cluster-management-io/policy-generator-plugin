@@ -122,6 +122,18 @@ func unmarshalManifestFile(manifestPath string) (*[]map[string]interface{}, erro
 		return nil, fmt.Errorf("failed to read the manifest file %s", manifestPath)
 	}
 
+	rv, err := unmarshalManifestBytes(manifestBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode the manifest file at %s: %w", manifestPath, err)
+	}
+
+	return rv, nil
+}
+
+// unmarshalManifestBytes unmarshals the input bytes slice of an object manifest/definition file
+// into a slice of maps in order to account for multiple YAML documents in the bytes slice. If each
+// document is not a map, an error will be returned.
+func unmarshalManifestBytes(manifestBytes []byte) (*[]map[string]interface{}, error) {
 	yamlDocs := []map[string]interface{}{}
 	d := yaml.NewDecoder(bytes.NewReader(manifestBytes))
 	for {
@@ -131,8 +143,6 @@ func unmarshalManifestFile(manifestPath string) (*[]map[string]interface{}, erro
 			if errors.Is(err, io.EOF) {
 				break
 			}
-
-			err = fmt.Errorf("failed to decode the manifest file at %s: %w", manifestPath, err)
 
 			return nil, err
 		}

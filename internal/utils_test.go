@@ -168,7 +168,10 @@ func TestGetPolicyTemplateInvalidManifest(t *testing.T) {
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	expected := "the input manifests must be in the format of YAML objects"
+	expected := fmt.Sprintf(
+		"failed to decode the manifest file at %s: the input manifests must be in the format of "+
+			"YAML objects", manifestPath,
+	)
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -254,6 +257,9 @@ func TestUnmarshalManifestFileNotObject(t *testing.T) {
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	expected := "the input manifests must be in the format of YAML objects"
+	expected := fmt.Sprintf(
+		"failed to decode the manifest file at %s: the input manifests must be in the format of "+
+			"YAML objects", manifestPath,
+	)
 	assertEqual(t, err.Error(), expected)
 }

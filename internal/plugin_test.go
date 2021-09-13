@@ -474,7 +474,11 @@ func TestCreatePolicyInvalidYAML(t *testing.T) {
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	assertEqual(t, err.Error(), "the input manifests must be in the format of YAML objects")
+	expected := fmt.Sprintf(
+		"failed to decode the manifest file at %s: the input manifests must be in the format of "+
+			"YAML objects", manifestPath,
+	)
+	assertEqual(t, err.Error(), expected)
 }
 
 func TestCreatePlacementRuleDefault(t *testing.T) {
