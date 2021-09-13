@@ -12,10 +12,35 @@ export GOBIN ?= $(GOBIN_DEFAULT)
 export PATH := $(PATH):$(GOBIN)
 TESTARGS_DEFAULT := "-v"
 export TESTARGS ?= $(TESTARGS_DEFAULT)
+export DEPENDENCY_OVERRIDE ?= false
 
-.PHONY: fmt lint lint-dependencies test
+# Kustomize plugin configuration
+XDG_CONFIG_HOME ?= ${HOME}/.config
+KUSTOMIZE_PLUGIN_HOME ?= $(XDG_CONFIG_HOME)/kustomize/plugin
+API_PLUGIN_PATH ?= $(KUSTOMIZE_PLUGIN_HOME)/policy.open-cluster-management.io/v1/policygenerator
+
+# Kustomize arguments
+SOURCE_DIR ?= examples/
+
+.PHONY: build build-binary generate layout fmt lint lint-dependencies test
 
 include build/common/Makefile.common.mk
+
+############################################################
+# build section
+############################################################
+
+build: layout
+	go build -o $(API_PLUGIN_PATH)/PolicyGenerator cmd/main.go
+
+build-binary:
+	go build -o PolicyGenerator cmd/main.go
+
+generate:
+	@KUSTOMIZE_PLUGIN_HOME=$(KUSTOMIZE_PLUGIN_HOME) kustomize build --enable-alpha-plugins $(SOURCE_DIR)
+
+layout:
+	mkdir -p $(API_PLUGIN_PATH)
 
 ############################################################
 # format section
@@ -29,9 +54,11 @@ fmt:
 ############################################################
 
 lint-dependencies:
-	@if [ ! -f $(GOBIN)/golangci-lint ]; then\
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v1.41.1/install.sh | sh -s -- -b $(GOBIN) v1.41.1;\
-    fi
+	@if [ ! -f $(GOBIN)/golangci-lint ] || [ "$(DEPENDENCY_OVERRIDE)" = "true" ]; then \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v1.41.1/install.sh | sh -s -- -b $(GOBIN) v1.41.1; \
+	else \
+		echo "Folder '$(GOBIN)/golangci-lint' already exists--skipping dependency install (export DEPENDENCY_OVERRIDE=true to override this and run install anyway)"; \
+	fi
 
 lint: lint-dependencies lint-all
 
