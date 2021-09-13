@@ -12,6 +12,7 @@ export GOBIN ?= $(GOBIN_DEFAULT)
 export PATH := $(PATH):$(GOBIN)
 TESTARGS_DEFAULT := "-v"
 export TESTARGS ?= $(TESTARGS_DEFAULT)
+export DEPENDENCY_OVERRIDE ?= false
 
 # Kustomize plugin configuration
 XDG_CONFIG_HOME ?= ${HOME}/.config
@@ -53,9 +54,11 @@ fmt:
 ############################################################
 
 lint-dependencies:
-	@if [ ! -f $(GOBIN)/golangci-lint ]; then\
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v1.41.1/install.sh | sh -s -- -b $(GOBIN) v1.41.1;\
-    fi
+	@if [ ! -f $(GOBIN)/golangci-lint ] || [ "$(DEPENDENCY_OVERRIDE)" = "true" ]; then \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v1.41.1/install.sh | sh -s -- -b $(GOBIN) v1.41.1; \
+	else \
+		echo "Folder '$(GOBIN)/golangci-lint' already exists--skipping dependency install (export DEPENDENCY_OVERRIDE=true to override this and run install anyway)"; \
+	fi
 
 lint: lint-dependencies lint-all
 
