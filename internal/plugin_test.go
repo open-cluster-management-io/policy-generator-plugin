@@ -14,6 +14,8 @@ func TestGenerate(t *testing.T) {
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
 	p := Plugin{}
+	p.PlacementBindingDefaults.Name = "my-placement-binding"
+	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := policyConfig{
 		Name: "policy-app-config",
@@ -21,7 +23,13 @@ func TestGenerate(t *testing.T) {
 			{Path: path.Join(tmpDir, "configmap.yaml")},
 		},
 	}
-	p.Policies = append(p.Policies, policyConf)
+	policyConf2 := policyConfig{
+		Name: "policy-app-config2",
+		Manifests: []manifest{
+			{Path: path.Join(tmpDir, "configmap.yaml")},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf, policyConf2)
 	p.applyDefaults()
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
@@ -60,10 +68,41 @@ spec:
                 severity: low
     remediationAction: inform
 ---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config2
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config2
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+    remediationAction: inform
+---
 apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule
 metadata:
-    name: placement-policy-app-config
+    name: my-placement-rule
     namespace: my-policies
 spec:
     clusterConditions:
@@ -75,16 +114,19 @@ spec:
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
 metadata:
-    name: binding-policy-app-config
+    name: my-placement-binding
     namespace: my-policies
 placementRef:
     apiGroup: apps.open-cluster-management.io
     kind: PlacementRule
-    name: placement-policy-app-config
+    name: my-placement-rule
 subjects:
     - apiGroup: policy.open-cluster-management.io
       kind: Policy
       name: policy-app-config
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config2
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	output, err := p.Generate()
@@ -250,10 +292,12 @@ func TestCreatePolicyInvalidYAML(t *testing.T) {
 func TestCreatePlacementRuleDefault(t *testing.T) {
 	t.Parallel()
 	p := Plugin{}
+	p.allPlrs = map[string]bool{}
+	p.csToPlr = map[string]string{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := policyConfig{Name: "policy-app-config"}
 
-	name, err := p.createPlacementRule(&policyConf, map[string]bool{})
+	name, err := p.createPlacementRule(&policyConf)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -278,9 +322,52 @@ spec:
 	assertEqual(t, output, expected)
 }
 
+func TestCreatePlacementRuleSinglePlr(t *testing.T) {
+	t.Parallel()
+	p := Plugin{}
+	p.allPlrs = map[string]bool{}
+	p.csToPlr = map[string]string{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	p.PolicyDefaults.Placement.Name = "my-placement-rule"
+	policyConf := policyConfig{Name: "policy-app-config"}
+
+	name, err := p.createPlacementRule(&policyConf)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	name2, err := p.createPlacementRule(&policyConf)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	// Verify that another placement rule is not created when the same cluster selectors are used
+	assertEqual(t, name, "my-placement-rule")
+	assertEqual(t, name2, "my-placement-rule")
+	output := p.outputBuffer.String()
+	expected := `
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+    name: my-placement-rule
+    namespace: my-policies
+spec:
+    clusterConditions:
+        - status: "True"
+          type: ManagedClusterConditionAvailable
+    clusterSelector:
+        matchExpressions: []
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+}
+
 func TestCreatePlacementRuleClusterSelectors(t *testing.T) {
 	t.Parallel()
 	p := Plugin{}
+	p.allPlrs = map[string]bool{}
+	p.csToPlr = map[string]string{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := policyConfig{Name: "policy-app-config"}
 	policyConf.Placement.ClusterSelectors = map[string]string{
@@ -288,7 +375,7 @@ func TestCreatePlacementRuleClusterSelectors(t *testing.T) {
 		"game":  "pacman",
 	}
 
-	name, err := p.createPlacementRule(&policyConf, map[string]bool{})
+	name, err := p.createPlacementRule(&policyConf)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -321,6 +408,39 @@ spec:
 	assertEqual(t, output, expected)
 }
 
+func TestCreatePlacementRuleDuplicateName(t *testing.T) {
+	t.Parallel()
+	p := Plugin{}
+	p.allPlrs = map[string]bool{}
+	p.csToPlr = map[string]string{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := policyConfig{
+		Name: "policy-app-config",
+		Placement: placementConfig{
+			Name: "my-placement",
+		},
+	}
+	policyConf2 := policyConfig{
+		Name: "policy-app-config2",
+		Placement: placementConfig{
+			ClusterSelectors: map[string]string{"my": "app"},
+			Name:             "my-placement",
+		},
+	}
+
+	_, err := p.createPlacementRule(&policyConf)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	_, err = p.createPlacementRule(&policyConf2)
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	assertEqual(t, err.Error(), "a duplicate placement rule name was detected: my-placement")
+}
+
 func plrPathHelper(t *testing.T, plrYAML string) (*Plugin, string) {
 	t.Helper()
 	tmpDir := t.TempDir()
@@ -332,6 +452,8 @@ func plrPathHelper(t *testing.T, plrYAML string) (*Plugin, string) {
 	}
 
 	p := Plugin{}
+	p.allPlrs = map[string]bool{}
+	p.processedPlrs = map[string]bool{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := policyConfig{Name: "policy-app-config"}
 	policyConf.Placement.PlacementRulePath = plrPath
@@ -363,7 +485,7 @@ spec:
 	plrYAML = strings.TrimPrefix(plrYAML, "\n")
 	p, _ := plrPathHelper(t, plrYAML)
 
-	name, err := p.createPlacementRule(&p.Policies[0], map[string]bool{})
+	name, err := p.createPlacementRule(&p.Policies[0])
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -386,7 +508,8 @@ metadata:
 	plrYAML = strings.TrimPrefix(plrYAML, "\n")
 	p, _ := plrPathHelper(t, plrYAML)
 
-	name, err := p.createPlacementRule(&p.Policies[0], map[string]bool{"my-plr": true})
+	p.processedPlrs = map[string]bool{"my-plr": true}
+	name, err := p.createPlacementRule(&p.Policies[0])
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -412,7 +535,7 @@ spec:
 `
 	p, plrPath := plrPathHelper(t, plrYAML)
 
-	_, err := p.createPlacementRule(&p.Policies[0], map[string]bool{})
+	_, err := p.createPlacementRule(&p.Policies[0])
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -438,7 +561,7 @@ spec:
 `
 	p, plrPath := plrPathHelper(t, plrYAML)
 
-	_, err := p.createPlacementRule(&p.Policies[0], map[string]bool{})
+	_, err := p.createPlacementRule(&p.Policies[0])
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -465,7 +588,7 @@ spec:
 `
 	p, plrPath := plrPathHelper(t, plrYAML)
 
-	_, err := p.createPlacementRule(&p.Policies[0], map[string]bool{})
+	_, err := p.createPlacementRule(&p.Policies[0])
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -492,7 +615,7 @@ data:
 `
 	p, plrPath := plrPathHelper(t, plrYAML)
 
-	_, err := p.createPlacementRule(&p.Policies[0], map[string]bool{})
+	_, err := p.createPlacementRule(&p.Policies[0])
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}

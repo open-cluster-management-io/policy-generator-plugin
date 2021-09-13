@@ -32,6 +32,12 @@ type namespaceSelector struct {
 	Include []string `json:"include,omitempty" yaml:"include,omitempty"`
 }
 
+type placementConfig struct {
+	ClusterSelectors  map[string]string `json:"clusterSelectors,omitempty" yaml:"clusterSelectors,omitempty"`
+	Name              string            `json:"name,omitempty" yaml:"name,omitempty"`
+	PlacementRulePath string            `json:"placementRulePath,omitempty" yaml:"placementRulePath,omitempty"`
+}
+
 // policyConfig represents a policy entry in the PolicyGenerator configuration.
 type policyConfig struct {
 	Categories     []string `json:"categories,omitempty" yaml:"categories,omitempty"`
@@ -44,13 +50,10 @@ type policyConfig struct {
 	Name              string            `json:"name,omitempty" yaml:"name,omitempty"`
 	NamespaceSelector namespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
 	// This is named Placement so that eventually PlacementRules and Placements will be supported
-	Placement struct {
-		ClusterSelectors  map[string]string `json:"clusterSelectors,omitempty" yaml:"clusterSelectors,omitempty"`
-		PlacementRulePath string            `json:"placementRulePath,omitempty" yaml:"placementRulePath,omitempty"`
-	} `json:"placement,omitempty" yaml:"placement,omitempty"`
-	RemediationAction string   `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
-	Severity          string   `json:"severity,omitempty" yaml:"severity,omitempty"`
-	Standards         []string `json:"standards,omitempty" yaml:"standards,omitempty"`
+	Placement         placementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
+	RemediationAction string          `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
+	Severity          string          `json:"severity,omitempty" yaml:"severity,omitempty"`
+	Standards         []string        `json:"standards,omitempty" yaml:"standards,omitempty"`
 }
 
 type policyDefaults struct {
@@ -60,13 +63,10 @@ type policyDefaults struct {
 	Namespace         string            `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	NamespaceSelector namespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
 	// This is named Placement so that eventually PlacementRules and Placements will be supported
-	Placement struct {
-		ClusterSelectors  map[string]string `json:"clusterSelectors,omitempty" yaml:"clusterSelectors,omitempty"`
-		PlacementRulePath string            `json:"placementRulePath,omitempty" yaml:"placementRulePath,omitempty"`
-	} `json:"placement,omitempty" yaml:"placement,omitempty"`
-	RemediationAction string   `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
-	Severity          string   `json:"severity,omitempty" yaml:"severity,omitempty"`
-	Standards         []string `json:"standards,omitempty" yaml:"standards,omitempty"`
+	Placement         placementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
+	RemediationAction string          `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
+	Severity          string          `json:"severity,omitempty" yaml:"severity,omitempty"`
+	Standards         []string        `json:"standards,omitempty" yaml:"standards,omitempty"`
 }
 
 // Plugin is used to store the PolicyGenerator configuration and the methods to generate the
@@ -80,7 +80,15 @@ type Plugin struct {
 	} `json:"placementBindingDefaults,omitempty" yaml:"placementBindingDefaults,omitempty"`
 	PolicyDefaults policyDefaults `json:"policyDefaults,omitempty" yaml:"policyDefaults,omitempty"`
 	Policies       []policyConfig `json:"policies" yaml:"policies"`
-	outputBuffer   bytes.Buffer
+	// A set of all placement rule names that have been processed or generated
+	allPlrs map[string]bool
+	// This is a mapping of cluster selectors formatted as the return value of getCsKey to placement
+	// rule names. This is used to find common cluster selectors that can be consolidated to a
+	// single placement rule.
+	csToPlr      map[string]string
+	outputBuffer bytes.Buffer
+	// A set of processed placement rules from external placement rules (Placement.PlacementRulePath)
+	processedPlrs map[string]bool
 }
 
 var defaults = policyDefaults{
@@ -107,6 +115,12 @@ func (p *Plugin) Config(config []byte) error {
 // Generate generates the policies, placement rules, and placement bindings and returns them as
 // a single YAML file as a byte array. An error is returned if they cannot be created.
 func (p *Plugin) Generate() ([]byte, error) {
+	// Set the default empty values to the fields that track state
+	p.allPlrs = map[string]bool{}
+	p.csToPlr = map[string]string{}
+	p.outputBuffer = bytes.Buffer{}
+	p.processedPlrs = map[string]bool{}
+
 	for i := range p.Policies {
 		err := p.createPolicy(&p.Policies[i])
 		if err != nil {
@@ -117,17 +131,12 @@ func (p *Plugin) Generate() ([]byte, error) {
 	// Keep track of which placement rule maps to which policy. This will be used to determine
 	// how many placement bindings are required since one per placement rule is required.
 	plrNameToPolicyIdxs := map[string][]int{}
-	// seen keeps track of which placement rules have been seen by name. This is so that if the
-	// same placementRulePath is provided for multiple policies, it's not reincluded in the
-	// generated output of the plugin.
-	seen := map[string]bool{}
 	for i := range p.Policies {
-		plrName, err := p.createPlacementRule(&p.Policies[i], seen)
+		plrName, err := p.createPlacementRule(&p.Policies[i])
 		if err != nil {
 			return nil, err
 		}
 		plrNameToPolicyIdxs[plrName] = append(plrNameToPolicyIdxs[plrName], i)
-		seen[plrName] = true
 	}
 
 	plcBindingCount := 0
@@ -400,11 +409,44 @@ func (p *Plugin) getPlrFromPath(plrPath string) (string, map[string]interface{},
 	return name, rule, nil
 }
 
+// getCsKey generates the key for the policy's cluster selectors to be used in Policies.csToPlr.
+func getCsKey(policyConf *policyConfig) string {
+	return fmt.Sprintf("%#v", policyConf.Placement.ClusterSelectors)
+}
+
+// getPlrName will generate a placement rule name for the policy. If the placement rule has
+// previously been generated, skip will be true.
+func (p *Plugin) getPlrName(policyConf *policyConfig) (name string, skip bool) {
+	if policyConf.Placement.Name != "" {
+		// If the policy explicitly specifies a placement rule name, use it
+		return policyConf.Placement.Name, false
+	} else if p.PolicyDefaults.Placement.Name != "" {
+		// If the policy doesn't explicitly specify a placement rule name, and there is a
+		// default placement rule name set, check if one has already been generated for these
+		// cluster selectors
+		csKey := getCsKey(policyConf)
+		if _, ok := p.csToPlr[csKey]; ok {
+			// Just reuse the previously created placement rule with the same cluster selectors
+			return p.csToPlr[csKey], true
+		}
+		// If the policy doesn't explicitly specify a placement rule name, and there is a
+		// default placement rule name, use that
+		if len(p.csToPlr) == 0 {
+			// If this is the first generated placement rule, just use it as is
+			return p.PolicyDefaults.Placement.Name, false
+		}
+		// If there is already one or more generated placement rules, increment the name
+		return fmt.Sprintf("%s%d", p.PolicyDefaults.Placement.Name, len(p.csToPlr)+1), false
+	}
+	// Default to a placement rule per policy
+	return "placement-" + policyConf.Name, false
+}
+
 // createPlacementRule creates a placement rule for the input policy configuration by writing it to
 // the policy generator's output buffer. The name of the placement rule or an error is returned.
-// If the placement rule name is in the skip map and is set to true, it will not be added to the
+// If the placement rule has already been generated, it will be reused and not added to the
 // policy generator's output buffer. An error is returned if the placement rule cannot be created.
-func (p *Plugin) createPlacementRule(policyConf *policyConfig, skip map[string]bool) (
+func (p *Plugin) createPlacementRule(policyConf *policyConfig) (
 	name string, err error,
 ) {
 	plrPath := policyConf.Placement.PlacementRulePath
@@ -416,10 +458,21 @@ func (p *Plugin) createPlacementRule(policyConf *policyConfig, skip map[string]b
 			return
 		}
 
-		if skip[name] {
+		// processedPlrs keeps track of which placement rules have been seen by name. This is so
+		// that if the same placementRulePath is provided for multiple policies, it's not reincluded
+		// in the generated output of the plugin.
+		if p.processedPlrs[name] {
 			return
 		}
+
+		p.processedPlrs[name] = true
 	} else {
+		var skip bool
+		name, skip = p.getPlrName(policyConf)
+		if skip {
+			return
+		}
+
 		// Sort the keys so that the match expressions can be ordered based on the label name
 		keys := make([]string, 0, len(policyConf.Placement.ClusterSelectors))
 		for key := range policyConf.Placement.ClusterSelectors {
@@ -437,7 +490,6 @@ func (p *Plugin) createPlacementRule(policyConf *policyConfig, skip map[string]b
 			matchExpressions = append(matchExpressions, matchExpression)
 		}
 
-		name = "placement-" + policyConf.Name
 		rule = map[string]interface{}{
 			"apiVersion": placementRuleAPIVersion,
 			"kind":       placementRuleKind,
@@ -454,7 +506,15 @@ func (p *Plugin) createPlacementRule(policyConf *policyConfig, skip map[string]b
 				},
 			},
 		}
+
+		csKey := getCsKey(policyConf)
+		p.csToPlr[csKey] = name
 	}
+
+	if p.allPlrs[name] {
+		return "", fmt.Errorf("a duplicate placement rule name was detected: %s", name)
+	}
+	p.allPlrs[name] = true
 
 	var ruleYAML []byte
 	ruleYAML, err = yaml.Marshal(rule)
