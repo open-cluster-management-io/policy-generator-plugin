@@ -29,7 +29,10 @@ func main() {
 	fmt.Print(outputBuffer.String())
 }
 
-// Error handler.
+// errorAndExit takes a message string with formatting verbs and associated formatting
+// arguments similar to fmt.Errorf(). If `debug` is set or it is given an empty message
+// string, it throws a panic to print the message along with the trace. Otherwise
+// it prints the formatted message to stderr and exits with error code 1.
 func errorAndExit(msg string, formatArgs ...interface{}) {
 	printArgs := make([]interface{}, len(formatArgs))
 	copy(printArgs, formatArgs)
@@ -42,7 +45,9 @@ func errorAndExit(msg string, formatArgs ...interface{}) {
 	os.Exit(1)
 }
 
-// Process generator file.
+// processGeneratorConfig takes a string file path to a PolicyGenerator YAML file.
+// It reads the file, processes and validates the contents, uses the contents to
+// generate policies, and returns the generated policies as a byte array.
 func processGeneratorConfig(filePath string) []byte {
 	p := internal.Plugin{}
 	fileData, err := os.ReadFile(filePath)
