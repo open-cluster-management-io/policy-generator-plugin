@@ -13,12 +13,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// getPolicyTemplate generates a policy template for a ConfigurationPolicy
-// that includes the manifests specified in policyConf. An error is returned
-// if one or more manifests cannot be read or are invalid.
-func getPolicyTemplate(policyConf *policyConfig) (
-	*map[string]map[string]interface{}, error,
-) {
+// getManifests will get all of the manifest files associated with the input policy configuration.
+// An error is returned if a manifest path cannot be read.
+func getManifests(policyConf *policyConfig) (*[]map[string]interface{}, error) {
 	manifests := []map[string]interface{}{}
 	for _, manifest := range policyConf.Manifests {
 		manifestPaths := []string{}
@@ -65,14 +62,28 @@ func getPolicyTemplate(policyConf *policyConfig) (
 		}
 	}
 
-	if len(manifests) == 0 {
+	return &manifests, nil
+}
+
+// getPolicyTemplate generates a policy template for a ConfigurationPolicy
+// that includes the manifests specified in policyConf. An error is returned
+// if one or more manifests cannot be read or are invalid.
+func getPolicyTemplate(policyConf *policyConfig) (
+	*map[string]map[string]interface{}, error,
+) {
+	manifests, err := getManifests(policyConf)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(*manifests) == 0 {
 		return nil, fmt.Errorf(
 			"the policy %s must specify at least one non-empty manifest file", policyConf.Name,
 		)
 	}
 
-	objectTemplates := make([]map[string]interface{}, 0, len(manifests))
-	for _, manifest := range manifests {
+	objectTemplates := make([]map[string]interface{}, 0, len(*manifests))
+	for _, manifest := range *manifests {
 		objTemplate := map[string]interface{}{
 			"complianceType":   policyConf.ComplianceType,
 			"objectDefinition": manifest,
