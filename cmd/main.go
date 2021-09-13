@@ -28,7 +28,7 @@ func main() {
 	fmt.Print(outputBuffer.String())
 }
 
-// Error handler
+// Error handler.
 func errorAndExit(msg string, formatArgs ...interface{}) {
 	printArgs := make([]interface{}, len(formatArgs))
 	copy(printArgs, formatArgs)
@@ -41,7 +41,7 @@ func errorAndExit(msg string, formatArgs ...interface{}) {
 	os.Exit(1)
 }
 
-// Process generator file
+// Process generator file.
 func processGeneratorConfig(filePath string) []byte {
 	p := internal.Plugin{}
 	fileData, err := os.ReadFile(filePath)
@@ -51,12 +51,12 @@ func processGeneratorConfig(filePath string) []byte {
 
 	err = p.Config(fileData)
 	if err != nil {
-		errorAndExit("error parsing config file '%s': %s", filePath, err)
+		errorAndExit("error processing the PolicyGenerator file '%s': %s", filePath, err)
 	}
 
 	generatedOutput, err := p.Generate()
 	if err != nil {
-		errorAndExit("error generating policies from config file '%s': %s", filePath, err)
+		errorAndExit("error generating policies from the PolicyGenerator file '%s': %s", filePath, err)
 	}
 
 	return generatedOutput
