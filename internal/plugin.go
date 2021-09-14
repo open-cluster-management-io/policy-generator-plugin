@@ -144,7 +144,7 @@ func (p *Plugin) Generate() ([]byte, error) {
 		plcBindingCount++
 		// Determine which policies to be included in the placement binding.
 		policyConfs := []*policyConfig{}
-		for i := range policyIdxs {
+		for _, i := range policyIdxs {
 			policyConfs = append(policyConfs, &p.Policies[i])
 		}
 
