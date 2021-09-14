@@ -25,6 +25,7 @@ For more about Open Cluster Management and its Policy Framework:
     - path/to/generator/file.yaml
     ...
     ```
+    - To read more about the `PolicyGenerator` YAML, see [About the PolicyGenerator plugin](./docs/policygenerator.md)
 
 3. To use the plugin to generate policies, do one of:
     - Utilize the `examples/` directory in this repository (the directory can be modified by exporting a new path to `SOURCE_DIR`):

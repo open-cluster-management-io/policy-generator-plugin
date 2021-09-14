@@ -1,0 +1,83 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  # Required. Used to uniquely identify the configuration file.
+  name: ""
+
+# Required if multiple policies are consolidated in a PlacementBinding so that the generator can
+# create unique PlacementBinding names using the name given here.
+placementBindingDefaults:
+  # Set an explicit placement binding name to use rather than rely on the default.
+  name: ""
+
+# Required. Any default value listed here can be overridden under an entry in the policies array
+# except for "namespace".
+policyDefaults:
+  # Optional. Array of categories to be used in the policy.open-cluster-management.io/categories
+  # annotation. This defaults to ["CM Configuration Management"].
+  categories:
+    - "CM Configuration Management"
+  # Optional. Array of controls to be used in the policy.open-cluster-management.io/controls
+  # annotation. This defaults to ["CM-2 Baseline Configuration"].
+  controls:
+    - "CM-2 Baseline Configuration"
+  # Required. The namespace of all the policies.
+  namespace: ""
+  # Optional. The placement configuration for the policies. This defaults to a placement
+  # configuration that matches all clusters.
+  placement:
+    # To specify a placement, specify key:value pair cluster selectors. (See placementRulePath to
+    # specify an existing file instead.)
+    clusterSelectors: {}
+    # Optional. Specifying a name will consolidate placement rules that contain the same cluster
+    # selectors.
+    name: ""
+    # To reuse an existing placement rule, specify the path here relative to the kustomization.yaml
+    # file. If given, this placement rule will be used by all policies by default. (See
+    # clusterSelectors to generate a new Placement instead.)
+    placementRulePath: ""
+  # Optional. The remediation action ("inform" or "enforce") for the policy. This defaults to
+  # "inform".
+  remediationAction: "inform"
+  # Optional. The severity of the policy violation. This defaults to "low".
+  severity: "low"
+  # Optional. Array of standards to be used in the policy.open-cluster-management.io/standards
+  # annotation. This defaults to ["NIST SP 800-53"].
+  standards:
+    - "NIST SP 800-53"
+
+# Required. The list of policies to create along with overrides to either the default values or, if
+# set, the values given in policyDefaults.
+policies:
+  # Required. The name of the policy to create.
+  - name: ""
+    # Required. The list of Kubernetes resource object manifests to include in the policy.
+    manifests:
+      # Required. Path to a single file or a flat directory of files relative to the
+      # kustomization.yaml file.
+      - path: ""
+    # Optional. (See policyDefaults.categories for description.)
+    categories:
+      - "CM Configuration Management"
+    # Optional. Determines the policy controller behavior when comparing the manifest to objects on
+    # the cluster ("musthave",  "mustonlyhave", or "mustnothave"). Defaults to "musthave".
+    complianceType: "musthave"
+    # Optional. (See policyDefaults.controls for description.)
+    controls:
+      - "CM-2 Baseline Configuration"
+    # Optional. (See policyDefaults.disabled for description.)
+    disabled: false
+    # Optional. Determines the list of namespaces to check on the cluster for the given manifest. If
+    # a namespace is specified in the manifest, the selector is not necessary. This defaults to no
+    # selectors.
+    namespaceSelector:
+      include: [] exclude: []
+    # Optional. (See policyDefaults.placement for description.)
+    placement: {}
+    # Optional. (See policyDefaults.remediationAction for description.)
+    remediationAction: ""
+    # Optional. (See policyDefaults.severity for description.)
+    severity: "low"
+    # Optional. (See policyDefaults.standards for description.)
+    standards:
+      - "NIST SP 800-53"
