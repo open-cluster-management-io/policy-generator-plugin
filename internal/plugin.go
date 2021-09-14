@@ -141,20 +141,35 @@ func (p *Plugin) Generate() ([]byte, error) {
 
 	plcBindingCount := 0
 	for plrName, policyIdxs := range plrNameToPolicyIdxs {
-		plcBindingCount++
 		// Determine which policies to be included in the placement binding.
 		policyConfs := []*policyConfig{}
 		for _, i := range policyIdxs {
 			policyConfs = append(policyConfs, &p.Policies[i])
 		}
 
-		// If there are multiple policies, still use the default placement binding name
-		// but append a number to it so it's a unique name.
+		// If there is more than one policy associated with a placement rule but no default binding name
+		// specified, throw an error
+		if len(policyConfs) > 1 && p.PlacementBindingDefaults.Name == "" {
+			return nil, fmt.Errorf(
+				"placementBindingDefaults.name must be set but is empty (mutiple policies were found for the PlacementBinding to placement '%s')",
+				plrName,
+			)
+		}
+
 		var bindingName string
-		if plcBindingCount == 1 {
-			bindingName = p.PlacementBindingDefaults.Name
+		// If there is only one policy, use the policy name if there is no default
+		// binding name specified
+		if len(policyConfs) == 1 && p.PlacementBindingDefaults.Name == "" {
+			bindingName = "binding-" + policyConfs[0].Name
 		} else {
-			bindingName = fmt.Sprintf("%s%d", p.PlacementBindingDefaults.Name, plcBindingCount)
+			plcBindingCount++
+			// If there are multiple policies, use the default placement binding name
+			// but append a number to it so it's a unique name.
+			if plcBindingCount == 1 {
+				bindingName = p.PlacementBindingDefaults.Name
+			} else {
+				bindingName = fmt.Sprintf("%s%d", p.PlacementBindingDefaults.Name, plcBindingCount)
+			}
 		}
 
 		err := p.createPlacementBinding(bindingName, plrName, policyConfs)
@@ -175,10 +190,6 @@ func (p *Plugin) applyDefaults() {
 	}
 
 	// Set defaults to the defaults that aren't overridden
-	if p.PlacementBindingDefaults.Name == "" && len(p.Policies) == 1 {
-		p.PlacementBindingDefaults.Name = "binding-" + p.Policies[0].Name
-	}
-
 	if p.PolicyDefaults.Categories == nil {
 		p.PolicyDefaults.Categories = defaults.Categories
 	}
@@ -251,12 +262,6 @@ func (p *Plugin) applyDefaults() {
 // assertValidConfig verifies that the user provided configuration has all the
 // required fields. Note that this should be run only after applyDefaults is run.
 func (p *Plugin) assertValidConfig() error {
-	if p.PlacementBindingDefaults.Name == "" && len(p.Policies) > 1 {
-		return errors.New(
-			"placementBindingDefaults.name must be set when there are mutiple policies",
-		)
-	}
-
 	if p.PolicyDefaults.Namespace == "" {
 		return errors.New("policyDefaults.namespace is empty but it must be set")
 	}

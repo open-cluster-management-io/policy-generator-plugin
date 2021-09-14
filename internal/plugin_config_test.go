@@ -169,7 +169,7 @@ policies:
 	}
 
 	assertEqual(t, p.Metadata.Name, "policy-generator-name")
-	assertEqual(t, p.PlacementBindingDefaults.Name, "binding-policy-app-config")
+	assertEqual(t, p.PlacementBindingDefaults.Name, "")
 	assertReflectEqual(t, p.PolicyDefaults.Categories, []string{"CM Configuration Management"})
 	assertEqual(t, p.PolicyDefaults.ComplianceType, "musthave")
 	assertReflectEqual(t, p.PolicyDefaults.Controls, []string{"CM-2 Baseline Configuration"})
@@ -197,33 +197,6 @@ policies:
 	assertEqual(t, policy.RemediationAction, "inform")
 	assertEqual(t, policy.Severity, "low")
 	assertReflectEqual(t, policy.Standards, []string{"NIST SP 800-53"})
-}
-
-func TestConfigNoPlacementBindingName(t *testing.T) {
-	t.Parallel()
-	const config = `
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-policies:
-- name: policy-app-config
-  manifests:
-    - path: input/configmap.yaml
-- name: policy-app-config2
-  manifests:
-    - path: input/configmap2.yaml
-`
-	p := Plugin{}
-	err := p.Config([]byte(config))
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
-	}
-
-	expected := "placementBindingDefaults.name must be set when there are mutiple policies"
-	assertEqual(t, err.Error(), expected)
 }
 
 func TestConfigNoNamespace(t *testing.T) {
