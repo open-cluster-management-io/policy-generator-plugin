@@ -4,7 +4,7 @@ See the [PolicyGenerator reference YAML](./policygenerator-reference.yaml) to se
 
 ## The Kustomize exec plugin explained
 
-The policy generator plugin is a binary written in Go. The binary accepts an input manifest of the `PolicyGenerator` kind in the `policy.open-cluster-management.io/v1` API. When Kustomize finds a manifest of that kind under the `generators:` array in `kustomization.yaml`, it looks in its directories for a binary of the same name ("PolicyGenerator") in the `policy.open-cluster-management.io/vi/policygenerator` directory and calls the binary as `<path>/PolicyGenerator <cached-manifest>` to run our generator as its plugin. The flag `--enable-alpha-plugins` must be specified in the kustomize command in order for our custom plugin to be enabled.
+The policy generator plugin is a binary written in Go. The binary accepts an input manifest of the `PolicyGenerator` kind in the `policy.open-cluster-management.io/v1` API. When Kustomize finds a manifest of that kind under the `generators:` array in `kustomization.yaml`, it looks in its directories for a binary of the same name ("PolicyGenerator") in the `policy.open-cluster-management.io/vi/policygenerator` directory and calls the binary as `<path>/PolicyGenerator <cached-manifest>` to run the generator as its plugin. The flag `--enable-alpha-plugins` must be specified in the Kustomize command in order for the external generator plugin to be enabled.
 
 ## Placement
 
