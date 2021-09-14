@@ -137,6 +137,194 @@ subjects:
 	assertEqual(t, string(output), expected)
 }
 
+func TestGenerateSeparateBindings(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	p := Plugin{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := policyConfig{
+		Name: "policy-app-config",
+		Manifests: []manifest{
+			{Path: path.Join(tmpDir, "configmap.yaml")},
+		},
+	}
+	policyConf2 := policyConfig{
+		Name: "policy-app-config2",
+		Manifests: []manifest{
+			{Path: path.Join(tmpDir, "configmap.yaml")},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf, policyConf2)
+	p.applyDefaults()
+	if err := p.assertValidConfig(); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+    remediationAction: inform
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config2
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config2
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+    remediationAction: inform
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+    name: placement-policy-app-config
+    namespace: my-policies
+spec:
+    clusterConditions:
+        - status: "True"
+          type: ManagedClusterConditionAvailable
+    clusterSelector:
+        matchExpressions: []
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+    name: placement-policy-app-config2
+    namespace: my-policies
+spec:
+    clusterConditions:
+        - status: "True"
+          type: ManagedClusterConditionAvailable
+    clusterSelector:
+        matchExpressions: []
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+    name: binding-policy-app-config
+    namespace: my-policies
+placementRef:
+    apiGroup: apps.open-cluster-management.io
+    kind: PlacementRule
+    name: placement-policy-app-config
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+    name: binding-policy-app-config2
+    namespace: my-policies
+placementRef:
+    apiGroup: apps.open-cluster-management.io
+    kind: PlacementRule
+    name: placement-policy-app-config2
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config2
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	output, err := p.Generate()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, string(output), expected)
+}
+
+func TestGenerateMissingBindingName(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	p := Plugin{}
+	p.PlacementBindingDefaults.Name = ""
+	p.PolicyDefaults.Placement.Name = "my-placement-rule"
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := policyConfig{
+		Name: "policy-app-config",
+		Manifests: []manifest{
+			{Path: path.Join(tmpDir, "configmap.yaml")},
+		},
+	}
+	policyConf2 := policyConfig{
+		Name: "policy-app-config2",
+		Manifests: []manifest{
+			{Path: path.Join(tmpDir, "configmap.yaml")},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf, policyConf2)
+	p.applyDefaults()
+	if err := p.assertValidConfig(); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	_, err := p.Generate()
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := fmt.Sprintf(
+		"placementBindingDefaults.name must be set but is empty (mutiple policies were found for the "+
+			"PlacementBinding to placement '%s')",
+		p.PolicyDefaults.Placement.Name,
+	)
+	assertEqual(t, err.Error(), expected)
+}
+
 func TestCreatePolicy(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
