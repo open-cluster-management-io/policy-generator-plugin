@@ -147,8 +147,8 @@ func (p *Plugin) Generate() ([]byte, error) {
 			policyConfs = append(policyConfs, &p.Policies[i])
 		}
 
-		// If there is more than one policy but no default binding name specified,
-		// throw an error
+		// If there is more than one policy associated with a placement rule but no default binding name
+		// specified, throw an error
 		if len(policyConfs) > 1 && p.PlacementBindingDefaults.Name == "" {
 			return nil, fmt.Errorf(
 				"placementBindingDefaults.name must be set but is empty (mutiple policies were found for the PlacementBinding to placement '%s')",
