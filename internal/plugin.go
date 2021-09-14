@@ -24,7 +24,8 @@ const (
 )
 
 type manifest struct {
-	Path string `json:"path,omitempty" yaml:"path,omitempty"`
+	Patches []map[string]interface{} `json:"patches,omitempty" yaml:"patches,omitempty"`
+	Path    string                   `json:"path,omitempty" yaml:"path,omitempty"`
 }
 
 type namespaceSelector struct {

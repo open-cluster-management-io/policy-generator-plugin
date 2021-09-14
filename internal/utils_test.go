@@ -47,7 +47,7 @@ data:
 			t.Fatalf("Failed to write %s", manifestPath)
 		}
 
-		manifestFiles = append(manifestFiles, manifest{manifestPath})
+		manifestFiles = append(manifestFiles, manifest{Path: manifestPath})
 	}
 
 	// Write a bogus file to ensure it is not picked up when creating the policy
@@ -104,12 +104,89 @@ data:
 	}
 }
 
+func TestGetPolicyTemplatePatches(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestPath := path.Join(tmpDir, "configmap.yaml")
+	manifestYAML := `
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-configmap
+data:
+  game.properties: enemies=potato
+`
+	err := ioutil.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestPath)
+	}
+
+	patches := []map[string]interface{}{
+		{
+			"metadata": map[string]interface{}{
+				"labels": map[string]string{"chandler": "bing"},
+			},
+		},
+		{
+			"metadata": map[string]interface{}{
+				"annotations": map[string]string{"monica": "geller"},
+			},
+		},
+	}
+	manifests := []manifest{
+		{Path: manifestPath, Patches: patches},
+	}
+	policyConf := policyConfig{
+		Manifests: manifests,
+		Name:      "policy-app-config",
+	}
+
+	policyTemplate, err := getPolicyTemplate(&policyConf)
+	if err != nil {
+		t.Fatalf("Failed to get the policy template: %v", err)
+	}
+	objdef := (*policyTemplate)["objectDefinition"]
+	assertEqual(t, objdef["metadata"].(map[string]string)["name"], "policy-app-config")
+	spec, ok := objdef["spec"].(map[string]interface{})
+	if !ok {
+		t.Fatal("The spec field is an invalid format")
+	}
+
+	objTemplates, ok := spec["object-templates"].([]map[string]interface{})
+	if !ok {
+		t.Fatal("The object-templates field is an invalid format")
+	}
+	assertEqual(t, len(objTemplates), 1)
+
+	objDef, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})
+	if !ok {
+		t.Fatal("The objectDefinition field is an invalid format")
+	}
+
+	metadata, ok := objDef["metadata"].(map[string]interface{})
+	if !ok {
+		t.Fatal("The metadata field is an invalid format")
+	}
+
+	labels, ok := metadata["labels"].(map[string]interface{})
+	if !ok {
+		t.Fatal("The labels field is an invalid format")
+	}
+	assertReflectEqual(t, labels, map[string]interface{}{"chandler": "bing"})
+
+	annotations, ok := metadata["annotations"].(map[string]interface{})
+	if !ok {
+		t.Fatal("The annotations field is an invalid format")
+	}
+	assertReflectEqual(t, annotations, map[string]interface{}{"monica": "geller"})
+}
+
 func TestGetPolicyTemplateNoManifests(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	policyConf := policyConfig{
 		ComplianceType:    "musthave",
-		Manifests:         []manifest{{tmpDir}},
+		Manifests:         []manifest{{Path: tmpDir}},
 		Name:              "policy-app-config",
 		RemediationAction: "inform",
 		Severity:          "low",
@@ -130,7 +207,7 @@ func TestGetPolicyTemplateInvalidPath(t *testing.T) {
 	manifestPath := path.Join(tmpDir, "does-not-exist.yaml")
 	policyConf := policyConfig{
 		ComplianceType:    "musthave",
-		Manifests:         []manifest{{manifestPath}},
+		Manifests:         []manifest{{Path: manifestPath}},
 		Name:              "policy-app-config",
 		RemediationAction: "inform",
 		Severity:          "low",

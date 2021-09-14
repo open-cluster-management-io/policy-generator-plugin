@@ -48,6 +48,7 @@ func getManifests(policyConf *policyConfig) (*[]map[string]interface{}, error) {
 			manifestPaths = append(manifestPaths, manifest.Path)
 		}
 
+		manifestFiles := []map[string]interface{}{}
 		for _, manifestPath := range manifestPaths {
 			manifestFile, err := unmarshalManifestFile(manifestPath)
 			if err != nil {
@@ -58,8 +59,26 @@ func getManifests(policyConf *policyConfig) (*[]map[string]interface{}, error) {
 				continue
 			}
 
-			manifests = append(manifests, *manifestFile...)
+			manifestFiles = append(manifestFiles, *manifestFile...)
 		}
+
+		if len(manifest.Patches) > 0 {
+			patcher := manifestPatcher{manifests: manifestFiles, patches: manifest.Patches}
+			const errTemplate = `failed to process the manifest at "%s": %w`
+			err = patcher.Validate()
+			if err != nil {
+				return nil, fmt.Errorf(errTemplate, manifest.Path, err)
+			}
+
+			patchedFiles, err := patcher.ApplyPatches()
+			if err != nil {
+				return nil, fmt.Errorf(errTemplate, manifest.Path, err)
+			}
+
+			manifestFiles = *patchedFiles
+		}
+
+		manifests = append(manifests, manifestFiles...)
 	}
 
 	return &manifests, nil
@@ -144,6 +163,7 @@ func unmarshalManifestBytes(manifestBytes []byte) (*[]map[string]interface{}, er
 				break
 			}
 
+			// nolint:wrapcheck
 			return nil, err
 		}
 
