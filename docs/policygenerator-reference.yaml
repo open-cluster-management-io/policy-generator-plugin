@@ -36,9 +36,10 @@ policyDefaults:
     # Optional. Specifying a name will consolidate placement rules that contain 
     # the same cluster selectors.
     name: ""
-    # To reuse an existing placement rule, specify the path here. If given, this
-    # placement rule will be used by all policies by default. (See 
-    # clusterSelectors to generate a new Placement instead.)
+    # To reuse an existing placement rule, specify the path here relative to
+    # the kustomization.yaml file. If given, this placement rule will be used by
+    # all policies by default. (See clusterSelectors to generate a new Placement 
+    # instead.)
     placementRulePath: ""
   # Optional. The remediation action ("inform" or "enforce") for the policy. This
   # defaults to "inform".
