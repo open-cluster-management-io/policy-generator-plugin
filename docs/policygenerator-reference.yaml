@@ -56,16 +56,16 @@ policies:
       # Required. Path to a single file or a flat directory of files relative to the
       # kustomization.yaml file.
       - path: ""
-    # Optional. (See policyDefaults.placement for description.)
+    # Optional. (See policyDefaults.categories for description.)
     categories:
       - "CM Configuration Management"
     # Optional. Determines the policy controller behavior when comparing the manifest to objects on
     # the cluster ("musthave",  "mustonlyhave", or "mustnothave"). Defaults to "musthave".
     complianceType: "musthave"
-    # Optional. (See policyDefaults.placement for description.)
+    # Optional. (See policyDefaults.controls for description.)
     controls:
       - "CM-2 Baseline Configuration"
-    # Optional. (See policyDefaults.placement for description.)
+    # Optional. (See policyDefaults.disabled for description.)
     disabled: false
     # Optional. Determines the list of namespaces to check on the cluster for the given manifest. If
     # a namespace is specified in the manifest, the selector is not necessary. This defaults to no
@@ -74,10 +74,10 @@ policies:
       include: [] exclude: []
     # Optional. (See policyDefaults.placement for description.)
     placement: {}
-    # Optional. (See policyDefaults.placement for description.)
+    # Optional. (See policyDefaults.remediationAction for description.)
     remediationAction: ""
-    # Optional. (See policyDefaults.placement for description.)
+    # Optional. (See policyDefaults.severity for description.)
     severity: "low"
-    # Optional. (See policyDefaults.placement for description.)
+    # Optional. (See policyDefaults.standards for description.)
     standards:
       - "NIST SP 800-53"
