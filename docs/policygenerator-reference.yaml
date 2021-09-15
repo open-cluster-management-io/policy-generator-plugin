@@ -36,8 +36,8 @@ policyDefaults:
     # file. If given, this placement rule will be used by all policies by default. (See
     # clusterSelectors to generate a new Placement instead.)
     placementRulePath: ""
-  # Optional. The remediation action ("inform" or "enforce") for the policy. This defaults to
-  # "inform".
+  # Optional. The remediation action ("inform" or "enforce") for each configuration policy. This
+  # defaults to "inform".
   remediationAction: "inform"
   # Optional. The severity of the policy violation. This defaults to "low".
   severity: "low"

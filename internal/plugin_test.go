@@ -80,7 +80,6 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
-    remediationAction: inform
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
@@ -111,7 +110,6 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
-    remediationAction: inform
 ---
 apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule
@@ -206,7 +204,6 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
-    remediationAction: inform
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
@@ -237,7 +234,6 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
-    remediationAction: inform
 ---
 apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule
@@ -391,7 +387,6 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
-    remediationAction: inform
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
@@ -460,7 +455,6 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
-    remediationAction: inform
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
