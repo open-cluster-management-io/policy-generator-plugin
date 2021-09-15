@@ -42,7 +42,7 @@ func TestGenerate(t *testing.T) {
 		},
 	}
 	p.Policies = append(p.Policies, policyConf, policyConf2)
-	p.applyDefaults()
+	p.applyDefaults(map[string]interface{}{})
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}
@@ -168,7 +168,7 @@ func TestGenerateSeparateBindings(t *testing.T) {
 		},
 	}
 	p.Policies = append(p.Policies, policyConf, policyConf2)
-	p.applyDefaults()
+	p.applyDefaults(map[string]interface{}{})
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}
@@ -317,7 +317,7 @@ func TestGenerateMissingBindingName(t *testing.T) {
 		},
 	}
 	p.Policies = append(p.Policies, policyConf, policyConf2)
-	p.applyDefaults()
+	p.applyDefaults(map[string]interface{}{})
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}
@@ -348,7 +348,7 @@ func TestCreatePolicy(t *testing.T) {
 		},
 	}
 	p.Policies = append(p.Policies, policyConf)
-	p.applyDefaults()
+	p.applyDefaults(map[string]interface{}{})
 
 	err := p.createPolicy(&p.Policies[0])
 	if err != nil {
@@ -405,7 +405,7 @@ func TestCreatePolicyDir(t *testing.T) {
 		NamespaceSelector: types.NamespaceSelector{Include: []string{"default"}},
 	}
 	p.Policies = append(p.Policies, policyConf)
-	p.applyDefaults()
+	p.applyDefaults(map[string]interface{}{})
 
 	err := p.createPolicy(&p.Policies[0])
 	if err != nil {
@@ -475,7 +475,7 @@ func TestCreatePolicyInvalidYAML(t *testing.T) {
 		Manifests: []types.Manifest{{Path: manifestPath}},
 	}
 	p.Policies = append(p.Policies, policyConf)
-	p.applyDefaults()
+	p.applyDefaults(map[string]interface{}{})
 
 	err = p.createPolicy(&p.Policies[0])
 	if err == nil {

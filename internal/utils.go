@@ -10,13 +10,14 @@ import (
 	"os"
 	"path"
 
+	"github.com/open-cluster-management/policy-generator-plugin/internal/expanders"
 	"github.com/open-cluster-management/policy-generator-plugin/internal/types"
 	"gopkg.in/yaml.v3"
 )
 
 // getManifests will get all of the manifest files associated with the input policy configuration.
 // An error is returned if a manifest path cannot be read.
-func getManifests(policyConf *types.PolicyConfig) (*[]map[string]interface{}, error) {
+func getManifests(policyConf *types.PolicyConfig) ([]map[string]interface{}, error) {
 	manifests := []map[string]interface{}{}
 	for _, manifest := range policyConf.Manifests {
 		manifestPaths := []string{}
@@ -82,28 +83,26 @@ func getManifests(policyConf *types.PolicyConfig) (*[]map[string]interface{}, er
 		manifests = append(manifests, manifestFiles...)
 	}
 
-	return &manifests, nil
+	return manifests, nil
 }
 
-// getPolicyTemplate generates a policy template for a ConfigurationPolicy
+// getPolicyTemplates generates the policy templates for the ConfigurationPolicy manifests
 // that includes the manifests specified in policyConf. An error is returned
 // if one or more manifests cannot be read or are invalid.
-func getPolicyTemplate(policyConf *types.PolicyConfig) (
-	*map[string]map[string]interface{}, error,
-) {
+func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string]interface{}, error) {
 	manifests, err := getManifests(policyConf)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(*manifests) == 0 {
+	if len(manifests) == 0 {
 		return nil, fmt.Errorf(
 			"the policy %s must specify at least one non-empty manifest file", policyConf.Name,
 		)
 	}
 
-	objectTemplates := make([]map[string]interface{}, 0, len(*manifests))
-	for _, manifest := range *manifests {
+	objectTemplates := make([]map[string]interface{}, 0, len(manifests))
+	for _, manifest := range manifests {
 		objTemplate := map[string]interface{}{
 			"complianceType":   policyConf.ComplianceType,
 			"objectDefinition": manifest,
@@ -129,7 +128,36 @@ func getPolicyTemplate(policyConf *types.PolicyConfig) (
 		policyTemplate["objectDefinition"]["spec"].(map[string]interface{})["namespaceSelector"] = policyConf.NamespaceSelector
 	}
 
-	return &policyTemplate, nil
+	policyTemplates := []map[string]map[string]interface{}{policyTemplate}
+	expandedPolicyTemplates := handleExpanders(manifests, policyConf)
+	policyTemplates = append(policyTemplates, expandedPolicyTemplates...)
+
+	return policyTemplates, nil
+}
+
+// handleExpanders will go through all the enabled expanders and generate additional
+// policy templates to include in the policy.
+func handleExpanders(
+	manifests []map[string]interface{}, policyConf *types.PolicyConfig,
+) []map[string]map[string]interface{} {
+	policyTemplates := []map[string]map[string]interface{}{}
+	expanders := expanders.GetExpanders()
+	kyvernoExpander, ok := expanders["kyverno"]
+	if !ok {
+		// Panic since this is a programmer error that is unrecoverable
+		panic("The kyverno expander was not returned in GetExpanders")
+	}
+
+	// Not the most efficient loop but it lends itself nicely for when there are
+	// additional expanders. Delete this comment when that occurs.
+	for _, m := range manifests {
+		if kyvernoExpander.Enabled(policyConf) && kyvernoExpander.CanHandle(m) {
+			kyvernoPolicyTemplates := kyvernoExpander.Expand(m, policyConf.Severity)
+			policyTemplates = append(policyTemplates, kyvernoPolicyTemplates...)
+		}
+	}
+
+	return policyTemplates
 }
 
 // unmarshalManifestFile unmarshals the input object manifest/definition file into

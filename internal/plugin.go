@@ -59,10 +59,17 @@ var defaults = types.PolicyDefaults{
 // configures the Policy object.
 func (p *Plugin) Config(config []byte) error {
 	err := yaml.Unmarshal(config, p)
+	const errTemplate = "the PolicyGenerator configuration file is invalid: %w"
 	if err != nil {
-		return fmt.Errorf("the PolicyGenerator configuration file is invalid: %w", err)
+		return fmt.Errorf(errTemplate, err)
 	}
-	p.applyDefaults()
+
+	var unmarshaledConfig map[string]interface{}
+	err = yaml.Unmarshal(config, &unmarshaledConfig)
+	if err != nil {
+		return fmt.Errorf(errTemplate, err)
+	}
+	p.applyDefaults(unmarshaledConfig)
 
 	return p.assertValidConfig()
 }
@@ -146,10 +153,45 @@ func (p *Plugin) Generate() ([]byte, error) {
 	return p.outputBuffer.Bytes(), nil
 }
 
+func getDefaultBool(config map[string]interface{}, key string) (value bool, set bool) {
+	defaults, ok := config["policyDefaults"].(map[string]interface{})
+	if ok {
+		value, set = defaults[key].(bool)
+
+		return
+	}
+
+	return false, false
+}
+
+func getPolicyBool(
+	config map[string]interface{}, policyIndex int, key string,
+) (value bool, set bool) {
+	policies, ok := config["policies"].([]interface{})
+	if !ok {
+		return false, false
+	}
+
+	if len(policies)-1 < policyIndex {
+		return false, false
+	}
+
+	policy, ok := policies[policyIndex].(map[string]interface{})
+	if !ok {
+		return false, false
+	}
+
+	value, set = policy[key].(bool)
+
+	return
+}
+
 // applyDefaults applies any missing defaults under Policy.PlacementBindingDefaults and
 // Policy.PolicyDefaults. It then applies the defaults and user provided defaults on each
-// policy entry if they are not overridden by the user.
-func (p *Plugin) applyDefaults() {
+// policy entry if they are not overridden by the user. The input unmarshaledConfig is used
+// in situations where it is necessary to know if an explicit false is provided rather than
+// rely on the default Go value on the Plugin struct.
+func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 	if len(p.Policies) == 0 {
 		return
 	}
@@ -165,6 +207,14 @@ func (p *Plugin) applyDefaults() {
 
 	if p.PolicyDefaults.Controls == nil {
 		p.PolicyDefaults.Controls = defaults.Controls
+	}
+
+	// Defaults to true unless explicitly set in the config.
+	ikvValue, set := getDefaultBool(unmarshaledConfig, "informKyvernoPolicies")
+	if set {
+		p.PolicyDefaults.InformKyvernoPolicies = ikvValue
+	} else {
+		p.PolicyDefaults.InformKyvernoPolicies = true
 	}
 
 	if p.PolicyDefaults.RemediationAction == "" {
@@ -191,6 +241,14 @@ func (p *Plugin) applyDefaults() {
 
 		if policy.Controls == nil {
 			policy.Controls = p.PolicyDefaults.Controls
+		}
+
+		// Defaults to the policy default unless explicitly set.
+		ikvValue, set := getPolicyBool(unmarshaledConfig, i, "informKyvernoPolicies")
+		if set {
+			policy.InformKyvernoPolicies = ikvValue
+		} else {
+			policy.InformKyvernoPolicies = p.PolicyDefaults.InformKyvernoPolicies
 		}
 
 		// If both cluster selectors and placement rule path aren't set, then use the
@@ -288,7 +346,7 @@ func (p *Plugin) assertValidConfig() error {
 // The generated policy is written to the plugin's output buffer. An error is returned if the
 // manifests specified in the configuration are invalid or can't be read.
 func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
-	policyTemplate, err := getPolicyTemplate(policyConf)
+	policyTemplates, err := getPolicyTemplates(policyConf)
 	if err != nil {
 		return err
 	}
@@ -307,7 +365,7 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 		},
 		"spec": map[string]interface{}{
 			"disabled":         policyConf.Disabled,
-			"policy-templates": []map[string]map[string]interface{}{*policyTemplate},
+			"policy-templates": policyTemplates,
 		},
 	}
 

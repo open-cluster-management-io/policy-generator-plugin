@@ -43,3 +43,7 @@ policies:
             namespace: default
             labels:
               monica: geller
+- name: policy-require-labels
+  disabled: true
+  manifests:
+    - path: input3/
