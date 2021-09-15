@@ -306,9 +306,8 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 			"namespace": p.PolicyDefaults.Namespace,
 		},
 		"spec": map[string]interface{}{
-			"disabled":          policyConf.Disabled,
-			"policy-templates":  []map[string]map[string]interface{}{*policyTemplate},
-			"remediationAction": policyConf.RemediationAction,
+			"disabled":         policyConf.Disabled,
+			"policy-templates": []map[string]map[string]interface{}{*policyTemplate},
 		},
 	}
 
