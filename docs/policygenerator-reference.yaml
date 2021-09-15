@@ -21,6 +21,10 @@ policyDefaults:
   # annotation. This defaults to ["CM-2 Baseline Configuration"].
   controls:
     - "CM-2 Baseline Configuration"
+  # Optional. When the policy references a Kyverno policy manifest, this determines if an additonal
+  # configuration policy should be generated in order to receive policy violations in Open Cluster
+  # Management when the Kyverno policy has been violated. This defaults to true.
+  informKyvernoPolicies: true
   # Required. The namespace of all the policies.
   namespace: ""
   # Optional. The placement configuration for the policies. This defaults to a placement
@@ -85,6 +89,8 @@ policies:
       - "CM-2 Baseline Configuration"
     # Optional. (See policyDefaults.disabled for description.)
     disabled: false
+    # Optional. (See policyDefaults.informKyvernoPolicies for description.)
+    informKyvernoPolicies: true
     # Optional. Determines the list of namespaces to check on the cluster for the given manifest. If
     # a namespace is specified in the manifest, the selector is not necessary. This defaults to no
     # selectors.

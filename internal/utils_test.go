@@ -73,11 +73,14 @@ data:
 			Severity:          "low",
 		}
 
-		policyTemplate, err := getPolicyTemplate(&policyConf)
+		policyTemplates, err := getPolicyTemplates(&policyConf)
 		if err != nil {
-			t.Fatalf("Failed to get the policy template: %v", err)
+			t.Fatalf("Failed to get the policy templates: %v", err)
 		}
-		objdef := (*policyTemplate)["objectDefinition"]
+		assertEqual(t, len(policyTemplates), 1)
+
+		policyTemplate := policyTemplates[0]
+		objdef := policyTemplate["objectDefinition"]
 		assertEqual(t, objdef["metadata"].(map[string]string)["name"], "policy-app-config")
 		spec, ok := objdef["spec"].(map[string]interface{})
 		if !ok {
@@ -142,11 +145,14 @@ data:
 		Name:      "policy-app-config",
 	}
 
-	policyTemplate, err := getPolicyTemplate(&policyConf)
+	policyTemplates, err := getPolicyTemplates(&policyConf)
 	if err != nil {
-		t.Fatalf("Failed to get the policy template: %v", err)
+		t.Fatalf("Failed to get the policy templates: %v", err)
 	}
-	objdef := (*policyTemplate)["objectDefinition"]
+	assertEqual(t, len(policyTemplates), 1)
+
+	policyTemplate := policyTemplates[0]
+	objdef := policyTemplate["objectDefinition"]
 	assertEqual(t, objdef["metadata"].(map[string]string)["name"], "policy-app-config")
 	spec, ok := objdef["spec"].(map[string]interface{})
 	if !ok {
@@ -182,6 +188,64 @@ data:
 	assertReflectEqual(t, annotations, map[string]interface{}{"monica": "geller"})
 }
 
+func TestGetPolicyTemplateKyverno(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestPath := path.Join(tmpDir, "kyverno.yaml")
+	manifestYAML := `
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: my-awesome-policy`
+
+	err := ioutil.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestPath)
+	}
+
+	policyConf := types.PolicyConfig{
+		ComplianceType:        "musthave",
+		InformKyvernoPolicies: true,
+		Manifests:             []types.Manifest{{Path: manifestPath}},
+		Name:                  "policy-kyverno-config",
+		RemediationAction:     "enforce",
+		Severity:              "low",
+	}
+
+	policyTemplates, err := getPolicyTemplates(&policyConf)
+	if err != nil {
+		t.Fatalf("Failed to get the policy templates: %v", err)
+	}
+	assertEqual(t, len(policyTemplates), 2)
+
+	// This is not an in-depth test since the Kyverno expansion is tested elsewhere. This is to
+	// to test that glue code is working as expected.
+	expandedPolicyTemplate := policyTemplates[1]
+	objdef := expandedPolicyTemplate["objectDefinition"]
+	spec, ok := objdef["spec"].(map[string]interface{})
+	if !ok {
+		t.Fatal("The spec field is an invalid format")
+	}
+	objTemplates, ok := spec["object-templates"].([]map[string]interface{})
+	if !ok {
+		t.Fatal("The object-templates field is an invalid format")
+	}
+	assertEqual(t, len(objTemplates), 2)
+	assertEqual(t, objTemplates[0]["complianceType"], "mustnothave")
+	kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
+	if !ok {
+		t.Fatal("The objectDefinition field is an invalid format")
+	}
+	assertEqual(t, kind1, "ClusterPolicyReport")
+
+	assertEqual(t, objTemplates[1]["complianceType"], "mustnothave")
+	kind2, ok := objTemplates[1]["objectDefinition"].(map[string]interface{})["kind"]
+	if !ok {
+		t.Fatal("The objectDefinition field is an invalid format")
+	}
+	assertEqual(t, kind2, "PolicyReport")
+}
+
 func TestGetPolicyTemplateNoManifests(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -193,7 +257,7 @@ func TestGetPolicyTemplateNoManifests(t *testing.T) {
 		Severity:          "low",
 	}
 
-	_, err := getPolicyTemplate(&policyConf)
+	_, err := getPolicyTemplates(&policyConf)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -214,7 +278,7 @@ func TestGetPolicyTemplateInvalidPath(t *testing.T) {
 		Severity:          "low",
 	}
 
-	_, err := getPolicyTemplate(&policyConf)
+	_, err := getPolicyTemplates(&policyConf)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -241,7 +305,7 @@ func TestGetPolicyTemplateInvalidManifest(t *testing.T) {
 		Severity:          "low",
 	}
 
-	_, err = getPolicyTemplate(&policyConf)
+	_, err = getPolicyTemplates(&policyConf)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}

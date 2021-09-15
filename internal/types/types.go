@@ -19,10 +19,11 @@ type PlacementConfig struct {
 
 // PolicyConfig represents a policy entry in the PolicyGenerator configuration.
 type PolicyConfig struct {
-	Categories     []string `json:"categories,omitempty" yaml:"categories,omitempty"`
-	ComplianceType string   `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
-	Controls       []string `json:"controls,omitempty" yaml:"controls,omitempty"`
-	Disabled       bool     `json:"disabled,omitempty" yaml:"disabled,omitempty"`
+	Categories            []string `json:"categories,omitempty" yaml:"categories,omitempty"`
+	ComplianceType        string   `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
+	Controls              []string `json:"controls,omitempty" yaml:"controls,omitempty"`
+	Disabled              bool     `json:"disabled,omitempty" yaml:"disabled,omitempty"`
+	InformKyvernoPolicies bool     `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
 	// Make this a slice of structs in the event we want additional configuration related to
 	// a manifest such as accepting patches.
 	Manifests         []Manifest        `json:"manifests,omitempty" yaml:"manifests,omitempty"`
