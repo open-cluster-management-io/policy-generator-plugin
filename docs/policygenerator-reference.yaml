@@ -95,7 +95,8 @@ policies:
     # a namespace is specified in the manifest, the selector is not necessary. This defaults to no
     # selectors.
     namespaceSelector:
-      include: [] exclude: []
+      include: []
+      exclude: []
     # Optional. (See policyDefaults.placement for description.)
     placement: {}
     # Optional. (See policyDefaults.remediationAction for description.)
