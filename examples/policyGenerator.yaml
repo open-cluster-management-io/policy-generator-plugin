@@ -24,8 +24,22 @@ policies:
   disabled: false
   manifests:
     - path: input/configmap-aliens.yaml
+      patches:
+        - apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            labels:
+              chandler: bing
   remediationAction: enforce
 - name: policy-app-config-others
   disabled: true
   manifests:
     - path: input2/
+      patches:
+        - apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: game-config-toads
+            namespace: default
+            labels:
+              monica: geller

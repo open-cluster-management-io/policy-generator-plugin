@@ -56,6 +56,24 @@ policies:
       # Required. Path to a single file or a flat directory of files relative to the
       # kustomization.yaml file.
       - path: ""
+        # Optional. A Kustomize patch to apply to the manifest(s) at the path. If there
+        # are multiple manifests, the patch requires the apiVersion, kind, metadata.name,
+        # and metadata.namespace (if applicable) fields to be set so Kustomize
+        # can identify the manifest the patch applies to.
+        patches:
+          # Optional: Only required when there are multiple manifests in the path.
+          apiVersion: ""
+          # Optional: Only required when there are multiple manifests in the path.
+          kind: ""
+          metadata:
+            # Optional: Only required when there are multiple manifests in the path.
+            name: ""
+            # Optional: Only required when there are multiple manifests in the path and it's a
+            # manifest to a namespaced resource.
+            namespace: ""
+            # An example modification to the manifest
+            annotations:
+              friends-character: Chandler Bing
     # Optional. (See policyDefaults.categories for description.)
     categories:
       - "CM Configuration Management"

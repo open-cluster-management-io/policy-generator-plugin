@@ -17,10 +17,20 @@ func TestGenerate(t *testing.T) {
 	p.PlacementBindingDefaults.Name = "my-placement-binding"
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	p.PolicyDefaults.Namespace = "my-policies"
+	patch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"labels": map[string]string{
+				"chandler": "bing",
+			},
+		},
+	}
 	policyConf := policyConfig{
 		Name: "policy-app-config",
 		Manifests: []manifest{
-			{Path: path.Join(tmpDir, "configmap.yaml")},
+			{
+				Path:    path.Join(tmpDir, "configmap.yaml"),
+				Patches: []map[string]interface{}{patch},
+			},
 		},
 	}
 	policyConf2 := policyConfig{
@@ -63,6 +73,8 @@ spec:
                             game.properties: enemies=potato
                         kind: ConfigMap
                         metadata:
+                            labels:
+                                chandler: bing
                             name: my-configmap
                 remediationAction: inform
                 severity: low
@@ -474,7 +486,11 @@ func TestCreatePolicyInvalidYAML(t *testing.T) {
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	assertEqual(t, err.Error(), "the input manifests must be in the format of YAML objects")
+	expected := fmt.Sprintf(
+		"failed to decode the manifest file at %s: the input manifests must be in the format of "+
+			"YAML objects", manifestPath,
+	)
+	assertEqual(t, err.Error(), expected)
 }
 
 func TestCreatePlacementRuleDefault(t *testing.T) {
