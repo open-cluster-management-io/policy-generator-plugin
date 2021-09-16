@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/open-cluster-management/policy-generator-plugin/internal"
@@ -50,7 +51,7 @@ func errorAndExit(msg string, formatArgs ...interface{}) {
 // generate policies, and returns the generated policies as a byte array.
 func processGeneratorConfig(filePath string) []byte {
 	p := internal.Plugin{}
-	fileData, err := os.ReadFile(filePath)
+	fileData, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		errorAndExit("failed to read file '%s': %s", filePath, err)
 	}
