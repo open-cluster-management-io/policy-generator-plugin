@@ -17,3 +17,6 @@ PolicyGenerator
 vendor/
 
 .go/
+
+# IDE
+.vscode
