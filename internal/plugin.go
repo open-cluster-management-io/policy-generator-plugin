@@ -74,7 +74,7 @@ func (p *Plugin) Config(config []byte) error {
 	return p.assertValidConfig()
 }
 
-// Generate generates the policies, placement rules, and placement bindings and returns them as
+// Generate the policies, placement rules, and placement bindings and returns them as
 // a single YAML file as a byte array. An error is returned if they cannot be created.
 func (p *Plugin) Generate() ([]byte, error) {
 	// Set the default empty values to the fields that track state

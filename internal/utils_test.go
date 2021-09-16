@@ -64,6 +64,9 @@ data:
 		{Manifests: manifestFiles},
 		{Manifests: []types.Manifest{{Path: tmpDir}}},
 	}
+	// test NonConsolidated = false case
+	// policyTemplates will have only one policyTemplate
+	// and two objTemplate under this policyTemplate
 	for _, test := range tests {
 		policyConf := types.PolicyConfig{
 			ComplianceType:    "musthave",
@@ -101,6 +104,67 @@ data:
 		assertEqual(t, kind1, "ConfigMap")
 		assertEqual(t, objTemplates[1]["complianceType"], "musthave")
 		kind2, ok := objTemplates[1]["objectDefinition"].(map[string]interface{})["kind"]
+		if !ok {
+			t.Fatal("The objectDefinition field is an invalid format")
+		}
+		assertEqual(t, kind2, "ConfigMap")
+	}
+
+	// test NonConsolidated = true case
+	// policyTemplates will have two policyTemplate
+	// and each policyTemplate has only one objTemplate
+	for _, test := range tests {
+		policyConf := types.PolicyConfig{
+			ComplianceType:    "musthave",
+			Manifests:         test.Manifests,
+			Name:              "policy-app-config",
+			RemediationAction: "inform",
+			Severity:          "low",
+			NonConsolidated:   true,
+		}
+
+		policyTemplates, err := getPolicyTemplates(&policyConf)
+		if err != nil {
+			t.Fatalf("Failed to get the policy templates: %v", err)
+		}
+		assertEqual(t, len(policyTemplates), 2)
+		policyTemplate1 := policyTemplates[0]
+		objdef1 := policyTemplate1["objectDefinition"]
+		assertEqual(t, objdef1["metadata"].(map[string]string)["name"], "policy-app-config")
+		spec1, ok := objdef1["spec"].(map[string]interface{})
+		if !ok {
+			t.Fatal("The spec field is an invalid format")
+		}
+		assertEqual(t, spec1["remediationAction"], "inform")
+		assertEqual(t, spec1["severity"], "low")
+		objTemplates1, ok := spec1["object-templates"].([]map[string]interface{})
+		if !ok {
+			t.Fatal("The object-templates field is an invalid format")
+		}
+		assertEqual(t, len(objTemplates1), 1)
+		assertEqual(t, objTemplates1[0]["complianceType"], "musthave")
+		kind1, ok := objTemplates1[0]["objectDefinition"].(map[string]interface{})["kind"]
+		if !ok {
+			t.Fatal("The objectDefinition field is an invalid format")
+		}
+		assertEqual(t, kind1, "ConfigMap")
+
+		policyTemplate2 := policyTemplates[1]
+		objdef2 := policyTemplate2["objectDefinition"]
+		assertEqual(t, objdef2["metadata"].(map[string]string)["name"], "policy-app-config")
+		spec2, ok := objdef2["spec"].(map[string]interface{})
+		if !ok {
+			t.Fatal("The spec field is an invalid format")
+		}
+		assertEqual(t, spec2["remediationAction"], "inform")
+		assertEqual(t, spec2["severity"], "low")
+		objTemplates2, ok := spec2["object-templates"].([]map[string]interface{})
+		if !ok {
+			t.Fatal("The object-templates field is an invalid format")
+		}
+		assertEqual(t, len(objTemplates2), 1)
+		assertEqual(t, objTemplates2[0]["complianceType"], "musthave")
+		kind2, ok := objTemplates2[0]["objectDefinition"].(map[string]interface{})["kind"]
 		if !ok {
 			t.Fatal("The objectDefinition field is an invalid format")
 		}

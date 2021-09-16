@@ -86,9 +86,11 @@ func getManifests(policyConf *types.PolicyConfig) ([]map[string]interface{}, err
 	return manifests, nil
 }
 
-// getPolicyTemplates generates the policy templates for the ConfigurationPolicy manifests
-// that includes the manifests specified in policyConf. An error is returned
-// if one or more manifests cannot be read or are invalid.
+// policyConf.NonConsolidated = false (default value) will generate a policy templates array
+// that just one item includes all consolidated manifests specified in policyConf.
+// policyConf.NonConsolidated = true will generate a policy templates array
+// that each item includes a single manifest specified in policyConf.
+// An error is returned if one or more manifests cannot be read or are invalid.
 func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string]interface{}, error) {
 	manifests, err := getManifests(policyConf)
 	if err != nil {
@@ -101,14 +103,51 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 		)
 	}
 
-	objectTemplates := make([]map[string]interface{}, 0, len(manifests))
+	policyTemplatesLength := 1
+	if policyConf.NonConsolidated {
+		policyTemplatesLength = len(manifests)
+	}
+	objectTemplates := make([]map[string]interface{}, 0, policyTemplatesLength)
+	policyTemplates := make([]map[string]map[string]interface{}, 0, policyTemplatesLength)
 	for _, manifest := range manifests {
 		objTemplate := map[string]interface{}{
 			"complianceType":   policyConf.ComplianceType,
 			"objectDefinition": manifest,
 		}
-		objectTemplates = append(objectTemplates, objTemplate)
+		if policyConf.NonConsolidated {
+			// casting each objTemplate with manifest to objectTemplates type
+			// build policyTemplate for each objectTemplates
+			policyTemplate := buildPolicyTemplatesItem(policyConf, &[]map[string]interface{}{objTemplate})
+			setNamespaceSelector(policyConf, policyTemplate)
+			policyTemplates = append(policyTemplates, *policyTemplate)
+		} else {
+			// put all objTemplate with manifest into single consolidated objectTemplates object
+			objectTemplates = append(objectTemplates, objTemplate)
+		}
 	}
+
+	//  just build one policyTemplate by using the above consolidated objectTemplates
+	if !policyConf.NonConsolidated {
+		policyTemplate := buildPolicyTemplatesItem(policyConf, &objectTemplates)
+		setNamespaceSelector(policyConf, policyTemplate)
+		policyTemplates = append(policyTemplates, *policyTemplate)
+	}
+
+	// check the enabled expanders and add additional policy templates
+	expandedPolicyTemplates := handleExpanders(manifests, policyConf)
+	policyTemplates = append(policyTemplates, expandedPolicyTemplates...)
+
+	return policyTemplates, nil
+}
+
+// void function to set namespaceSelector by reference.
+func setNamespaceSelector(policyConf *types.PolicyConfig, policyTemplate *map[string]map[string]interface{}) {
+	if policyConf.NamespaceSelector.Exclude != nil || policyConf.NamespaceSelector.Include != nil {
+		(*policyTemplate)["objectDefinition"]["spec"].(map[string]interface{})["namespaceSelector"] = policyConf.NamespaceSelector
+	}
+}
+
+func buildPolicyTemplatesItem(policyConf *types.PolicyConfig, objectTemplates *[]map[string]interface{}) *map[string]map[string]interface{} {
 	policyTemplate := map[string]map[string]interface{}{
 		"objectDefinition": {
 			"apiVersion": policyAPIVersion,
@@ -117,22 +156,14 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 				"name": policyConf.Name,
 			},
 			"spec": map[string]interface{}{
-				"object-templates":  objectTemplates,
+				"object-templates":  *objectTemplates,
 				"remediationAction": policyConf.RemediationAction,
 				"severity":          policyConf.Severity,
 			},
 		},
 	}
 
-	if policyConf.NamespaceSelector.Exclude != nil || policyConf.NamespaceSelector.Include != nil {
-		policyTemplate["objectDefinition"]["spec"].(map[string]interface{})["namespaceSelector"] = policyConf.NamespaceSelector
-	}
-
-	policyTemplates := []map[string]map[string]interface{}{policyTemplate}
-	expandedPolicyTemplates := handleExpanders(manifests, policyConf)
-	policyTemplates = append(policyTemplates, expandedPolicyTemplates...)
-
-	return policyTemplates, nil
+	return &policyTemplate
 }
 
 // handleExpanders will go through all the enabled expanders and generate additional
