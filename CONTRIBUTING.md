@@ -62,10 +62,12 @@ comment on the issue or pull request (PR).
 
 ## Pre-check before submitting a PR
 
-Before submitting a PR, please perform the following steps:
+Before submitting a PR, perform the following steps:
 
 ```shell
 make fmt
 make lint
 make test
 ```
+
+If there are any updates to the YAML, also make sure to update the [policy-generator.yaml](./docs/policy-generator.yaml) file.
