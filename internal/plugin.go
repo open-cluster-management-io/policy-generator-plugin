@@ -140,11 +140,21 @@ func (p *Plugin) Generate() ([]byte, error) {
 		plrNameToPolicyIdxs[plrName] = append(plrNameToPolicyIdxs[plrName], i)
 	}
 
+	// Sort the keys of plrNameToPolicyIdxs so that the policy bindings are generated in a
+	// consistent order.
+	plrNames := make([]string, len(plrNameToPolicyIdxs))
+	i := 0
+	for k := range plrNameToPolicyIdxs {
+		plrNames[i] = k
+		i++
+	}
+	sort.Strings(plrNames)
+
 	plcBindingCount := 0
-	for plrName, policyIdxs := range plrNameToPolicyIdxs {
+	for _, plrName := range plrNames {
 		// Determine which policies to be included in the placement binding.
 		policyConfs := []*policyConfig{}
-		for _, i := range policyIdxs {
+		for _, i := range plrNameToPolicyIdxs[plrName] {
 			policyConfs = append(policyConfs, &p.Policies[i])
 		}
 
