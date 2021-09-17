@@ -7,6 +7,8 @@ import (
 	"path"
 	"strings"
 	"testing"
+
+	"github.com/open-cluster-management/policy-generator-plugin/internal/types"
 )
 
 func TestGenerate(t *testing.T) {
@@ -24,18 +26,18 @@ func TestGenerate(t *testing.T) {
 			},
 		},
 	}
-	policyConf := policyConfig{
+	policyConf := types.PolicyConfig{
 		Name: "policy-app-config",
-		Manifests: []manifest{
+		Manifests: []types.Manifest{
 			{
 				Path:    path.Join(tmpDir, "configmap.yaml"),
 				Patches: []map[string]interface{}{patch},
 			},
 		},
 	}
-	policyConf2 := policyConfig{
+	policyConf2 := types.PolicyConfig{
 		Name: "policy-app-config2",
-		Manifests: []manifest{
+		Manifests: []types.Manifest{
 			{Path: path.Join(tmpDir, "configmap.yaml")},
 		},
 	}
@@ -155,15 +157,15 @@ func TestGenerateSeparateBindings(t *testing.T) {
 	createConfigMap(t, tmpDir, "configmap.yaml")
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "my-policies"
-	policyConf := policyConfig{
+	policyConf := types.PolicyConfig{
 		Name: "policy-app-config",
-		Manifests: []manifest{
+		Manifests: []types.Manifest{
 			{Path: path.Join(tmpDir, "configmap.yaml")},
 		},
 	}
-	policyConf2 := policyConfig{
+	policyConf2 := types.PolicyConfig{
 		Name: "policy-app-config2",
-		Manifests: []manifest{
+		Manifests: []types.Manifest{
 			{Path: path.Join(tmpDir, "configmap.yaml")},
 		},
 	}
@@ -306,15 +308,15 @@ func TestGenerateMissingBindingName(t *testing.T) {
 	p.PlacementBindingDefaults.Name = ""
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	p.PolicyDefaults.Namespace = "my-policies"
-	policyConf := policyConfig{
+	policyConf := types.PolicyConfig{
 		Name: "policy-app-config",
-		Manifests: []manifest{
+		Manifests: []types.Manifest{
 			{Path: path.Join(tmpDir, "configmap.yaml")},
 		},
 	}
-	policyConf2 := policyConfig{
+	policyConf2 := types.PolicyConfig{
 		Name: "policy-app-config2",
-		Manifests: []manifest{
+		Manifests: []types.Manifest{
 			{Path: path.Join(tmpDir, "configmap.yaml")},
 		},
 	}
@@ -343,9 +345,9 @@ func TestCreatePolicy(t *testing.T) {
 	createConfigMap(t, tmpDir, "configmap.yaml")
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "my-policies"
-	policyConf := policyConfig{
+	policyConf := types.PolicyConfig{
 		Name: "policy-app-config",
-		Manifests: []manifest{
+		Manifests: []types.Manifest{
 			{Path: path.Join(tmpDir, "configmap.yaml")},
 		},
 	}
@@ -402,10 +404,10 @@ func TestCreatePolicyDir(t *testing.T) {
 	createConfigMap(t, tmpDir, "configmap2.yaml")
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "my-policies"
-	policyConf := policyConfig{
+	policyConf := types.PolicyConfig{
 		Name:              "policy-app-config",
-		Manifests:         []manifest{{Path: tmpDir}},
-		NamespaceSelector: namespaceSelector{Include: []string{"default"}},
+		Manifests:         []types.Manifest{{Path: tmpDir}},
+		NamespaceSelector: types.NamespaceSelector{Include: []string{"default"}},
 	}
 	p.Policies = append(p.Policies, policyConf)
 	p.applyDefaults()
@@ -474,9 +476,9 @@ func TestCreatePolicyInvalidYAML(t *testing.T) {
 	}
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "my-policies"
-	policyConf := policyConfig{
+	policyConf := types.PolicyConfig{
 		Name:      "policy-app-config",
-		Manifests: []manifest{{Path: manifestPath}},
+		Manifests: []types.Manifest{{Path: manifestPath}},
 	}
 	p.Policies = append(p.Policies, policyConf)
 	p.applyDefaults()
@@ -499,7 +501,7 @@ func TestCreatePlacementRuleDefault(t *testing.T) {
 	p.allPlrs = map[string]bool{}
 	p.csToPlr = map[string]string{}
 	p.PolicyDefaults.Namespace = "my-policies"
-	policyConf := policyConfig{Name: "policy-app-config"}
+	policyConf := types.PolicyConfig{Name: "policy-app-config"}
 
 	name, err := p.createPlacementRule(&policyConf)
 	if err != nil {
@@ -533,7 +535,7 @@ func TestCreatePlacementRuleSinglePlr(t *testing.T) {
 	p.csToPlr = map[string]string{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
-	policyConf := policyConfig{Name: "policy-app-config"}
+	policyConf := types.PolicyConfig{Name: "policy-app-config"}
 
 	name, err := p.createPlacementRule(&policyConf)
 	if err != nil {
@@ -573,7 +575,7 @@ func TestCreatePlacementRuleClusterSelectors(t *testing.T) {
 	p.allPlrs = map[string]bool{}
 	p.csToPlr = map[string]string{}
 	p.PolicyDefaults.Namespace = "my-policies"
-	policyConf := policyConfig{Name: "policy-app-config"}
+	policyConf := types.PolicyConfig{Name: "policy-app-config"}
 	policyConf.Placement.ClusterSelectors = map[string]string{
 		"cloud": "red hat",
 		"game":  "pacman",
@@ -618,15 +620,15 @@ func TestCreatePlacementRuleDuplicateName(t *testing.T) {
 	p.allPlrs = map[string]bool{}
 	p.csToPlr = map[string]string{}
 	p.PolicyDefaults.Namespace = "my-policies"
-	policyConf := policyConfig{
+	policyConf := types.PolicyConfig{
 		Name: "policy-app-config",
-		Placement: placementConfig{
+		Placement: types.PlacementConfig{
 			Name: "my-placement",
 		},
 	}
-	policyConf2 := policyConfig{
+	policyConf2 := types.PolicyConfig{
 		Name: "policy-app-config2",
-		Placement: placementConfig{
+		Placement: types.PlacementConfig{
 			ClusterSelectors: map[string]string{"my": "app"},
 			Name:             "my-placement",
 		},
@@ -659,7 +661,7 @@ func plrPathHelper(t *testing.T, plrYAML string) (*Plugin, string) {
 	p.allPlrs = map[string]bool{}
 	p.processedPlrs = map[string]bool{}
 	p.PolicyDefaults.Namespace = "my-policies"
-	policyConf := policyConfig{Name: "policy-app-config"}
+	policyConf := types.PolicyConfig{Name: "policy-app-config"}
 	policyConf.Placement.PlacementRulePath = plrPath
 	p.Policies = append(p.Policies, policyConf)
 
@@ -832,14 +834,14 @@ func TestCreatePlacementBinding(t *testing.T) {
 	t.Parallel()
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "my-policies"
-	policyConf := policyConfig{Name: "policy-app-config"}
+	policyConf := types.PolicyConfig{Name: "policy-app-config"}
 	p.Policies = append(p.Policies, policyConf)
-	policyConf2 := policyConfig{Name: "policy-app-config2"}
+	policyConf2 := types.PolicyConfig{Name: "policy-app-config2"}
 	p.Policies = append(p.Policies, policyConf2)
 
 	bindingName := "my-placement-binding"
 	plrName := "my-placement-rule"
-	policyConfs := []*policyConfig{}
+	policyConfs := []*types.PolicyConfig{}
 	policyConfs = append(policyConfs, &p.Policies[0], &p.Policies[1])
 
 	err := p.createPlacementBinding(bindingName, plrName, policyConfs)
