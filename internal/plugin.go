@@ -74,7 +74,7 @@ func (p *Plugin) Config(config []byte) error {
 	return p.assertValidConfig()
 }
 
-// Generate the policies, placement rules, and placement bindings and returns them as
+// Generate generates the policies, placement rules, and placement bindings and returns them as
 // a single YAML file as a byte array. An error is returned if they cannot be created.
 func (p *Plugin) Generate() ([]byte, error) {
 	// Set the default empty values to the fields that track state
@@ -209,20 +209,19 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		p.PolicyDefaults.Controls = defaults.Controls
 	}
 
-	// Policy expanders default to true unless explicitly set in the config.
-	// Gatekeeper policy expander policyDefault
-	igvValue, set := getDefaultBool(unmarshaledConfig, "informGatekeeperPolicies")
-	if set {
-		p.PolicyDefaults.InformGatekeeperPolicies = igvValue
-	} else {
-		p.PolicyDefaults.InformGatekeeperPolicies = true
-	}
-	// Kyverno policy expander policyDefault
-	ikvValue, set := getDefaultBool(unmarshaledConfig, "informKyvernoPolicies")
-	if set {
+	// Defaults to true unless explicitly set in the config.
+	ikvValue, setIkv := getDefaultBool(unmarshaledConfig, "informKyvernoPolicies")
+	if setIkv {
 		p.PolicyDefaults.InformKyvernoPolicies = ikvValue
 	} else {
 		p.PolicyDefaults.InformKyvernoPolicies = true
+	}
+
+	consolidatedValue, setConsolidated := getDefaultBool(unmarshaledConfig, "consolidatedManifests")
+	if setConsolidated {
+		p.PolicyDefaults.ConsolidatedManifests = consolidatedValue
+	} else {
+		p.PolicyDefaults.ConsolidatedManifests = true
 	}
 
 	if p.PolicyDefaults.RemediationAction == "" {
@@ -251,20 +250,19 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.Controls = p.PolicyDefaults.Controls
 		}
 
-		// Policy expanders default to the policy default unless explicitly set.
-		// Gatekeeper policy expander policy override
-		igvValue, set := getPolicyBool(unmarshaledConfig, i, "informGatekeeperPolicies")
-		if set {
-			policy.InformGatekeeperPolicies = igvValue
-		} else {
-			policy.InformGatekeeperPolicies = p.PolicyDefaults.InformGatekeeperPolicies
-		}
-		// Kyverno policy expander policy override
-		ikvValue, set := getPolicyBool(unmarshaledConfig, i, "informKyvernoPolicies")
-		if set {
+		// Defaults to the policy default unless explicitly set.
+		ikvValue, setIkv := getPolicyBool(unmarshaledConfig, i, "informKyvernoPolicies")
+		if setIkv {
 			policy.InformKyvernoPolicies = ikvValue
 		} else {
 			policy.InformKyvernoPolicies = p.PolicyDefaults.InformKyvernoPolicies
+		}
+
+		consolidatedValue, setConsolidated := getPolicyBool(unmarshaledConfig, i, "consolidatedManifests")
+		if setConsolidated {
+			policy.ConsolidatedManifests = consolidatedValue
+		} else {
+			policy.ConsolidatedManifests = p.PolicyDefaults.ConsolidatedManifests
 		}
 
 		// If both cluster selectors and placement rule path aren't set, then use the

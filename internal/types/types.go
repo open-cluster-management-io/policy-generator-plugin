@@ -32,23 +32,22 @@ type PolicyConfig struct {
 	RemediationAction     string          `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
 	Severity              string          `json:"severity,omitempty" yaml:"severity,omitempty"`
 	Standards             []string        `json:"standards,omitempty" yaml:"standards,omitempty"`
-	InformKyvernoPolicies bool            `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
+	ConsolidatedManifests bool            `json:"consolidatedManifests,omitempty" yaml:"consolidatedManifests,omitempty"`
 	Disabled              bool            `json:"disabled,omitempty" yaml:"disabled,omitempty"`
-	// NonConsolidated = false (default value) will consolidate multi manifests specified
-	// in policyConf into single policy template
-	NonConsolidated bool `json:"nonConsolidated,omitempty" yaml:"nonConsolidated,omitempty"`
+	InformKyvernoPolicies bool            `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
 }
 
 type PolicyDefaults struct {
-	Categories            []string          `json:"categories,omitempty" yaml:"categories,omitempty"`
-	ComplianceType        string            `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
-	Controls              []string          `json:"controls,omitempty" yaml:"controls,omitempty"`
-	InformKyvernoPolicies bool              `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
-	Namespace             string            `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	NamespaceSelector     NamespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
+	Categories        []string          `json:"categories,omitempty" yaml:"categories,omitempty"`
+	ComplianceType    string            `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
+	Controls          []string          `json:"controls,omitempty" yaml:"controls,omitempty"`
+	Namespace         string            `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	NamespaceSelector NamespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
 	// This is named Placement so that eventually PlacementRules and Placements will be supported
-	Placement         PlacementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
-	RemediationAction string          `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
-	Severity          string          `json:"severity,omitempty" yaml:"severity,omitempty"`
-	Standards         []string        `json:"standards,omitempty" yaml:"standards,omitempty"`
+	Placement             PlacementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
+	RemediationAction     string          `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
+	Severity              string          `json:"severity,omitempty" yaml:"severity,omitempty"`
+	Standards             []string        `json:"standards,omitempty" yaml:"standards,omitempty"`
+	ConsolidatedManifests bool            `json:"consolidatedManifests,omitempty" yaml:"consolidatedManifests,omitempty"`
+	InformKyvernoPolicies bool            `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
 }

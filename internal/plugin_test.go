@@ -43,6 +43,10 @@ func TestGenerate(t *testing.T) {
 	}
 	p.Policies = append(p.Policies, policyConf, policyConf2)
 	p.applyDefaults(map[string]interface{}{})
+	// Default all policy ConsolidatedManifests flags are set to true
+	// unless explicitly set
+	assertEqual(t, p.Policies[0].ConsolidatedManifests, true)
+	assertEqual(t, p.Policies[1].ConsolidatedManifests, true)
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}

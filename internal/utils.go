@@ -86,10 +86,11 @@ func getManifests(policyConf *types.PolicyConfig) ([]map[string]interface{}, err
 	return manifests, nil
 }
 
-// policyConf.NonConsolidated = false (default value) will generate a policy templates array
-// that just one item includes all consolidated manifests specified in policyConf.
-// policyConf.NonConsolidated = true will generate a policy templates array
-// that each item includes a single manifest specified in policyConf.
+// getPolicyTemplates generates the policy templates for the ConfigurationPolicy manifests
+// policyConf.ConsolidatedManifests = true (default value) will generate a policy templates slice
+// that just one template includes all consolidated manifests specified in policyConf.
+// policyConf.ConsolidatedManifests = false will generate a policy templates slice
+// that each template includes a single manifest specified in policyConf.
 // An error is returned if one or more manifests cannot be read or are invalid.
 func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string]interface{}, error) {
 	manifests, err := getManifests(policyConf)
@@ -104,7 +105,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 	}
 
 	policyTemplatesLength := 1
-	if policyConf.NonConsolidated {
+	if !policyConf.ConsolidatedManifests {
 		policyTemplatesLength = len(manifests)
 	}
 	objectTemplates := make([]map[string]interface{}, 0, policyTemplatesLength)
@@ -114,21 +115,21 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 			"complianceType":   policyConf.ComplianceType,
 			"objectDefinition": manifest,
 		}
-		if policyConf.NonConsolidated {
-			// casting each objTemplate with manifest to objectTemplates type
-			// build policyTemplate for each objectTemplates
-			policyTemplate := buildPolicyTemplatesItem(policyConf, &[]map[string]interface{}{objTemplate})
-			setNamespaceSelector(policyConf, policyTemplate)
-			policyTemplates = append(policyTemplates, *policyTemplate)
-		} else {
+		if policyConf.ConsolidatedManifests {
 			// put all objTemplate with manifest into single consolidated objectTemplates object
 			objectTemplates = append(objectTemplates, objTemplate)
+		} else {
+			// casting each objTemplate with manifest to objectTemplates type
+			// build policyTemplate for each objectTemplates
+			policyTemplate := buildPolicyTemplate(policyConf, &[]map[string]interface{}{objTemplate})
+			setNamespaceSelector(policyConf, policyTemplate)
+			policyTemplates = append(policyTemplates, *policyTemplate)
 		}
 	}
 
 	//  just build one policyTemplate by using the above consolidated objectTemplates
-	if !policyConf.NonConsolidated {
-		policyTemplate := buildPolicyTemplatesItem(policyConf, &objectTemplates)
+	if policyConf.ConsolidatedManifests {
+		policyTemplate := buildPolicyTemplate(policyConf, &objectTemplates)
 		setNamespaceSelector(policyConf, policyTemplate)
 		policyTemplates = append(policyTemplates, *policyTemplate)
 	}
@@ -140,14 +141,15 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 	return policyTemplates, nil
 }
 
-// void function to set namespaceSelector by reference.
+// setNamespaceSelector sets the namespace selector, if set, on the input policy template.
 func setNamespaceSelector(policyConf *types.PolicyConfig, policyTemplate *map[string]map[string]interface{}) {
 	if policyConf.NamespaceSelector.Exclude != nil || policyConf.NamespaceSelector.Include != nil {
 		(*policyTemplate)["objectDefinition"]["spec"].(map[string]interface{})["namespaceSelector"] = policyConf.NamespaceSelector
 	}
 }
 
-func buildPolicyTemplatesItem(policyConf *types.PolicyConfig, objectTemplates *[]map[string]interface{}) *map[string]map[string]interface{} {
+// buildPolicyTemplate generates single policy template by using objectTemplates with manifests.
+func buildPolicyTemplate(policyConf *types.PolicyConfig, objectTemplates *[]map[string]interface{}) *map[string]map[string]interface{} {
 	policyTemplate := map[string]map[string]interface{}{
 		"objectDefinition": {
 			"apiVersion": policyAPIVersion,
