@@ -12,8 +12,6 @@ type GatekeeperPolicyExpander struct{}
 
 const (
 	gatekeeperConstraintAPIVersion = "constraints.gatekeeper.sh/v1beta1"
-	gatekeeperTemplateAPIVersion   = "templates.gatekeeper.sh/v1beta1"
-	gatekeeperTemplateKind         = "ConstraintTemplate"
 )
 
 // CanHandle determines if the manifest is a Gatekeeper policy that can be expanded.
@@ -55,7 +53,7 @@ func (g GatekeeperPolicyExpander) Expand(
 	constraintName, _, _ := unstructured.NestedString(manifest, "metadata", "name")
 	constraintKind, _, _ := unstructured.NestedString(manifest, "kind")
 
-	auditConfigPolicyName := fmt.Sprintf("inform-gatekeeper-%s", constraintName)
+	auditConfigPolicyName := fmt.Sprintf("inform-gatekeeper-audit-%s", constraintName)
 	auditConfigurationPolicy := map[string]map[string]interface{}{
 		"objectDefinition": {
 			"apiVersion": configPolicyAPIVersion,
@@ -90,7 +88,7 @@ func (g GatekeeperPolicyExpander) Expand(
 	}
 	// Further improvements here could be made by having the user specify the Gatekeeper namespace and
 	// targeting the events for the constraint kind to just that namespace.
-	admissionConfigPolicyName := fmt.Sprintf("inform-gatekeeper-%s", constraintName)
+	admissionConfigPolicyName := fmt.Sprintf("inform-gatekeeper-admission-%s", constraintName)
 	admissionConfigurationPolicy := map[string]map[string]interface{}{
 		"objectDefinition": {
 			"apiVersion": configPolicyAPIVersion,

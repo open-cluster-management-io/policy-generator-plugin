@@ -3,27 +3,12 @@ package expanders
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/open-cluster-management/policy-generator-plugin/internal/types"
 )
 
-func assertEqual(t *testing.T, a interface{}, b interface{}) {
-	t.Helper()
-	if a != b {
-		t.Fatalf("%s != %s", a, b)
-	}
-}
-
-func assertReflectEqual(t *testing.T, a interface{}, b interface{}) {
-	t.Helper()
-	if !reflect.DeepEqual(a, b) {
-		t.Fatalf("%s != %s", a, b)
-	}
-}
-
-func TestCanHandle(t *testing.T) {
+func TestKyvernoCanHandle(t *testing.T) {
 	t.Parallel()
 	k := KyvernoPolicyExpander{}
 
@@ -41,7 +26,7 @@ func TestCanHandle(t *testing.T) {
 				manifest := map[string]interface{}{
 					"apiVersion": kyvernoAPIVersion,
 					"kind":       test.kind,
-					"metadata": map[string]string{
+					"metadata": map[string]interface{}{
 						"name": "my-awesome-policy",
 					},
 				}
@@ -51,7 +36,7 @@ func TestCanHandle(t *testing.T) {
 	}
 }
 
-func TestCanHandleInvalid(t *testing.T) {
+func TestKyvernoCanHandleInvalid(t *testing.T) {
 	t.Parallel()
 	k := KyvernoPolicyExpander{}
 
@@ -66,13 +51,13 @@ func TestCanHandleInvalid(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(
-			fmt.Sprintf("kind=%s", test.kind),
+			fmt.Sprintf("apiVersion=%s,kind=%s,name=%s", test.apiVersion, test.kind, test.name),
 			func(t *testing.T) {
 				t.Parallel()
 				manifest := map[string]interface{}{
 					"apiVersion": test.apiVersion,
 					"kind":       test.kind,
-					"metadata": map[string]string{
+					"metadata": map[string]interface{}{
 						"name": test.name,
 					},
 				}
@@ -82,7 +67,7 @@ func TestCanHandleInvalid(t *testing.T) {
 	}
 }
 
-func TestEnabled(t *testing.T) {
+func TestKyvernoEnabled(t *testing.T) {
 	t.Parallel()
 	k := KyvernoPolicyExpander{}
 	tests := []struct {
@@ -95,13 +80,13 @@ func TestEnabled(t *testing.T) {
 	}
 }
 
-func TestExpand(t *testing.T) {
+func TestKyvernoExpand(t *testing.T) {
 	t.Parallel()
 	k := KyvernoPolicyExpander{}
 	manifest := map[string]interface{}{
 		"apiVersion": kyvernoAPIVersion,
 		"kind":       kyvernoClusterKind,
-		"metadata": map[string]string{
+		"metadata": map[string]interface{}{
 			"name": "my-awesome-policy",
 		},
 	}
