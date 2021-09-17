@@ -10,12 +10,13 @@ import (
 	"os"
 	"path"
 
+	"github.com/open-cluster-management/policy-generator-plugin/internal/types"
 	"gopkg.in/yaml.v3"
 )
 
 // getManifests will get all of the manifest files associated with the input policy configuration.
 // An error is returned if a manifest path cannot be read.
-func getManifests(policyConf *policyConfig) (*[]map[string]interface{}, error) {
+func getManifests(policyConf *types.PolicyConfig) (*[]map[string]interface{}, error) {
 	manifests := []map[string]interface{}{}
 	for _, manifest := range policyConf.Manifests {
 		manifestPaths := []string{}
@@ -87,7 +88,7 @@ func getManifests(policyConf *policyConfig) (*[]map[string]interface{}, error) {
 // getPolicyTemplate generates a policy template for a ConfigurationPolicy
 // that includes the manifests specified in policyConf. An error is returned
 // if one or more manifests cannot be read or are invalid.
-func getPolicyTemplate(policyConf *policyConfig) (
+func getPolicyTemplate(policyConf *types.PolicyConfig) (
 	*map[string]map[string]interface{}, error,
 ) {
 	manifests, err := getManifests(policyConf)

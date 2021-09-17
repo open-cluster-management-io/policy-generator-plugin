@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/open-cluster-management/policy-generator-plugin/internal/types"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -23,53 +24,6 @@ const (
 	placementRuleKind          = "PlacementRule"
 )
 
-type manifest struct {
-	Patches []map[string]interface{} `json:"patches,omitempty" yaml:"patches,omitempty"`
-	Path    string                   `json:"path,omitempty" yaml:"path,omitempty"`
-}
-
-type namespaceSelector struct {
-	Exclude []string `json:"exclude,omitempty" yaml:"exclude,omitempty"`
-	Include []string `json:"include,omitempty" yaml:"include,omitempty"`
-}
-
-type placementConfig struct {
-	ClusterSelectors  map[string]string `json:"clusterSelectors,omitempty" yaml:"clusterSelectors,omitempty"`
-	Name              string            `json:"name,omitempty" yaml:"name,omitempty"`
-	PlacementRulePath string            `json:"placementRulePath,omitempty" yaml:"placementRulePath,omitempty"`
-}
-
-// policyConfig represents a policy entry in the PolicyGenerator configuration.
-type policyConfig struct {
-	Categories     []string `json:"categories,omitempty" yaml:"categories,omitempty"`
-	ComplianceType string   `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
-	Controls       []string `json:"controls,omitempty" yaml:"controls,omitempty"`
-	Disabled       bool     `json:"disabled,omitempty" yaml:"disabled,omitempty"`
-	// Make this a slice of structs in the event we want additional configuration related to
-	// a manifest such as accepting patches.
-	Manifests         []manifest        `json:"manifests,omitempty" yaml:"manifests,omitempty"`
-	Name              string            `json:"name,omitempty" yaml:"name,omitempty"`
-	NamespaceSelector namespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
-	// This is named Placement so that eventually PlacementRules and Placements will be supported
-	Placement         placementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
-	RemediationAction string          `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
-	Severity          string          `json:"severity,omitempty" yaml:"severity,omitempty"`
-	Standards         []string        `json:"standards,omitempty" yaml:"standards,omitempty"`
-}
-
-type policyDefaults struct {
-	Categories        []string          `json:"categories,omitempty" yaml:"categories,omitempty"`
-	ComplianceType    string            `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
-	Controls          []string          `json:"controls,omitempty" yaml:"controls,omitempty"`
-	Namespace         string            `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	NamespaceSelector namespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
-	// This is named Placement so that eventually PlacementRules and Placements will be supported
-	Placement         placementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
-	RemediationAction string          `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
-	Severity          string          `json:"severity,omitempty" yaml:"severity,omitempty"`
-	Standards         []string        `json:"standards,omitempty" yaml:"standards,omitempty"`
-}
-
 // Plugin is used to store the PolicyGenerator configuration and the methods to generate the
 // desired policies.
 type Plugin struct {
@@ -79,8 +33,8 @@ type Plugin struct {
 	PlacementBindingDefaults struct {
 		Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	} `json:"placementBindingDefaults,omitempty" yaml:"placementBindingDefaults,omitempty"`
-	PolicyDefaults policyDefaults `json:"policyDefaults,omitempty" yaml:"policyDefaults,omitempty"`
-	Policies       []policyConfig `json:"policies" yaml:"policies"`
+	PolicyDefaults types.PolicyDefaults `json:"policyDefaults,omitempty" yaml:"policyDefaults,omitempty"`
+	Policies       []types.PolicyConfig `json:"policies" yaml:"policies"`
 	// A set of all placement rule names that have been processed or generated
 	allPlrs map[string]bool
 	// This is a mapping of cluster selectors formatted as the return value of getCsKey to placement
@@ -92,7 +46,7 @@ type Plugin struct {
 	processedPlrs map[string]bool
 }
 
-var defaults = policyDefaults{
+var defaults = types.PolicyDefaults{
 	Categories:        []string{"CM Configuration Management"},
 	ComplianceType:    "musthave",
 	Controls:          []string{"CM-2 Baseline Configuration"},
@@ -153,7 +107,7 @@ func (p *Plugin) Generate() ([]byte, error) {
 	plcBindingCount := 0
 	for _, plrName := range plrNames {
 		// Determine which policies to be included in the placement binding.
-		policyConfs := []*policyConfig{}
+		policyConfs := []*types.PolicyConfig{}
 		for _, i := range plrNameToPolicyIdxs[plrName] {
 			policyConfs = append(policyConfs, &p.Policies[i])
 		}
@@ -333,7 +287,7 @@ func (p *Plugin) assertValidConfig() error {
 // createPolicy will generate the root policy based on the PolicyGenerator configuration.
 // The generated policy is written to the plugin's output buffer. An error is returned if the
 // manifests specified in the configuration are invalid or can't be read.
-func (p *Plugin) createPolicy(policyConf *policyConfig) error {
+func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 	policyTemplate, err := getPolicyTemplate(policyConf)
 	if err != nil {
 		return err
@@ -426,13 +380,13 @@ func (p *Plugin) getPlrFromPath(plrPath string) (string, map[string]interface{},
 }
 
 // getCsKey generates the key for the policy's cluster selectors to be used in Policies.csToPlr.
-func getCsKey(policyConf *policyConfig) string {
+func getCsKey(policyConf *types.PolicyConfig) string {
 	return fmt.Sprintf("%#v", policyConf.Placement.ClusterSelectors)
 }
 
 // getPlrName will generate a placement rule name for the policy. If the placement rule has
 // previously been generated, skip will be true.
-func (p *Plugin) getPlrName(policyConf *policyConfig) (name string, skip bool) {
+func (p *Plugin) getPlrName(policyConf *types.PolicyConfig) (name string, skip bool) {
 	if policyConf.Placement.Name != "" {
 		// If the policy explicitly specifies a placement rule name, use it
 		return policyConf.Placement.Name, false
@@ -462,7 +416,7 @@ func (p *Plugin) getPlrName(policyConf *policyConfig) (name string, skip bool) {
 // the policy generator's output buffer. The name of the placement rule or an error is returned.
 // If the placement rule has already been generated, it will be reused and not added to the
 // policy generator's output buffer. An error is returned if the placement rule cannot be created.
-func (p *Plugin) createPlacementRule(policyConf *policyConfig) (
+func (p *Plugin) createPlacementRule(policyConf *types.PolicyConfig) (
 	name string, err error,
 ) {
 	plrPath := policyConf.Placement.PlacementRulePath
@@ -552,7 +506,7 @@ func (p *Plugin) createPlacementRule(policyConf *policyConfig) (
 // writing it to the policy generator's output buffer. An error is returned if the placement binding
 // cannot be created.
 func (p *Plugin) createPlacementBinding(
-	bindingName, plrName string, policyConfs []*policyConfig,
+	bindingName, plrName string, policyConfs []*types.PolicyConfig,
 ) error {
 	subjects := make([]map[string]string, 0, len(policyConfs))
 	for _, policyConf := range policyConfs {

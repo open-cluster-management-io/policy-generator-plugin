@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/open-cluster-management/policy-generator-plugin/internal/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -28,7 +29,7 @@ func assertReflectEqual(t *testing.T, a interface{}, b interface{}) {
 func TestGetPolicyTemplate(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
-	manifestFiles := []manifest{}
+	manifestFiles := []types.Manifest{}
 	for i, enemy := range []string{"goldfish", "potato"} {
 		manifestPath := path.Join(tmpDir, fmt.Sprintf("configmap%d.yaml", i))
 		manifestYAML := fmt.Sprintf(
@@ -47,7 +48,7 @@ data:
 			t.Fatalf("Failed to write %s", manifestPath)
 		}
 
-		manifestFiles = append(manifestFiles, manifest{Path: manifestPath})
+		manifestFiles = append(manifestFiles, types.Manifest{Path: manifestPath})
 	}
 
 	// Write a bogus file to ensure it is not picked up when creating the policy
@@ -59,12 +60,12 @@ data:
 	}
 
 	// Test both passing in individual files and a flat directory
-	tests := []struct{ Manifests []manifest }{
+	tests := []struct{ Manifests []types.Manifest }{
 		{Manifests: manifestFiles},
-		{Manifests: []manifest{{Path: tmpDir}}},
+		{Manifests: []types.Manifest{{Path: tmpDir}}},
 	}
 	for _, test := range tests {
-		policyConf := policyConfig{
+		policyConf := types.PolicyConfig{
 			ComplianceType:    "musthave",
 			Manifests:         test.Manifests,
 			Name:              "policy-app-config",
@@ -133,10 +134,10 @@ data:
 			},
 		},
 	}
-	manifests := []manifest{
+	manifests := []types.Manifest{
 		{Path: manifestPath, Patches: patches},
 	}
-	policyConf := policyConfig{
+	policyConf := types.PolicyConfig{
 		Manifests: manifests,
 		Name:      "policy-app-config",
 	}
@@ -184,9 +185,9 @@ data:
 func TestGetPolicyTemplateNoManifests(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
-	policyConf := policyConfig{
+	policyConf := types.PolicyConfig{
 		ComplianceType:    "musthave",
-		Manifests:         []manifest{{Path: tmpDir}},
+		Manifests:         []types.Manifest{{Path: tmpDir}},
 		Name:              "policy-app-config",
 		RemediationAction: "inform",
 		Severity:          "low",
@@ -205,9 +206,9 @@ func TestGetPolicyTemplateInvalidPath(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	manifestPath := path.Join(tmpDir, "does-not-exist.yaml")
-	policyConf := policyConfig{
+	policyConf := types.PolicyConfig{
 		ComplianceType:    "musthave",
-		Manifests:         []manifest{{Path: manifestPath}},
+		Manifests:         []types.Manifest{{Path: manifestPath}},
 		Name:              "policy-app-config",
 		RemediationAction: "inform",
 		Severity:          "low",
@@ -232,9 +233,9 @@ func TestGetPolicyTemplateInvalidManifest(t *testing.T) {
 		t.Fatalf("Failed to write %s", manifestPath)
 	}
 
-	policyConf := policyConfig{
+	policyConf := types.PolicyConfig{
 		ComplianceType:    "musthave",
-		Manifests:         []manifest{{Path: manifestPath}},
+		Manifests:         []types.Manifest{{Path: manifestPath}},
 		Name:              "policy-app-config",
 		RemediationAction: "inform",
 		Severity:          "low",
