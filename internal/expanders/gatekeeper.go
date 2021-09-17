@@ -17,7 +17,7 @@ const (
 )
 
 // CanHandle determines if the manifest is a Gatekeeper policy that can be expanded.
-func (k GatekeeperPolicyExpander) CanHandle(manifest map[string]interface{}) bool {
+func (g GatekeeperPolicyExpander) CanHandle(manifest map[string]interface{}) bool {
 	// Verify the APIVersion
 	if a, _, _ := unstructured.NestedString(manifest, "apiVersion"); a != gatekeeperConstraintAPIVersion {
 		return false
@@ -40,14 +40,14 @@ func (k GatekeeperPolicyExpander) CanHandle(manifest map[string]interface{}) boo
 }
 
 // Enabled determines if the policy configuration allows a Gatekeeper policy to be expanded.
-func (k GatekeeperPolicyExpander) Enabled(policyConf *types.PolicyConfig) bool {
+func (g GatekeeperPolicyExpander) Enabled(policyConf *types.PolicyConfig) bool {
 	return policyConf.InformGatekeeperPolicies
 }
 
 // Expand will generate additional policy templates for the Gatekeeper policy
 // for auditing purposes through Open Cluster Management. This should be run after the CanHandle
 // method.
-func (k GatekeeperPolicyExpander) Expand(
+func (g GatekeeperPolicyExpander) Expand(
 	manifest map[string]interface{}, severity string,
 ) []map[string]map[string]interface{} {
 	templates := []map[string]map[string]interface{}{}
