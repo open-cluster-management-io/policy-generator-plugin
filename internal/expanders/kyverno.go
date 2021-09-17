@@ -40,9 +40,8 @@ func (k KyvernoPolicyExpander) Enabled(policyConf *types.PolicyConfig) bool {
 	return policyConf.InformKyvernoPolicies
 }
 
-// AdditionalPolicyTemplates will generate additional policy templates for the Kyverno policy
-// for auditing purposes through Open Cluster Management. This should be run after the CanHandle
-// method.
+// Expand will generate additional policy templates for the Kyverno policy for auditing purposes
+// through Open Cluster Management. This should be run after the CanHandle method.
 func (k KyvernoPolicyExpander) Expand(
 	manifest map[string]interface{}, severity string,
 ) []map[string]map[string]interface{} {
