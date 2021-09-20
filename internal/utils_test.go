@@ -64,17 +64,17 @@ data:
 		{Manifests: manifestFiles},
 		{Manifests: []types.Manifest{{Path: tmpDir}}},
 	}
-	// test ConsolidatedManifests = true (default case)
+	// test ConsolidateManifests = true (default case)
 	// policyTemplates will have only one policyTemplate
 	// and two objTemplate under this policyTemplate
 	for _, test := range tests {
 		policyConf := types.PolicyConfig{
-			ComplianceType:        "musthave",
-			Manifests:             test.Manifests,
-			Name:                  "policy-app-config",
-			RemediationAction:     "inform",
-			Severity:              "low",
-			ConsolidatedManifests: true,
+			ComplianceType:       "musthave",
+			ConsolidateManifests: true,
+			Manifests:            test.Manifests,
+			Name:                 "policy-app-config",
+			RemediationAction:    "inform",
+			Severity:             "low",
 		}
 
 		policyTemplates, err := getPolicyTemplates(&policyConf)
@@ -111,17 +111,17 @@ data:
 		assertEqual(t, kind2, "ConfigMap")
 	}
 
-	// test ConsolidatedManifests = false case
+	// test ConsolidateManifests = false case
 	// policyTemplates will skip the consolidation and have two policyTemplate
 	// and each policyTemplate has only one objTemplate
 	for _, test := range tests {
 		policyConf := types.PolicyConfig{
-			ComplianceType:        "musthave",
-			Manifests:             test.Manifests,
-			Name:                  "policy-app-config",
-			RemediationAction:     "inform",
-			Severity:              "low",
-			ConsolidatedManifests: false,
+			ComplianceType:       "musthave",
+			ConsolidateManifests: false,
+			Manifests:            test.Manifests,
+			Name:                 "policy-app-config",
+			RemediationAction:    "inform",
+			Severity:             "low",
 		}
 
 		policyTemplates, err := getPolicyTemplates(&policyConf)

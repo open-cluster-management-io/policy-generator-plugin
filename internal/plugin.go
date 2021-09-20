@@ -209,7 +209,15 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		p.PolicyDefaults.Controls = defaults.Controls
 	}
 
-	// Defaults to true unless explicitly set in the config.
+	// Policy expanders default to true unless explicitly set in the config.
+	// Gatekeeper policy expander policyDefault
+	igvValue, setIgv := getDefaultBool(unmarshaledConfig, "informGatekeeperPolicies")
+	if setIgv {
+		p.PolicyDefaults.InformGatekeeperPolicies = igvValue
+	} else {
+		p.PolicyDefaults.InformGatekeeperPolicies = true
+	}
+	// Kyverno policy expander policyDefault
 	ikvValue, setIkv := getDefaultBool(unmarshaledConfig, "informKyvernoPolicies")
 	if setIkv {
 		p.PolicyDefaults.InformKyvernoPolicies = ikvValue
@@ -217,11 +225,11 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		p.PolicyDefaults.InformKyvernoPolicies = true
 	}
 
-	consolidatedValue, setConsolidated := getDefaultBool(unmarshaledConfig, "consolidatedManifests")
+	consolidatedValue, setConsolidated := getDefaultBool(unmarshaledConfig, "consolidateManifests")
 	if setConsolidated {
-		p.PolicyDefaults.ConsolidatedManifests = consolidatedValue
+		p.PolicyDefaults.ConsolidateManifests = consolidatedValue
 	} else {
-		p.PolicyDefaults.ConsolidatedManifests = true
+		p.PolicyDefaults.ConsolidateManifests = true
 	}
 
 	if p.PolicyDefaults.RemediationAction == "" {
@@ -250,7 +258,15 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.Controls = p.PolicyDefaults.Controls
 		}
 
-		// Defaults to the policy default unless explicitly set.
+		// Policy expanders default to the policy default unless explicitly set.
+		// Gatekeeper policy expander policy override
+		igvValue, setIgv := getPolicyBool(unmarshaledConfig, i, "informGatekeeperPolicies")
+		if setIgv {
+			policy.InformGatekeeperPolicies = igvValue
+		} else {
+			policy.InformGatekeeperPolicies = p.PolicyDefaults.InformGatekeeperPolicies
+		}
+		// Kyverno policy expander policy override
 		ikvValue, setIkv := getPolicyBool(unmarshaledConfig, i, "informKyvernoPolicies")
 		if setIkv {
 			policy.InformKyvernoPolicies = ikvValue
@@ -258,11 +274,11 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.InformKyvernoPolicies = p.PolicyDefaults.InformKyvernoPolicies
 		}
 
-		consolidatedValue, setConsolidated := getPolicyBool(unmarshaledConfig, i, "consolidatedManifests")
+		consolidatedValue, setConsolidated := getPolicyBool(unmarshaledConfig, i, "consolidateManifests")
 		if setConsolidated {
-			policy.ConsolidatedManifests = consolidatedValue
+			policy.ConsolidateManifests = consolidatedValue
 		} else {
-			policy.ConsolidatedManifests = p.PolicyDefaults.ConsolidatedManifests
+			policy.ConsolidateManifests = p.PolicyDefaults.ConsolidateManifests
 		}
 
 		// If both cluster selectors and placement rule path aren't set, then use the

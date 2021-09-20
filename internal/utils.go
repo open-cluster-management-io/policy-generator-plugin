@@ -87,9 +87,9 @@ func getManifests(policyConf *types.PolicyConfig) ([]map[string]interface{}, err
 }
 
 // getPolicyTemplates generates the policy templates for the ConfigurationPolicy manifests
-// policyConf.ConsolidatedManifests = true (default value) will generate a policy templates slice
-// that just one template includes all consolidated manifests specified in policyConf.
-// policyConf.ConsolidatedManifests = false will generate a policy templates slice
+// policyConf.ConsolidateManifests = true (default value) will generate a policy templates slice
+// that just has one template which includes all the manifests specified in policyConf.
+// policyConf.ConsolidateManifests = false will generate a policy templates slice
 // that each template includes a single manifest specified in policyConf.
 // An error is returned if one or more manifests cannot be read or are invalid.
 func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string]interface{}, error) {
@@ -104,18 +104,20 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 		)
 	}
 
+	objectTemplatesLength := len(manifests)
 	policyTemplatesLength := 1
-	if !policyConf.ConsolidatedManifests {
+	if !policyConf.ConsolidateManifests {
 		policyTemplatesLength = len(manifests)
+		objectTemplatesLength = 0
 	}
-	objectTemplates := make([]map[string]interface{}, 0, policyTemplatesLength)
+	objectTemplates := make([]map[string]interface{}, 0, objectTemplatesLength)
 	policyTemplates := make([]map[string]map[string]interface{}, 0, policyTemplatesLength)
 	for _, manifest := range manifests {
 		objTemplate := map[string]interface{}{
 			"complianceType":   policyConf.ComplianceType,
 			"objectDefinition": manifest,
 		}
-		if policyConf.ConsolidatedManifests {
+		if policyConf.ConsolidateManifests {
 			// put all objTemplate with manifest into single consolidated objectTemplates object
 			objectTemplates = append(objectTemplates, objTemplate)
 		} else {
@@ -128,7 +130,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 	}
 
 	//  just build one policyTemplate by using the above consolidated objectTemplates
-	if policyConf.ConsolidatedManifests {
+	if policyConf.ConsolidateManifests {
 		policyTemplate := buildPolicyTemplate(policyConf, &objectTemplates)
 		setNamespaceSelector(policyConf, policyTemplate)
 		policyTemplates = append(policyTemplates, *policyTemplate)
