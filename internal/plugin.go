@@ -211,18 +211,25 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 	// Policy expanders default to true unless explicitly set in the config.
 	// Gatekeeper policy expander policyDefault
-	igvValue, set := getDefaultBool(unmarshaledConfig, "informGatekeeperPolicies")
-	if set {
+	igvValue, setIgv := getDefaultBool(unmarshaledConfig, "informGatekeeperPolicies")
+	if setIgv {
 		p.PolicyDefaults.InformGatekeeperPolicies = igvValue
 	} else {
 		p.PolicyDefaults.InformGatekeeperPolicies = true
 	}
 	// Kyverno policy expander policyDefault
-	ikvValue, set := getDefaultBool(unmarshaledConfig, "informKyvernoPolicies")
-	if set {
+	ikvValue, setIkv := getDefaultBool(unmarshaledConfig, "informKyvernoPolicies")
+	if setIkv {
 		p.PolicyDefaults.InformKyvernoPolicies = ikvValue
 	} else {
 		p.PolicyDefaults.InformKyvernoPolicies = true
+	}
+
+	consolidatedValue, setConsolidated := getDefaultBool(unmarshaledConfig, "consolidateManifests")
+	if setConsolidated {
+		p.PolicyDefaults.ConsolidateManifests = consolidatedValue
+	} else {
+		p.PolicyDefaults.ConsolidateManifests = true
 	}
 
 	if p.PolicyDefaults.RemediationAction == "" {
@@ -253,18 +260,25 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 		// Policy expanders default to the policy default unless explicitly set.
 		// Gatekeeper policy expander policy override
-		igvValue, set := getPolicyBool(unmarshaledConfig, i, "informGatekeeperPolicies")
-		if set {
+		igvValue, setIgv := getPolicyBool(unmarshaledConfig, i, "informGatekeeperPolicies")
+		if setIgv {
 			policy.InformGatekeeperPolicies = igvValue
 		} else {
 			policy.InformGatekeeperPolicies = p.PolicyDefaults.InformGatekeeperPolicies
 		}
 		// Kyverno policy expander policy override
-		ikvValue, set := getPolicyBool(unmarshaledConfig, i, "informKyvernoPolicies")
-		if set {
+		ikvValue, setIkv := getPolicyBool(unmarshaledConfig, i, "informKyvernoPolicies")
+		if setIkv {
 			policy.InformKyvernoPolicies = ikvValue
 		} else {
 			policy.InformKyvernoPolicies = p.PolicyDefaults.InformKyvernoPolicies
+		}
+
+		consolidatedValue, setConsolidated := getPolicyBool(unmarshaledConfig, i, "consolidateManifests")
+		if setConsolidated {
+			policy.ConsolidateManifests = consolidatedValue
+		} else {
+			policy.ConsolidateManifests = p.PolicyDefaults.ConsolidateManifests
 		}
 
 		// If both cluster selectors and placement rule path aren't set, then use the
