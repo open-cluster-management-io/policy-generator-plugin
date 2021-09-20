@@ -17,6 +17,7 @@ func TestGatekeeperCanHandle(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(
 			fmt.Sprintf("kind=%s", test.kind),
 			func(t *testing.T) {
