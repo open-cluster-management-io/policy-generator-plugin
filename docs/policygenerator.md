@@ -26,7 +26,7 @@ can create unique names for the bindings.
 ## Policy expanders
 
 Policy expanders provide logic to create additional policies based on a given kind to give a
-complete picture of violations or status using Open Cluster Management policies. Generally the
+complete picture of violations or status using Open Cluster Management policies. Generally, the
 expanders point to kinds provided by policy engines such as [Kyverno](https://kyverno.io/) and
 [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/). These expanders are enabled by
 default but can be disabled individually by setting the flag associated with the expander in the
@@ -44,10 +44,10 @@ To contribute a policy expander, you'll need to:
    follow the other files there as an example.
 3. Choose a name for your boolean expander setting. (Existing names have followed the pattern
    `Inform<engine-name>Policies`.)
-4. Add your expander setting to both the `PolicyDefaults` and the `PolicyConfig` array in
+4. Add your expander setting to both the `PolicyDefaults` and the `PolicyConfig` structs in
    [types.go](../types/types.go)
 5. Add your expander setting to the `applyDefaults()` method in [plugin.go](../internal/plugin.go)
-   to set a defaults for both `PolicyDefaults` and `Policies`.
+   to set defaults for both `PolicyDefaults` and `Policies`.
 6. Update the [policygenerator-reference.yaml](./policygenerator-reference.yaml) with your expander
    setting.
 7. Add tests for your expander to the [internal/expanders/](../internal/expanders/) directory.
@@ -67,5 +67,5 @@ DIRECTORY TREE              PACKAGE                 DESCRIPTION
     │   └── types.go        types                   Generator structs
     ├── patches.go          internal                Code to patch input manifests
     ├── plugin.go           internal                Primary generator methods
-    ├── utils.go            internal                Helper/utility methods
+    ├── utils.go            internal                Helper/utility functions
 ```
