@@ -22,3 +22,50 @@ PlacementBinding, either specify `placement.placementRulePath` to an existing Pl
 set `placement.name` along with `placement.clusterSelectors`. When the PlacementBinding is
 consolidated in this way, `placementBindingDefaults.name` must be specified so that the generator
 can create unique names for the bindings.
+
+## Policy expanders
+
+Policy expanders provide logic to create additional policies based on a given kind to give a
+complete picture of violations or status using Open Cluster Management policies. Generally the
+expanders point to kinds provided by policy engines such as [Kyverno](https://kyverno.io/) and
+[Gatekeeper](https://open-policy-agent.github.io/gatekeeper/). These expanders are enabled by
+default but can be disabled individually by setting the flag associated with the expander in the
+`PolicyGenerator` manifest either in `policyDefaults` or for a particular manifest in the `policies`
+array.
+
+### Contributing a policy expander
+
+To contribute a policy expander, you'll need to:
+
+1. Add your expander to the `getExpanders()` method in
+   [expanders.go](../internal/expanders/expanders.go) and familiarize yourself with the Interface
+   there that you'll be implementing.
+2. Add your expander file to the [internal/expanders/](../internal/expanders/) directory. You can
+   follow the other files there as an example.
+3. Choose a name for your boolean expander setting. (Existing names have followed the pattern
+   `Inform<engine-name>Policies`.)
+4. Add your expander setting to both the `PolicyDefaults` and the `PolicyConfig` array in
+   [types.go](../types/types.go)
+5. Add your expander setting to the `applyDefaults()` method in [plugin.go](../internal/plugin.go)
+   to set a defaults for both `PolicyDefaults` and `Policies`.
+6. Update the [policygenerator-reference.yaml](./policygenerator-reference.yaml) with your expander
+   setting.
+7. Add tests for your expander to the [internal/expanders/](../internal/expanders/) directory.
+
+## PolicyGenerator code structure
+
+```
+DIRECTORY TREE              PACKAGE                 DESCRIPTION
+================================================================================================
+.
+├── cmd
+│   └── main.go             main                    Parent binary (imports the internal package)
+└── internal
+    ├── expanders
+    │   ├── expanders.go    expanders               Policy expander interface
+    ├── types
+    │   └── types.go        types                   Generator structs
+    ├── patches.go          internal                Code to patch input manifests
+    ├── plugin.go           internal                Primary generator methods
+    ├── utils.go            internal                Helper/utility methods
+```

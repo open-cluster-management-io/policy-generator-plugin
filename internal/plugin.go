@@ -209,7 +209,15 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		p.PolicyDefaults.Controls = defaults.Controls
 	}
 
-	// Defaults to true unless explicitly set in the config.
+	// Policy expanders default to true unless explicitly set in the config.
+	// Gatekeeper policy expander policyDefault
+	igvValue, set := getDefaultBool(unmarshaledConfig, "informGatekeeperPolicies")
+	if set {
+		p.PolicyDefaults.InformGatekeeperPolicies = igvValue
+	} else {
+		p.PolicyDefaults.InformGatekeeperPolicies = true
+	}
+	// Kyverno policy expander policyDefault
 	ikvValue, set := getDefaultBool(unmarshaledConfig, "informKyvernoPolicies")
 	if set {
 		p.PolicyDefaults.InformKyvernoPolicies = ikvValue
@@ -243,7 +251,15 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.Controls = p.PolicyDefaults.Controls
 		}
 
-		// Defaults to the policy default unless explicitly set.
+		// Policy expanders default to the policy default unless explicitly set.
+		// Gatekeeper policy expander policy override
+		igvValue, set := getPolicyBool(unmarshaledConfig, i, "informGatekeeperPolicies")
+		if set {
+			policy.InformGatekeeperPolicies = igvValue
+		} else {
+			policy.InformGatekeeperPolicies = p.PolicyDefaults.InformGatekeeperPolicies
+		}
+		// Kyverno policy expander policy override
 		ikvValue, set := getPolicyBool(unmarshaledConfig, i, "informKyvernoPolicies")
 		if set {
 			policy.InformKyvernoPolicies = ikvValue

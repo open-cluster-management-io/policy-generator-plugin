@@ -141,19 +141,12 @@ func handleExpanders(
 	manifests []map[string]interface{}, policyConf *types.PolicyConfig,
 ) []map[string]map[string]interface{} {
 	policyTemplates := []map[string]map[string]interface{}{}
-	expanders := expanders.GetExpanders()
-	kyvernoExpander, ok := expanders["kyverno"]
-	if !ok {
-		// Panic since this is a programmer error that is unrecoverable
-		panic("The kyverno expander was not returned in GetExpanders")
-	}
-
-	// Not the most efficient loop but it lends itself nicely for when there are
-	// additional expanders. Delete this comment when that occurs.
-	for _, m := range manifests {
-		if kyvernoExpander.Enabled(policyConf) && kyvernoExpander.CanHandle(m) {
-			kyvernoPolicyTemplates := kyvernoExpander.Expand(m, policyConf.Severity)
-			policyTemplates = append(policyTemplates, kyvernoPolicyTemplates...)
+	for _, expander := range expanders.GetExpanders() {
+		for _, m := range manifests {
+			if expander.Enabled(policyConf) && expander.CanHandle(m) {
+				expandedPolicyTemplates := expander.Expand(m, policyConf.Severity)
+				policyTemplates = append(policyTemplates, expandedPolicyTemplates...)
+			}
 		}
 	}
 

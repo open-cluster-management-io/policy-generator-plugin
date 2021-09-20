@@ -34,7 +34,7 @@ policies:
 - name: policy-app-config-others
   disabled: true
   manifests:
-    - path: input2/
+    - path: input-folder/
       patches:
         - apiVersion: v1
           kind: ConfigMap
@@ -46,4 +46,7 @@ policies:
 - name: policy-require-labels
   disabled: true
   manifests:
-    - path: input3/
+    - path: input-kyverno/
+- name: policy-require-ns-labels
+  manifests:
+    - path: input-gatekeeper/
