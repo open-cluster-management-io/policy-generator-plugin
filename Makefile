@@ -22,7 +22,7 @@ API_PLUGIN_PATH ?= $(KUSTOMIZE_PLUGIN_HOME)/policy.open-cluster-management.io/v1
 # Kustomize arguments
 SOURCE_DIR ?= examples/
 
-.PHONY: build build-binary generate layout fmt lint lint-dependencies test
+.PHONY: build build-binary build-release generate layout fmt lint lint-dependencies test
 
 include build/common/Makefile.common.mk
 
@@ -35,6 +35,17 @@ build: layout
 
 build-binary:
 	go build -o PolicyGenerator cmd/main.go
+
+build-release:
+	@if [[ $(shell git status --porcelain | wc -l) -gt 0 ]]; \
+		then \
+			echo "There are local modifications in the repo" > /dev/stderr; \
+			exit 1; \
+	fi
+	@mkdir -p build_output
+	GOOS=linux GOARCH=amd64 go build -o build_output/linux-amd64-PolicyGenerator cmd/main.go
+	GOOS=darwin GOARCH=amd64 go build -o build_output/darwin-amd64-PolicyGenerator cmd/main.go
+	GOOS=windows GOARCH=amd64 go build -o build_output/windows-amd64-PolicyGenerator.exe cmd/main.go
 
 generate:
 	@KUSTOMIZE_PLUGIN_HOME=$(KUSTOMIZE_PLUGIN_HOME) kustomize build --enable-alpha-plugins $(SOURCE_DIR)
