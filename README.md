@@ -13,13 +13,47 @@ For more about Open Cluster Management and its Policy Framework:
 
 ### As a Kustomize plugin
 
+#### Installation
+
+##### Install from the GitHub release
+
+1. Download the precompiled plugin binary from the
+  [release](https://github.com/open-cluster-management/policy-generator-plugin/releases)
+  of your choice.
+
+2. Create the plugin directory:
+
+    ```bash
+    mkdir -p ${HOME}/.config/kustomize/plugin/policy.open-cluster-management.io/v1/policygenerator
+    ```
+
+3. Move the binary to the plugin directory:
+
+    - Linux:
+
+        ```bash
+        chmod +x linux-amd64-PolicyGenerator
+        mv linux-amd64-PolicyGenerator ${HOME}/.config/kustomize/plugin/policy.open-cluster-management.io/v1/policygenerator/PolicyGenerator
+        ```
+
+    - MacOS:
+
+        ```bash
+        chmod +x darwin-amd64-PolicyGenerator
+        mv darwin-amd64-PolicyGenerator ${HOME}/.config/kustomize/plugin/policy.open-cluster-management.io/v1/policygenerator/PolicyGenerator
+        ```
+
+##### Build and install from source
+
 1. Build the plugin binary (only needed once or to update the plugin):
     ```bash
     make build
     ```
     **NOTE:** This will default to placing the binary in `${HOME}/.config/kustomize/plugin/`. You can change this by exporting `KUSTOMIZE_PLUGIN_HOME` to a different path.
 
-2. Create a `kustomization.yaml` file that points to `PolicyGenerator` manifest(s), with any additional desired patches or customizations (see [`examples/policyGenerator.yaml`](./examples/policyGenerator.yaml) for an example):
+#### Configuration
+
+1. Create a `kustomization.yaml` file that points to `PolicyGenerator` manifest(s), with any additional desired patches or customizations (see [`examples/policyGenerator.yaml`](./examples/policyGenerator.yaml) for an example):
     ```yaml
     generators:
     - path/to/generator/file.yaml
@@ -27,7 +61,7 @@ For more about Open Cluster Management and its Policy Framework:
     ```
     - To read more about the `PolicyGenerator` YAML, see [About the PolicyGenerator plugin](./docs/policygenerator.md)
 
-3. To use the plugin to generate policies, do one of:
+2. To use the plugin to generate policies, do one of:
     - Utilize the `examples/` directory in this repository (the directory can be modified by exporting a new path to `SOURCE_DIR`):
       ```bash
       make generate
