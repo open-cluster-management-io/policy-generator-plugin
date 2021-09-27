@@ -43,9 +43,9 @@ build-release:
 			exit 1; \
 	fi
 	@mkdir -p build_output
-	GOOS=linux GOARCH=amd64 go build -o build_output/linux-amd64-PolicyGenerator cmd/main.go
-	GOOS=darwin GOARCH=amd64 go build -o build_output/darwin-amd64-PolicyGenerator cmd/main.go
-	GOOS=windows GOARCH=amd64 go build -o build_output/windows-amd64-PolicyGenerator.exe cmd/main.go
+	GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/linux-amd64-PolicyGenerator cmd/main.go
+	GOOS=darwin CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/darwin-amd64-PolicyGenerator cmd/main.go
+	GOOS=windows CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/windows-amd64-PolicyGenerator.exe cmd/main.go
 
 generate:
 	@KUSTOMIZE_PLUGIN_HOME=$(KUSTOMIZE_PLUGIN_HOME) kustomize build --enable-alpha-plugins $(SOURCE_DIR)
