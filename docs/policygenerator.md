@@ -45,7 +45,7 @@ To contribute a policy expander, you'll need to:
 3. Choose a name for your boolean expander setting. (Existing names have followed the pattern
    `Inform<engine-name>Policies`.)
 4. Add your expander setting to both the `PolicyDefaults` and the `PolicyConfig` structs in
-   [types.go](../types/types.go)
+   [types.go](../internal/types/types.go)
 5. Add your expander setting to the `applyDefaults()` method in [plugin.go](../internal/plugin.go)
    to set defaults for both `PolicyDefaults` and `Policies`.
 6. Update the [policygenerator-reference.yaml](./policygenerator-reference.yaml) with your expander
