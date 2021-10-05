@@ -540,9 +540,13 @@ func (p *Plugin) createPlacementRule(policyConf *types.PolicyConfig) (
 		matchExpressions := []map[string]interface{}{}
 		for _, label := range keys {
 			matchExpression := map[string]interface{}{
-				"key":      label,
-				"operator": "In",
-				"values":   []string{policyConf.Placement.ClusterSelectors[label]},
+				"key": label,
+			}
+			if policyConf.Placement.ClusterSelectors[label] == "" {
+				matchExpression["operator"] = "Exist"
+			} else {
+				matchExpression["operator"] = "In"
+				matchExpression["values"] = []string{policyConf.Placement.ClusterSelectors[label]}
 			}
 			matchExpressions = append(matchExpressions, matchExpression)
 		}

@@ -575,8 +575,9 @@ func TestCreatePlacementRuleClusterSelectors(t *testing.T) {
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{Name: "policy-app-config"}
 	policyConf.Placement.ClusterSelectors = map[string]string{
-		"cloud": "red hat",
-		"game":  "pacman",
+		"cloud":  "red hat",
+		"doesIt": "",
+		"game":   "pacman",
 	}
 
 	name, err := p.createPlacementRule(&policyConf)
@@ -603,6 +604,8 @@ spec:
               operator: In
               values:
                 - red hat
+            - key: doesIt
+              operator: Exist
             - key: game
               operator: In
               values:
