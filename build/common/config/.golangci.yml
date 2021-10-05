@@ -27,6 +27,7 @@ run:
 linters:
   enable-all: true
   disable:
+    - nestif
     - depguard
     - dupl
     - gochecknoglobals
