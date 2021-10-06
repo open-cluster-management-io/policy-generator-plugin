@@ -110,10 +110,8 @@ func TestGatekeeperExpand(t *testing.T) {
 								"metadata": map[string]interface{}{
 									"name": "my-awesome-constraint",
 								},
-								"status": []map[string]interface{}{
-									{
-										"totalViolations": 0,
-									},
+								"status": map[string]interface{}{
+									"totalViolations": 0,
 								},
 							},
 						},

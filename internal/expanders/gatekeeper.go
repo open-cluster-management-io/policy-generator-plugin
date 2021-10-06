@@ -75,10 +75,8 @@ func (g GatekeeperPolicyExpander) Expand(
 							"metadata": map[string]interface{}{
 								"name": constraintName,
 							},
-							"status": []map[string]interface{}{
-								{
-									"totalViolations": 0,
-								},
+							"status": map[string]interface{}{
+								"totalViolations": 0,
 							},
 						},
 					},
