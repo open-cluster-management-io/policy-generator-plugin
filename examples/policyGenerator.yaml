@@ -23,7 +23,8 @@ policies:
 - name: policy-app-config-aliens
   disabled: false
   manifests:
-    - path: input/configmap-aliens.yaml
+    - complianceType: "mustonlyhave"
+      path: input/configmap-aliens.yaml
       patches:
         - apiVersion: v1
           kind: ConfigMap

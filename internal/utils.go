@@ -15,13 +15,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// getManifests will get all of the manifest files associated with the input policy configuration
-// separated by policyConf.Manifests entries. An error is returned if a manifest path cannot
-// be read.
-func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, error) {
-	manifests := [][]map[string]interface{}{}
+// getManifests will get all of the manifest files associated with the input policy configuration.
+// An error is returned if a manifest path cannot be read.
+func getManifests(policyConf *types.PolicyConfig) ([]types.ObjectTemplate, error) {
+	manifests := []types.ObjectTemplate{}
 	for _, manifest := range policyConf.Manifests {
-		manifestPaths := []string{}
 		manifestFiles := []map[string]interface{}{}
 		readErr := fmt.Errorf("failed to read the manifest path %s", manifest.Path)
 		manifestPathInfo, err := os.Stat(manifest.Path)
@@ -46,7 +44,16 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 				}
 
 				yamlPath := path.Join(manifest.Path, f.Name())
-				manifestPaths = append(manifestPaths, yamlPath)
+				manifestFile, err := unmarshalManifestFile(yamlPath)
+				if err != nil {
+					return nil, err
+				}
+
+				if len(*manifestFile) == 0 {
+					continue
+				}
+
+				manifestFiles = append(manifestFiles, *manifestFile...)
 			}
 		} else {
 			// Unmarshal the manifest in order to check for metadata patch replacement
@@ -79,19 +86,6 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 			manifestFiles = append(manifestFiles, *manifestFile...)
 		}
 
-		for _, manifestPath := range manifestPaths {
-			manifestFile, err := unmarshalManifestFile(manifestPath)
-			if err != nil {
-				return nil, err
-			}
-
-			if len(*manifestFile) == 0 {
-				continue
-			}
-
-			manifestFiles = append(manifestFiles, *manifestFile...)
-		}
-
 		if len(manifest.Patches) > 0 {
 			patcher := manifestPatcher{manifests: manifestFiles, patches: manifest.Patches}
 			const errTemplate = `failed to process the manifest at "%s": %w`
@@ -108,7 +102,16 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 			manifestFiles = *patchedFiles
 		}
 
-		manifests = append(manifests, manifestFiles)
+		for _, manifestFile := range manifestFiles {
+			objTemp := types.ObjectTemplate{}
+			objTemp.ObjectDefinition = manifestFile
+			if manifest.ComplianceType != "" {
+				objTemp.ComplianceType = manifest.ComplianceType
+			} else {
+				objTemp.ComplianceType = policyConf.ComplianceType
+			}
+			manifests = append(manifests, objTemp)
+		}
 	}
 
 	return manifests, nil
@@ -121,57 +124,55 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 // that each template includes a single manifest specified in policyConf.
 // An error is returned if one or more manifests cannot be read or are invalid.
 func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string]interface{}, error) {
-	manifestGroups, err := getManifests(policyConf)
+	manifests, err := getManifests(policyConf)
 	if err != nil {
 		return nil, err
 	}
 
-	objectTemplatesLength := len(manifestGroups)
-	policyTemplatesLength := 1
-	if !policyConf.ConsolidateManifests {
-		policyTemplatesLength = len(manifestGroups)
-		objectTemplatesLength = 0
-	}
-	objectTemplates := make([]map[string]interface{}, 0, objectTemplatesLength)
-	policyTemplates := make([]map[string]map[string]interface{}, 0, policyTemplatesLength)
-	for i, manifestGroup := range manifestGroups {
-		complianceType := policyConf.Manifests[i].ComplianceType
-		for _, manifest := range manifestGroup {
-			objTemplate := map[string]interface{}{
-				"complianceType":   complianceType,
-				"objectDefinition": manifest,
-			}
-			if policyConf.ConsolidateManifests {
-				// put all objTemplate with manifest into single consolidated objectTemplates object
-				objectTemplates = append(objectTemplates, objTemplate)
-			} else {
-				// casting each objTemplate with manifest to objectTemplates type
-				// build policyTemplate for each objectTemplates
-				policyTemplate := buildPolicyTemplate(policyConf, &[]map[string]interface{}{objTemplate})
-				setNamespaceSelector(policyConf, policyTemplate)
-				policyTemplates = append(policyTemplates, *policyTemplate)
-			}
-		}
-	}
-
-	if len(policyTemplates) == 0 && len(objectTemplates) == 0 {
+	if len(manifests) == 0 {
 		return nil, fmt.Errorf(
 			"the policy %s must specify at least one non-empty manifest file", policyConf.Name,
 		)
 	}
 
+	objectTemplatesLength := len(manifests)
+	policyTemplatesLength := 1
+	if !policyConf.ConsolidateManifests {
+		policyTemplatesLength = len(manifests)
+		objectTemplatesLength = 0
+	}
+	objectTemplates := make([]map[string]interface{}, 0, objectTemplatesLength)
+	policyTemplates := make([]map[string]map[string]interface{}, 0, policyTemplatesLength)
+	manifestExapnder := make([]map[string]interface{}, 0, policyTemplatesLength)
+
+	for _, manifest := range manifests {
+		objTemplate := map[string]interface{}{
+			"complianceType":   manifest.ComplianceType,
+			"objectDefinition": manifest.ObjectDefinition,
+		}
+		manifestExapnder = append(manifestExapnder, manifest.ObjectDefinition)
+		if policyConf.ConsolidateManifests {
+			// put all objTemplate with manifest into single consolidated objectTemplates object
+			objectTemplates = append(objectTemplates, objTemplate)
+		} else {
+			// casting each objTemplate with manifest to objectTemplates type
+			// build policyTemplate for each objectTemplates
+			policyTemplate := buildPolicyTemplate(policyConf, len(policyTemplates)+1, &[]map[string]interface{}{objTemplate})
+			setNamespaceSelector(policyConf, policyTemplate)
+			policyTemplates = append(policyTemplates, *policyTemplate)
+		}
+	}
+
 	//  just build one policyTemplate by using the above consolidated objectTemplates
 	if policyConf.ConsolidateManifests {
-		policyTemplate := buildPolicyTemplate(policyConf, &objectTemplates)
+		policyTemplate := buildPolicyTemplate(policyConf, 1, &objectTemplates)
 		setNamespaceSelector(policyConf, policyTemplate)
 		policyTemplates = append(policyTemplates, *policyTemplate)
 	}
 
 	// check the enabled expanders and add additional policy templates
-	for _, manifestGroup := range manifestGroups {
-		expandedPolicyTemplates := handleExpanders(manifestGroup, policyConf)
-		policyTemplates = append(policyTemplates, expandedPolicyTemplates...)
-	}
+	expandedPolicyTemplates := handleExpanders(manifestExapnder, policyConf)
+	policyTemplates = append(policyTemplates, expandedPolicyTemplates...)
 
 	return policyTemplates, nil
 }
@@ -184,13 +185,23 @@ func setNamespaceSelector(policyConf *types.PolicyConfig, policyTemplate *map[st
 }
 
 // buildPolicyTemplate generates single policy template by using objectTemplates with manifests.
-func buildPolicyTemplate(policyConf *types.PolicyConfig, objectTemplates *[]map[string]interface{}) *map[string]map[string]interface{} {
+// policyNum defines which number the configuration policy is in the policy. If it is greater than
+// one then the configuration policy name will have policyNum appended to it.
+func buildPolicyTemplate(
+	policyConf *types.PolicyConfig, policyNum int, objectTemplates *[]map[string]interface{},
+) *map[string]map[string]interface{} {
+	var name string
+	if policyNum > 1 {
+		name = fmt.Sprintf("%s%d", policyConf.Name, policyNum)
+	} else {
+		name = policyConf.Name
+	}
 	policyTemplate := map[string]map[string]interface{}{
 		"objectDefinition": {
 			"apiVersion": policyAPIVersion,
 			"kind":       configPolicyKind,
 			"metadata": map[string]string{
-				"name": policyConf.Name,
+				"name": name,
 			},
 			"spec": map[string]interface{}{
 				"object-templates":  *objectTemplates,

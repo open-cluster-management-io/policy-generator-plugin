@@ -12,6 +12,11 @@ type NamespaceSelector struct {
 	Include []string `json:"include,omitempty" yaml:"include,omitempty"`
 }
 
+type ObjectTemplate struct {
+	ComplianceType   string                 `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
+	ObjectDefinition map[string]interface{} `json:"objectDefinition,omitempty" yaml:"objectDefinition,omitempty"`
+}
+
 type PlacementConfig struct {
 	ClusterSelectors  map[string]string `json:"clusterSelectors,omitempty" yaml:"clusterSelectors,omitempty"`
 	Name              string            `json:"name,omitempty" yaml:"name,omitempty"`
