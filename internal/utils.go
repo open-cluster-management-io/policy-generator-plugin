@@ -21,6 +21,7 @@ func getManifests(policyConf *types.PolicyConfig) ([]map[string]interface{}, err
 	manifests := []map[string]interface{}{}
 	for _, manifest := range policyConf.Manifests {
 		manifestPaths := []string{}
+		manifestFiles := []map[string]interface{}{}
 		readErr := fmt.Errorf("failed to read the manifest path %s", manifest.Path)
 		manifestPathInfo, err := os.Stat(manifest.Path)
 		if err != nil {
@@ -47,10 +48,36 @@ func getManifests(policyConf *types.PolicyConfig) ([]map[string]interface{}, err
 				manifestPaths = append(manifestPaths, yamlPath)
 			}
 		} else {
-			manifestPaths = append(manifestPaths, manifest.Path)
+			// Unmarshal the manifest in order to check for metadata patch replacement
+			manifestFile, err := unmarshalManifestFile(manifest.Path)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(*manifestFile) == 0 {
+				continue
+			}
+			// Allowing replace the original manifest metadata.name and/or metadata.namespace if it is a single
+			// yaml structure in the manifest path
+			if len(*manifestFile) == 1 && len(manifest.Patches) == 1 {
+				if patchMetadata, ok := manifest.Patches[0]["metadata"].(map[string]interface{}); ok {
+					if metadata, ok := (*manifestFile)[0]["metadata"].(map[string]interface{}); ok {
+						name, ok := patchMetadata["name"].(string)
+						if ok && name != "" {
+							metadata["name"] = name
+						}
+						namespace, ok := patchMetadata["namespace"].(string)
+						if ok && namespace != "" {
+							metadata["namespace"] = namespace
+						}
+						(*manifestFile)[0]["metadata"] = metadata
+					}
+				}
+			}
+
+			manifestFiles = append(manifestFiles, *manifestFile...)
 		}
 
-		manifestFiles := []map[string]interface{}{}
 		for _, manifestPath := range manifestPaths {
 			manifestFile, err := unmarshalManifestFile(manifestPath)
 			if err != nil {
