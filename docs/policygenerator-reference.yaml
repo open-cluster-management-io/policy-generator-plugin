@@ -65,6 +65,8 @@ policies:
       # Required. Path to a single file or a flat directory of files relative to the
       # kustomization.yaml file.
       - path: ""
+        # Optional. (See policy[0].complianceType for description.)
+        complianceType: "musthave"
         # Optional. A Kustomize patch to apply to the manifest(s) at the path. If there
         # are multiple manifests, the patch requires the apiVersion, kind, metadata.name,
         # and metadata.namespace (if applicable) fields to be set so Kustomize

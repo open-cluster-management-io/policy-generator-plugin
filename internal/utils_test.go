@@ -30,6 +30,7 @@ func TestGetPolicyTemplate(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	manifestFiles := []types.Manifest{}
+	manifestFilesMustNotHave := []types.Manifest{}
 	for i, enemy := range []string{"goldfish", "potato"} {
 		manifestPath := path.Join(tmpDir, fmt.Sprintf("configmap%d.yaml", i))
 		manifestYAML := fmt.Sprintf(
@@ -48,7 +49,14 @@ data:
 			t.Fatalf("Failed to write %s", manifestPath)
 		}
 
-		manifestFiles = append(manifestFiles, types.Manifest{Path: manifestPath})
+		// The applyDefaults method would normally fill in ComplianceType on each manifest entry.
+		manifestFiles = append(
+			manifestFiles, types.Manifest{ComplianceType: "musthave", Path: manifestPath},
+		)
+		manifestFilesMustNotHave = append(
+			manifestFilesMustNotHave,
+			types.Manifest{ComplianceType: "mustnothave", Path: manifestPath},
+		)
 	}
 
 	// Write a bogus file to ensure it is not picked up when creating the policy
@@ -60,9 +68,17 @@ data:
 	}
 
 	// Test both passing in individual files and a flat directory
-	tests := []struct{ Manifests []types.Manifest }{
-		{Manifests: manifestFiles},
-		{Manifests: []types.Manifest{{Path: tmpDir}}},
+	tests := []struct {
+		ExpectedComplianceType string
+		Manifests              []types.Manifest
+	}{
+		{ExpectedComplianceType: "musthave", Manifests: manifestFiles},
+		{ExpectedComplianceType: "mustnothave", Manifests: manifestFilesMustNotHave},
+		// The applyDefaults method would normally fill in ComplianceType on each manifest entry.
+		{
+			ExpectedComplianceType: "musthave",
+			Manifests:              []types.Manifest{{ComplianceType: "musthave", Path: tmpDir}},
+		},
 	}
 	// test ConsolidateManifests = true (default case)
 	// policyTemplates will have only one policyTemplate
@@ -97,13 +113,13 @@ data:
 			t.Fatal("The object-templates field is an invalid format")
 		}
 		assertEqual(t, len(objTemplates), 2)
-		assertEqual(t, objTemplates[0]["complianceType"], "musthave")
+		assertEqual(t, objTemplates[0]["complianceType"], test.ExpectedComplianceType)
 		kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
 		if !ok {
 			t.Fatal("The objectDefinition field is an invalid format")
 		}
 		assertEqual(t, kind1, "ConfigMap")
-		assertEqual(t, objTemplates[1]["complianceType"], "musthave")
+		assertEqual(t, objTemplates[1]["complianceType"], test.ExpectedComplianceType)
 		kind2, ok := objTemplates[1]["objectDefinition"].(map[string]interface{})["kind"]
 		if !ok {
 			t.Fatal("The objectDefinition field is an invalid format")
@@ -143,7 +159,7 @@ data:
 			t.Fatal("The object-templates field is an invalid format")
 		}
 		assertEqual(t, len(objTemplates1), 1)
-		assertEqual(t, objTemplates1[0]["complianceType"], "musthave")
+		assertEqual(t, objTemplates1[0]["complianceType"], test.ExpectedComplianceType)
 		kind1, ok := objTemplates1[0]["objectDefinition"].(map[string]interface{})["kind"]
 		if !ok {
 			t.Fatal("The objectDefinition field is an invalid format")
@@ -164,7 +180,7 @@ data:
 			t.Fatal("The object-templates field is an invalid format")
 		}
 		assertEqual(t, len(objTemplates2), 1)
-		assertEqual(t, objTemplates2[0]["complianceType"], "musthave")
+		assertEqual(t, objTemplates2[0]["complianceType"], test.ExpectedComplianceType)
 		kind2, ok := objTemplates2[0]["objectDefinition"].(map[string]interface{})["kind"]
 		if !ok {
 			t.Fatal("The objectDefinition field is an invalid format")
@@ -481,7 +497,7 @@ func TestGetPolicyTemplateInvalidPath(t *testing.T) {
 	manifestPath := path.Join(tmpDir, "does-not-exist.yaml")
 	policyConf := types.PolicyConfig{
 		ComplianceType:    "musthave",
-		Manifests:         []types.Manifest{{Path: manifestPath}},
+		Manifests:         []types.Manifest{{ComplianceType: "musthave", Path: manifestPath}},
 		Name:              "policy-app-config",
 		RemediationAction: "inform",
 		Severity:          "low",

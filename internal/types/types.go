@@ -2,8 +2,9 @@
 package types
 
 type Manifest struct {
-	Patches []map[string]interface{} `json:"patches,omitempty" yaml:"patches,omitempty"`
-	Path    string                   `json:"path,omitempty" yaml:"path,omitempty"`
+	ComplianceType string                   `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
+	Patches        []map[string]interface{} `json:"patches,omitempty" yaml:"patches,omitempty"`
+	Path           string                   `json:"path,omitempty" yaml:"path,omitempty"`
 }
 
 type NamespaceSelector struct {
