@@ -309,6 +309,12 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		if policy.Standards == nil {
 			policy.Standards = p.PolicyDefaults.Standards
 		}
+
+		for i := range policy.Manifests {
+			if policy.Manifests[i].ComplianceType == "" {
+				policy.Manifests[i].ComplianceType = policy.ComplianceType
+			}
+		}
 	}
 }
 
