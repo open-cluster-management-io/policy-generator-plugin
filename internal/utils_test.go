@@ -253,6 +253,150 @@ data:
 	assertReflectEqual(t, annotations, map[string]interface{}{"monica": "geller"})
 }
 
+func TestGetPolicyTemplateMetadataPatches(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestPath := path.Join(tmpDir, "patch-configmap.yaml")
+	manifestYAML := `
+---
+apiVersion: v1
+kind: configmap
+metadata:
+  name: test-configmap
+  namespace: test-namespace
+data:
+  image: "quay.io/potatos1"
+`
+	err := ioutil.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestPath)
+	}
+
+	patches := []map[string]interface{}{
+		{
+			"metadata": map[string]interface{}{
+				"name":      "patch-configmap",
+				"namespace": "patch-namespace",
+			},
+			"data": map[string]interface{}{
+				"image": "quay.io/potatos2",
+			},
+		},
+	}
+
+	manifests := []types.Manifest{
+		{Path: manifestPath, Patches: patches},
+	}
+	policyConf := types.PolicyConfig{
+		Manifests: manifests,
+		Name:      "policy-app-config",
+	}
+
+	policyTemplates, err := getPolicyTemplates(&policyConf)
+	if err != nil {
+		t.Fatalf("Failed to get the policy templates: %v ", err)
+	}
+	assertEqual(t, len(policyTemplates), 1)
+
+	policyTemplate := policyTemplates[0]
+	objdef := policyTemplate["objectDefinition"]
+	assertEqual(t, objdef["metadata"].(map[string]string)["name"], "policy-app-config")
+	spec, ok := objdef["spec"].(map[string]interface{})
+	if !ok {
+		t.Fatal("The spec field is an invalid format")
+	}
+
+	objTemplates, ok := spec["object-templates"].([]map[string]interface{})
+	if !ok {
+		t.Fatal("The object-templates field is an invalid format")
+	}
+	assertEqual(t, len(objTemplates), 1)
+
+	objDef, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})
+	if !ok {
+		t.Fatal("The objectDefinition field is an invalid format")
+	}
+
+	metadata, ok := objDef["metadata"].(map[string]interface{})
+	if !ok {
+		t.Fatal("The metadata field is an invalid format")
+	}
+
+	name, ok := metadata["name"].(string)
+	if !ok {
+		t.Fatal("The metadata.name field is an invalid format")
+	}
+	assertEqual(t, name, "patch-configmap")
+
+	namespace, ok := metadata["namespace"].(string)
+	if !ok {
+		t.Fatal("The metadata.namespace field is an invalid format")
+	}
+	assertEqual(t, namespace, "patch-namespace")
+
+	data, ok := objDef["data"].(map[string]interface{})
+	if !ok {
+		t.Fatal("The data field is an invalid format")
+	}
+
+	image, ok := data["image"].(string)
+	if !ok {
+		t.Fatal("The data.image field is an invalid format")
+	}
+	assertEqual(t, image, "quay.io/potatos2")
+}
+
+func TestGetPolicyTemplateMetadataPatchesFail(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestPath := path.Join(tmpDir, "multi-configmaps.yaml")
+	manifestYAML := `
+---
+apiVersion: v1
+kind: configmap
+metadata:
+  name: test-configmap
+  namespace: test-namespace
+data:
+  image: "quay.io/potatos1"
+---
+apiVersion: v1
+kind: configmap
+metadata:
+  name: test2-configmap
+  namespace: test2-namespace
+data:
+  image: "quay.io/potatos1"
+`
+	err := ioutil.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestPath)
+	}
+
+	patches := []map[string]interface{}{
+		{
+			"metadata": map[string]interface{}{
+				"name":      "patch-configmap",
+				"namespace": "patch-namespace",
+			},
+			"data": map[string]interface{}{
+				"image": "quay.io/potatos2",
+			},
+		},
+	}
+
+	manifests := []types.Manifest{
+		{Path: manifestPath, Patches: patches},
+	}
+	policyConf := types.PolicyConfig{
+		Manifests: manifests,
+		Name:      "policy-app-config",
+	}
+
+	_, err = getPolicyTemplates(&policyConf)
+	assertEqual(t, err != nil, true)
+}
+
 func TestGetPolicyTemplateKyverno(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()

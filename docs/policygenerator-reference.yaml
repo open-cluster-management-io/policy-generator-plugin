@@ -76,9 +76,11 @@ policies:
             kind: ""
             metadata:
               # Optional: Only required when there are multiple manifests in the path.
+              # Optional: Replace metadata.name is only allowed for a single YAML structure manifest.
               name: ""
               # Optional: Only required when there are multiple manifests in the path and it's a
               # manifest to a namespaced resource.
+              # Optional: Replace metadata.namespace is only allowed for a single YAML structure manifest.
               namespace: ""
               # An example modification to the manifest
               annotations:

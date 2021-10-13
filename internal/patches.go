@@ -20,7 +20,7 @@ type manifestPatcher struct {
 	patches []map[string]interface{}
 }
 
-// validateManifestInfo verifes that the apiVersion, kind, metadata.name fields from a manifest
+// validateManifestInfo verifies that the apiVersion, kind, metadata.name fields from a manifest
 // are set. If at least one is not present, an error is returned based on the input error template
 // which accepts the field name.
 func validateManifestInfo(manifest map[string]interface{}, errTemplate string) error {
