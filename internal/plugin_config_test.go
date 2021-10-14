@@ -223,6 +223,39 @@ policies:
 	assertEqual(t, err.Error(), expected)
 }
 
+func TestCreateInvalidPolicyName(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	configMapPath := path.Join(tmpDir, "configmap.yaml")
+	policyNS := "my-policies-my-policies-my-policies"
+	policyName := "policy-app-config-policy-app-config-policy-app-config"
+	defaultsConfig := fmt.Sprintf(
+		`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: %s
+policies:
+- name: %s
+  manifests:
+    - path: %s
+`,
+		policyNS, policyName, configMapPath,
+	)
+
+	p := Plugin{}
+	err := p.Config([]byte(defaultsConfig))
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := fmt.Sprintf("the policy namespace and name cannot be more than 63 characters %s.%s", policyNS, policyName)
+	assertEqual(t, err.Error(), expected)
+}
+
 func TestConfigNoPolicies(t *testing.T) {
 	t.Parallel()
 	const config = `
