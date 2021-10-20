@@ -136,7 +136,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 	policyTemplates := make([]map[string]map[string]interface{}, 0, policyTemplatesLength)
 	for i, manifestGroup := range manifestGroups {
 		complianceType := policyConf.Manifests[i].ComplianceType
-		for _, manifest := range manifestGroup {
+		for j, manifest := range manifestGroup {
 			objTemplate := map[string]interface{}{
 				"complianceType":   complianceType,
 				"objectDefinition": manifest,
@@ -147,7 +147,9 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 			} else {
 				// casting each objTemplate with manifest to objectTemplates type
 				// build policyTemplate for each objectTemplates
-				policyTemplate := buildPolicyTemplate(policyConf, &[]map[string]interface{}{objTemplate})
+				policyTemplate := buildPolicyTemplate(
+					policyConf, i+j+1, &[]map[string]interface{}{objTemplate},
+				)
 				setNamespaceSelector(policyConf, policyTemplate)
 				policyTemplates = append(policyTemplates, *policyTemplate)
 			}
@@ -162,7 +164,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 
 	//  just build one policyTemplate by using the above consolidated objectTemplates
 	if policyConf.ConsolidateManifests {
-		policyTemplate := buildPolicyTemplate(policyConf, &objectTemplates)
+		policyTemplate := buildPolicyTemplate(policyConf, 1, &objectTemplates)
 		setNamespaceSelector(policyConf, policyTemplate)
 		policyTemplates = append(policyTemplates, *policyTemplate)
 	}
@@ -184,13 +186,23 @@ func setNamespaceSelector(policyConf *types.PolicyConfig, policyTemplate *map[st
 }
 
 // buildPolicyTemplate generates single policy template by using objectTemplates with manifests.
-func buildPolicyTemplate(policyConf *types.PolicyConfig, objectTemplates *[]map[string]interface{}) *map[string]map[string]interface{} {
+// policyNum defines which number the configuration policy is in the policy. If it is greater than
+// one then the configuration policy name will have policyNum appended to it.
+func buildPolicyTemplate(
+	policyConf *types.PolicyConfig, policyNum int, objectTemplates *[]map[string]interface{},
+) *map[string]map[string]interface{} {
+	var name string
+	if policyNum > 1 {
+		name = fmt.Sprintf("%s%d", policyConf.Name, policyNum)
+	} else {
+		name = policyConf.Name
+	}
 	policyTemplate := map[string]map[string]interface{}{
 		"objectDefinition": {
 			"apiVersion": policyAPIVersion,
 			"kind":       configPolicyKind,
 			"metadata": map[string]string{
-				"name": policyConf.Name,
+				"name": name,
 			},
 			"spec": map[string]interface{}{
 				"object-templates":  *objectTemplates,
