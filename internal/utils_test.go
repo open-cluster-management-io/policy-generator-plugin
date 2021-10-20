@@ -168,7 +168,7 @@ data:
 
 		policyTemplate2 := policyTemplates[1]
 		objdef2 := policyTemplate2["objectDefinition"]
-		assertEqual(t, objdef2["metadata"].(map[string]string)["name"], "policy-app-config")
+		assertEqual(t, objdef2["metadata"].(map[string]string)["name"], "policy-app-config2")
 		spec2, ok := objdef2["spec"].(map[string]interface{})
 		if !ok {
 			t.Fatal("The spec field is an invalid format")
