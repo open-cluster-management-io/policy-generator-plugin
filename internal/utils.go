@@ -136,7 +136,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 	policyTemplates := make([]map[string]map[string]interface{}, 0, policyTemplatesLength)
 	for i, manifestGroup := range manifestGroups {
 		complianceType := policyConf.Manifests[i].ComplianceType
-		for j, manifest := range manifestGroup {
+		for _, manifest := range manifestGroup {
 			objTemplate := map[string]interface{}{
 				"complianceType":   complianceType,
 				"objectDefinition": manifest,
@@ -148,7 +148,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 				// casting each objTemplate with manifest to objectTemplates type
 				// build policyTemplate for each objectTemplates
 				policyTemplate := buildPolicyTemplate(
-					policyConf, i+j+1, &[]map[string]interface{}{objTemplate},
+					policyConf, len(policyTemplates)+1, &[]map[string]interface{}{objTemplate},
 				)
 				setNamespaceSelector(policyConf, policyTemplate)
 				policyTemplates = append(policyTemplates, *policyTemplate)
