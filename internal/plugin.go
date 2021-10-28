@@ -22,6 +22,7 @@ const (
 	placementBindingKind       = "PlacementBinding"
 	placementRuleAPIVersion    = "apps.open-cluster-management.io/v1"
 	placementRuleKind          = "PlacementRule"
+	maxObjectNameLength        = 63
 )
 
 // Plugin is used to store the PolicyGenerator configuration and the methods to generate the
@@ -356,6 +357,11 @@ func (p *Plugin) assertValidConfig() error {
 
 		if policy.Name == "" {
 			return errors.New("each policy must have a name set")
+		}
+
+		if len(p.PolicyDefaults.Namespace+"."+policy.Name) > maxObjectNameLength {
+			return fmt.Errorf("the policy namespace and name cannot be more than 63 characters %s.%s",
+				p.PolicyDefaults.Namespace, policy.Name)
 		}
 
 		if seen[policy.Name] {
