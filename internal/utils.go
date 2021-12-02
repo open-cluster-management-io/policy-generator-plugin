@@ -9,6 +9,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/open-cluster-management/policy-generator-plugin/internal/expanders"
 	"github.com/open-cluster-management/policy-generator-plugin/internal/types"
@@ -279,4 +281,31 @@ func unmarshalManifestBytes(manifestBytes []byte) (*[]map[string]interface{}, er
 	}
 
 	return &yamlDocs, nil
+}
+
+// verifyManifestPath verifies that the manifest path is in the directory tree under baseDirectory.
+// An error is returned if it is not or the paths couldn't be properly resolved.
+func verifyManifestPath(baseDirectory string, manifestPath string) error {
+	absPath, err := filepath.Abs(manifestPath)
+	if err != nil {
+		return fmt.Errorf("could not resolve the manifest path %s to an absolute path", manifestPath)
+	}
+
+	relPath, err := filepath.Rel(baseDirectory, absPath)
+	if err != nil {
+		return fmt.Errorf(
+			"could not resolve the manifest path %s to a relative path from the kustomization.yaml file",
+			manifestPath,
+		)
+	}
+
+	parDir := ".." + string(filepath.Separator)
+	if strings.HasPrefix(relPath, parDir) || relPath == ".." {
+		return fmt.Errorf(
+			"the manifest path %s is not in the same directory tree as the kustomization.yaml file",
+			manifestPath,
+		)
+	}
+
+	return nil
 }

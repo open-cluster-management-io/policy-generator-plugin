@@ -16,6 +16,7 @@ func TestGenerate(t *testing.T) {
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
 	p := Plugin{}
+	p.baseDirectory = tmpDir
 	p.PlacementBindingDefaults.Name = "my-placement-binding"
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	p.PolicyDefaults.Namespace = "my-policies"
@@ -158,6 +159,7 @@ func TestGenerateSeparateBindings(t *testing.T) {
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
 	p := Plugin{}
+	p.baseDirectory = tmpDir
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{
 		Name: "policy-app-config",
@@ -305,6 +307,7 @@ func TestGenerateMissingBindingName(t *testing.T) {
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
 	p := Plugin{}
+	p.baseDirectory = tmpDir
 	p.PlacementBindingDefaults.Name = ""
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	p.PolicyDefaults.Namespace = "my-policies"
