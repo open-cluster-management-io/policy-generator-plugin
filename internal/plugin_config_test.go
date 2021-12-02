@@ -223,7 +223,7 @@ policies:
 	assertEqual(t, err.Error(), expected)
 }
 
-func TestCreateInvalidPolicyName(t *testing.T) {
+func TestConfigInvalidPolicyName(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
