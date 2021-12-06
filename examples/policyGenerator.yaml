@@ -6,6 +6,7 @@ placementBindingDefaults:
   name: my-placement-binding
 policyDefaults:
   # categories: []
+  # complianceType: "musthave"
   controls: 
     - PR.DS-1 Data-at-rest
   namespace: my-policies

@@ -18,10 +18,15 @@ generator plugin to be enabled.
 
 By default, a Placement and PlacementBinding are created for each policy with the policy name as the
 suffix. To signal that you'd like to consolidate policies that use the same Placement under a single
-PlacementBinding, either specify `placement.placementRulePath` to an existing Placement manifest or
-set `placement.name` along with `placement.clusterSelectors`. When the PlacementBinding is
-consolidated in this way, `placementBindingDefaults.name` must be specified so that the generator
-can create unique names for the bindings.
+PlacementBinding, either specify `placement.placementRulePath` to an existing Placement manifest or set
+`placement.name` along with `placement.clusterSelectors`. When the PlacementBinding is consolidated in
+this way, `placementBindingDefaults.name` must be specified so that the generator can create unique
+names for the bindings.
+
+The PlacementRule kind in the `apps.open-cluster-management.io` API group is used by default if no
+placement is given. However, you can use the Placement kind in the
+`cluster.open-cluster-management.io` API group by specifying a Placement manifest in
+`placement.placementPath` or specifying labels in `placement.labelSelector`.
 
 ## Policy expanders
 

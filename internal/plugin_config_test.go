@@ -94,11 +94,13 @@ policies:
 	}
 	assertReflectEqual(t, p.PolicyDefaults.NamespaceSelector, expectedNsSelector)
 	assertEqual(t, p.PolicyDefaults.Placement.PlacementRulePath, "")
+	assertEqual(t, p.PolicyDefaults.Placement.PlacementPath, "")
 	assertReflectEqual(
 		t,
 		p.PolicyDefaults.Placement.ClusterSelectors,
 		map[string]string{"cloud": "red hat"},
 	)
+	assertEqual(t, len(p.PolicyDefaults.Placement.LabelSelector), 0)
 	assertEqual(t, p.PolicyDefaults.RemediationAction, "enforce")
 	assertEqual(t, p.PolicyDefaults.Severity, "medium")
 	assertReflectEqual(t, p.PolicyDefaults.Standards, []string{"NIST SP 800-53"})
@@ -180,6 +182,8 @@ policies:
 	assertReflectEqual(t, p.PolicyDefaults.NamespaceSelector, expectedNsSelector)
 	assertEqual(t, p.PolicyDefaults.Placement.PlacementRulePath, "")
 	assertEqual(t, len(p.PolicyDefaults.Placement.ClusterSelectors), 0)
+	assertEqual(t, p.PolicyDefaults.Placement.PlacementPath, "")
+	assertEqual(t, len(p.PolicyDefaults.Placement.LabelSelector), 0)
 	assertEqual(t, p.PolicyDefaults.RemediationAction, "inform")
 	assertEqual(t, p.PolicyDefaults.Severity, "low")
 	assertReflectEqual(t, p.PolicyDefaults.Standards, []string{"NIST SP 800-53"})
@@ -196,6 +200,8 @@ policies:
 	assertReflectEqual(t, policy.NamespaceSelector, expectedNsSelector)
 	assertEqual(t, len(policy.Placement.ClusterSelectors), 0)
 	assertEqual(t, policy.Placement.PlacementRulePath, "")
+	assertEqual(t, len(policy.Placement.LabelSelector), 0)
+	assertEqual(t, policy.Placement.PlacementPath, "")
 	assertEqual(t, policy.RemediationAction, "inform")
 	assertEqual(t, policy.Severity, "low")
 	assertReflectEqual(t, policy.Standards, []string{"NIST SP 800-53"})
@@ -252,7 +258,7 @@ policies:
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	expected := fmt.Sprintf("the policy namespace and name cannot be more than 63 characters %s.%s", policyNS, policyName)
+	expected := fmt.Sprintf("the policy namespace and name cannot be more than 63 characters: %s.%s", policyNS, policyName)
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -276,7 +282,106 @@ policyDefaults:
 	assertEqual(t, err.Error(), expected)
 }
 
-func TestConfigMultiplePlacements(t *testing.T) {
+func TestConfigMultiplePlacementsClusterSelectorAndPlRPath(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	config := fmt.Sprintf(`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: my-policies
+policies:
+- name: policy-app-config
+  placement:
+    clusterSelectors:
+      cloud: red hat
+    placementRulePath: path/to/plr.yaml
+  manifests:
+    - path: %s
+`,
+		path.Join(tmpDir, "configmap.yaml"),
+	)
+	p := Plugin{}
+	err := p.Config([]byte(config))
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := "policy policy-app-config may not specify a placement selector and " +
+		"placement path together"
+	assertEqual(t, err.Error(), expected)
+}
+
+func TestConfigMultiplePlacementsLabelSelectorAndPlRPath(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	config := fmt.Sprintf(`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: my-policies
+policies:
+- name: policy-app-config
+  placement:
+    labelSelector:
+      cloud: red hat
+    placementRulePath: path/to/plr.yaml
+  manifests:
+    - path: %s
+`,
+		path.Join(tmpDir, "configmap.yaml"),
+	)
+	p := Plugin{}
+	err := p.Config([]byte(config))
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := "policy policy-app-config may not specify a placement selector and " +
+		"placement path together"
+	assertEqual(t, err.Error(), expected)
+}
+
+func TestConfigMultiplePlacementsLabelSelectorAndPlPath(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	config := fmt.Sprintf(`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: my-policies
+policies:
+- name: policy-app-config
+  placement:
+    labelSelector:
+      cloud: red hat
+    placementPath: path/to/pl.yaml
+  manifests:
+    - path: %s
+`,
+		path.Join(tmpDir, "configmap.yaml"),
+	)
+	p := Plugin{}
+	err := p.Config([]byte(config))
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := "policy policy-app-config may not specify a placement selector and " +
+		"placement path together"
+	assertEqual(t, err.Error(), expected)
+}
+
+func TestConfigMultipleDefaultPlacementLabels(t *testing.T) {
 	t.Parallel()
 	const config = `
 apiVersion: policy.open-cluster-management.io/v1
@@ -285,6 +390,73 @@ metadata:
   name: policy-generator-name
 policyDefaults:
   namespace: my-policies
+  placement:
+    clusterSelectors:
+      cloud: red hat
+    labelSelector:
+      cloud: red hat
+policies:
+- name: policy-app-config
+  manifests:
+    - path: input/configmap.yaml
+`
+	p := Plugin{}
+	err := p.Config([]byte(config))
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := "policyDefaults must provide only one of " +
+		"placement.labelSelector or placement.clusterSelectors"
+	assertEqual(t, err.Error(), expected)
+}
+
+func TestConfigMultiplePolicyPlacementLabels(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	config := fmt.Sprintf(`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: my-policies
+policies:
+- name: policy-app-config
+  placement:
+    clusterSelectors:
+      cloud: red hat
+    labelSelector:
+      cloud: red hat
+  manifests:
+    - path: %s
+`,
+		path.Join(tmpDir, "configmap.yaml"),
+	)
+	p := Plugin{}
+	err := p.Config([]byte(config))
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := "policy policy-app-config must provide only one of " +
+		"placement.labelSelector or placement.clusterselectors"
+	assertEqual(t, err.Error(), expected)
+}
+
+func TestConfigMultipleDefaultPlacementPaths(t *testing.T) {
+	t.Parallel()
+	const config = `
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: my-policies
+  placement:
+    placementPath: path/to/pl.yaml
+    placementRulePath: path/to/plr.yaml
 policies:
 - name: policy-app-config
   placement:
@@ -300,8 +472,110 @@ policies:
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	expected := "a policy may not specify placement.clusterSelectors and " +
-		"placement.placementRulePath together"
+	expected := "policyDefaults must provide only one of " +
+		"placement.placementPath or placement.placementRulePath"
+	assertEqual(t, err.Error(), expected)
+}
+
+func TestConfigMultipleDefaultAndPolicyPlacements(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	config := fmt.Sprintf(`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: my-policies
+  placement:
+    placementPath: path/to/pl.yaml
+policies:
+- name: policy-app-config
+  placement:
+    clusterSelectors:
+      cloud: red hat
+  manifests:
+  - path: %s
+`,
+		path.Join(tmpDir, "configmap.yaml"),
+	)
+	p := Plugin{}
+	err := p.Config([]byte(config))
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := "policy policy-app-config may not specify a " +
+		"placement selector and placement path together"
+	assertEqual(t, err.Error(), expected)
+}
+
+func TestConfigPlacementInvalidMixture(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	config := fmt.Sprintf(`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: my-policies
+policies:
+- name: policy-app-config-1
+  placement:
+    clusterSelectors:
+      cloud: red hat
+  manifests:
+    - path: %s
+- name: policy-app-config-2
+  placement:
+    labelSelector:
+      cloud: red hat
+  manifests:
+    - path: %s
+`,
+		path.Join(tmpDir, "configmap.yaml"), path.Join(tmpDir, "configmap.yaml"),
+	)
+	p := Plugin{}
+	err := p.Config([]byte(config))
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := "may not use a mix of Placement and PlacementRule for " +
+		"policies; found 1 Placement and 1 PlacementRule"
+	assertEqual(t, err.Error(), expected)
+}
+
+func TestConfigPlacementPathNotFound(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	config := fmt.Sprintf(`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: my-policies
+policies:
+- name: policy-app-config
+  placement:
+    placementPath: path/to/pl.yaml
+  manifests:
+    - path: %s
+`,
+		path.Join(tmpDir, "configmap.yaml"),
+	)
+	p := Plugin{}
+	err := p.Config([]byte(config))
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := "could not read the placement path path/to/pl.yaml"
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -336,7 +610,9 @@ policies:
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	assertEqual(t, err.Error(), "each policy must have a unique name set: policy-app-config")
+	expected := "each policy must have a unique name set, " +
+		"but found a duplicate name: policy-app-config"
+	assertEqual(t, err.Error(), expected)
 }
 
 func TestConfigNoManifests(t *testing.T) {
@@ -357,7 +633,8 @@ policies:
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	expected := "each policy must have at least one manifest"
+	expected := "each policy must have at least one manifest, " +
+		"but found none in policy policy-app-config"
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -386,7 +663,9 @@ policies:
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	expected := fmt.Sprintf("could not read the manifest path %s", manifestPath)
+	expected := fmt.Sprintf(
+		"could not read the manifest path %s in policy policy-app-config", manifestPath,
+	)
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -414,7 +693,7 @@ policies:
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	expected := "each policy must have a name set"
+	expected := "each policy must have a name set, but did not find a name at policy array index 0"
 	assertEqual(t, err.Error(), expected)
 }
 

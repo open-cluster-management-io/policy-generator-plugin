@@ -35,15 +35,22 @@ policyDefaults:
   # Optional. The placement configuration for the policies. This defaults to a placement
   # configuration that matches all clusters.
   placement:
-    # To specify a placement, specify key:value pair cluster selectors. (See placementRulePath to
-    # specify an existing file instead.)
+    # To specify a placement rule, specify key:value pair cluster selectors. (See placementRulePath
+    # to specify an existing file instead.)
     clusterSelectors: {}
+    # To specify a placement, specify key:value pair cluster label selectors. (See placementPath to
+    # specify an existing file instead.)
+    labelSelector: {}
     # Optional. Specifying a name will consolidate placement rules that contain the same cluster
     # selectors.
     name: ""
-    # To reuse an existing placement rule, specify the path here relative to the kustomization.yaml
-    # file. If given, this placement rule will be used by all policies by default. (See
-    # clusterSelectors to generate a new Placement instead.)
+    # To reuse an existing placement manifest, specify the path here relative to the
+    # kustomization.yaml file. If given, this placement will be used by all policies by default.
+    # (See clusterSelectors to generate a new Placement instead.)
+    placementPath: ""
+    # To reuse an existing placement rule manifest, specify the path here relative to the
+    # kustomization.yaml file. If given, this placement rule will be used by all policies by
+    # default. (See clusterSelectors to generate a new PlacementRule instead.)
     placementRulePath: ""
   # Optional. The remediation action ("inform" or "enforce") for each configuration policy. This
   # defaults to "inform".
@@ -58,12 +65,12 @@ policyDefaults:
 # Required. The list of policies to create along with overrides to either the default values or, if
 # set, the values given in policyDefaults.
 policies:
-  # Required. The name of the policy to create.
+    # Required. The name of the policy to create.
   - name: ""
     # Required. The list of Kubernetes resource object manifests to include in the policy.
     manifests:
-      # Required. Path to a single file or a flat directory of files relative to the
-      # kustomization.yaml file.
+        # Required. Path to a single file or a flat directory of files relative to the
+        # kustomization.yaml file.
       - path: ""
         # Optional. (See policy[0].complianceType for description.)
         complianceType: "musthave"
