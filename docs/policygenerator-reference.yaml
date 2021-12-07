@@ -63,7 +63,9 @@ policies:
     # Required. The list of Kubernetes resource object manifests to include in the policy.
     manifests:
       # Required. Path to a single file or a flat directory of files relative to the
-      # kustomization.yaml file.
+      # kustomization.yaml file. This path cannot be in a directory outside of the directory with
+      # the kustomization.yaml file. Subdirectories within the directory with kustomization.yaml
+      # file are allowed.
       - path: ""
         # Optional. (See policy[0].complianceType for description.)
         complianceType: "musthave"

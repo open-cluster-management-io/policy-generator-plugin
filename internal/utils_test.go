@@ -4,6 +4,7 @@ package internal
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"reflect"
 	"testing"
@@ -671,4 +672,69 @@ func TestUnmarshalManifestFileNotObject(t *testing.T) {
 			"YAML objects", manifestPath,
 	)
 	assertEqual(t, err.Error(), expected)
+}
+
+// nolint: paralleltest
+func TestVerifyManifestPath(t *testing.T) {
+	baseDirectory := t.TempDir()
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get the current working directory: %v", err)
+	}
+
+	defer func() {
+		err := os.Chdir(cwd)
+		if err != nil {
+			// panic since this could affect other tests that haven't yet run
+			panic(fmt.Sprintf("Couldn't go back to the original working directory: %v", err))
+		}
+	}()
+
+	err = os.Chdir(baseDirectory)
+	if err != nil {
+		t.Fatalf("Failed to change the working directory to %s: %v", baseDirectory, err)
+	}
+
+	manifestPath := path.Join(baseDirectory, "configmap.yaml")
+	yamlContent := "---\nkind: ConfigMap"
+	err = ioutil.WriteFile(manifestPath, []byte(yamlContent), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestPath)
+	}
+
+	tests := []struct {
+		ManifestPath   string
+		ExpectedErrMsg string
+	}{
+		{manifestPath, ""},
+		{"configmap.yaml", ""},
+		{
+			"../../../../temp.yaml",
+			"the manifest path ../../../../temp.yaml is not in the same directory tree as the kustomization.yaml file",
+		},
+		{
+			"..",
+			"the manifest path .. is not in the same directory tree as the kustomization.yaml file",
+		},
+		{
+			"/super/secret",
+			"the manifest path /super/secret is not in the same directory tree as the kustomization.yaml file",
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		// nolint: paralleltest
+		t.Run(
+			"manifestPath="+test.ManifestPath,
+			func(t *testing.T) {
+				err := verifyManifestPath(baseDirectory, test.ManifestPath)
+				if err == nil {
+					assertEqual(t, "", test.ExpectedErrMsg)
+				} else {
+					assertEqual(t, err.Error(), test.ExpectedErrMsg)
+				}
+			},
+		)
+	}
 }
