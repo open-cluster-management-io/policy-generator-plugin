@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -676,7 +677,10 @@ func TestUnmarshalManifestFileNotObject(t *testing.T) {
 
 // nolint: paralleltest
 func TestVerifyManifestPath(t *testing.T) {
-	baseDirectory := t.TempDir()
+	baseDirectory, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatalf("Failed to evaluate symlinks for the base directory: %v", err)
+	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Failed to get the current working directory: %v", err)
@@ -690,17 +694,43 @@ func TestVerifyManifestPath(t *testing.T) {
 		}
 	}()
 
-	err = os.Chdir(baseDirectory)
+	// Set up directory structure, with 'workingdir' as target directory:
+	// baseDirectory (t.TempDir())
+	// ├── workingdir
+	// │   └── subdir
+	// └── otherdir
+	workingDir := path.Join(baseDirectory, "workingdir")
+	subDir := path.Join(workingDir, "subdir")
+	otherDir := path.Join(baseDirectory, "otherdir")
+	err = os.MkdirAll(subDir, 0777)
 	if err != nil {
-		t.Fatalf("Failed to change the working directory to %s: %v", baseDirectory, err)
+		t.Fatalf("Failed to create the directory structure %s: %v", subDir, err)
+	}
+	err = os.Mkdir(otherDir, 0777)
+	if err != nil {
+		t.Fatalf("Failed to create the directory structure %s: %v", otherDir, err)
 	}
 
-	manifestPath := path.Join(baseDirectory, "configmap.yaml")
+	// Create files in baseDirectory/workingdir and baseDirectory/otherdir
+	manifestPath := path.Join(workingDir, "configmap.yaml")
 	yamlContent := "---\nkind: ConfigMap"
 	err = ioutil.WriteFile(manifestPath, []byte(yamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestPath)
 	}
+	otherManifestPath := path.Join(otherDir, "configmap.yaml")
+	err = ioutil.WriteFile(otherManifestPath, []byte(yamlContent), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", otherManifestPath)
+	}
+
+	err = os.Chdir(workingDir)
+	if err != nil {
+		t.Fatalf("Failed to change the working directory to %s: %v", workingDir, err)
+	}
+
+	grandParentDir := path.Join("..", "..")
+	relOtherManifestPath := path.Join("..", "otherdir", "configmap.yaml")
 
 	tests := []struct {
 		ManifestPath   string
@@ -708,17 +738,30 @@ func TestVerifyManifestPath(t *testing.T) {
 	}{
 		{manifestPath, ""},
 		{"configmap.yaml", ""},
-		{
-			"../../../../temp.yaml",
-			"the manifest path ../../../../temp.yaml is not in the same directory tree as the kustomization.yaml file",
-		},
+		{"subdir", ""},
 		{
 			"..",
 			"the manifest path .. is not in the same directory tree as the kustomization.yaml file",
 		},
 		{
-			"/super/secret",
-			"the manifest path /super/secret is not in the same directory tree as the kustomization.yaml file",
+			grandParentDir,
+			fmt.Sprintf("the manifest path %s is not in the same directory tree as the kustomization.yaml file", grandParentDir),
+		},
+		{
+			baseDirectory,
+			fmt.Sprintf("the manifest path %s is not in the same directory tree as the kustomization.yaml file", baseDirectory),
+		},
+		{
+			otherManifestPath,
+			fmt.Sprintf("the manifest path %s is not in the same directory tree as the kustomization.yaml file", otherManifestPath),
+		},
+		{
+			relOtherManifestPath,
+			fmt.Sprintf("the manifest path %s is not in the same directory tree as the kustomization.yaml file", relOtherManifestPath),
+		},
+		{
+			otherDir,
+			fmt.Sprintf("the manifest path %s is not in the same directory tree as the kustomization.yaml file", otherDir),
 		},
 	}
 
@@ -728,7 +771,7 @@ func TestVerifyManifestPath(t *testing.T) {
 		t.Run(
 			"manifestPath="+test.ManifestPath,
 			func(t *testing.T) {
-				err := verifyManifestPath(baseDirectory, test.ManifestPath)
+				err := verifyManifestPath(workingDir, test.ManifestPath)
 				if err == nil {
 					assertEqual(t, "", test.ExpectedErrMsg)
 				} else {

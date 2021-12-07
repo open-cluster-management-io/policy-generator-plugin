@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -79,6 +80,10 @@ func (p *Plugin) Config(config []byte, baseDirectory string) error {
 	}
 	p.applyDefaults(unmarshaledConfig)
 
+	baseDirectory, err = filepath.EvalSymlinks(baseDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to evaluate symlinks for the base directory: %w", err)
+	}
 	p.baseDirectory = baseDirectory
 
 	return p.assertValidConfig()
