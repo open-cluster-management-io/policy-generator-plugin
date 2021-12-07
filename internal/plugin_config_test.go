@@ -78,7 +78,7 @@ policies:
 	)
 
 	p := Plugin{}
-	err := p.Config([]byte(exampleConfig))
+	err := p.Config([]byte(exampleConfig), tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -167,7 +167,7 @@ policies:
 		configMapPath,
 	)
 	p := Plugin{}
-	err := p.Config([]byte(defaultsConfig))
+	err := p.Config([]byte(defaultsConfig), tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -220,7 +220,7 @@ policies:
     - path: input/configmap.yaml
 `
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), "")
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -229,7 +229,7 @@ policies:
 	assertEqual(t, err.Error(), expected)
 }
 
-func TestCreateInvalidPolicyName(t *testing.T) {
+func TestConfigInvalidPolicyName(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
@@ -253,7 +253,7 @@ policies:
 	)
 
 	p := Plugin{}
-	err := p.Config([]byte(defaultsConfig))
+	err := p.Config([]byte(defaultsConfig), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -273,12 +273,49 @@ policyDefaults:
   namespace: my-policies
 `
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), "")
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
 
 	expected := "policies is empty but it must be set"
+	assertEqual(t, err.Error(), expected)
+}
+
+func TestConfigInvalidPath(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	configMapPath := path.Join(tmpDir, "configmap.yaml")
+	policyNS := "my-policies"
+	policyName := "policy-app-config"
+	defaultsConfig := fmt.Sprintf(
+		`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: %s
+policies:
+- name: %s
+  manifests:
+    - path: %s
+`,
+		policyNS, policyName, configMapPath,
+	)
+
+	p := Plugin{}
+	// Provide a base directory that isn't in the same directory tree as tmpDir.
+	baseDir := t.TempDir()
+	err := p.Config([]byte(defaultsConfig), baseDir)
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := fmt.Sprintf(
+		"the manifest path %s is not in the same directory tree as the kustomization.yaml file", configMapPath,
+	)
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -305,7 +342,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -338,7 +375,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -371,7 +408,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -401,7 +438,7 @@ policies:
     - path: input/configmap.yaml
 `
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), "")
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -435,7 +472,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -467,7 +504,7 @@ policies:
     - path: input/configmap.yaml
 `
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), "")
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -501,7 +538,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -539,7 +576,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"), path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -570,7 +607,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -605,7 +642,7 @@ policies:
 		path.Join(tmpDir, "configmap2.yaml"),
 	)
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -628,7 +665,7 @@ policies:
 - name: policy-app-config
 `
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), "")
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -658,7 +695,7 @@ policies:
 		manifestPath,
 	)
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -688,7 +725,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -721,7 +758,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
-	err := p.Config([]byte(config))
+	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}

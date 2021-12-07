@@ -21,12 +21,11 @@ policyDefaults:
   # annotation. This defaults to ["CM-2 Baseline Configuration"].
   controls:
     - "CM-2 Baseline Configuration"
-  # Optional. This determines if a single configuration policy should be
-  # generated for all the manifests being wrapped in the policy.
-  # If set to false, a configuration policy per manifest will be generated.
-  # This defaults to true.
+  # Optional. This determines if a single configuration policy should be generated for all the
+  # manifests being wrapped in the policy. If set to false, a configuration policy per manifest will
+  # be generated. This defaults to true.
   consolidateManifests: true
-  # Optional. When the policy references a Kyverno policy manifest, this determines if an additonal
+  # Optional. When the policy references a Kyverno policy manifest, this determines if an additional
   # configuration policy should be generated in order to receive policy violations in Open Cluster
   # Management when the Kyverno policy has been violated. This defaults to true.
   informKyvernoPolicies: true
@@ -70,7 +69,9 @@ policies:
     # Required. The list of Kubernetes resource object manifests to include in the policy.
     manifests:
         # Required. Path to a single file or a flat directory of files relative to the
-        # kustomization.yaml file.
+        # kustomization.yaml file. This path cannot be in a directory outside of the directory with
+        # the kustomization.yaml file. Subdirectories within the directory with kustomization.yaml
+        # file are allowed.
       - path: ""
         # Optional. (See policy[0].complianceType for description.)
         complianceType: "musthave"

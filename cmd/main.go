@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 
 	"github.com/open-cluster-management/policy-generator-plugin/internal"
 	"github.com/spf13/pflag"
@@ -50,13 +51,18 @@ func errorAndExit(msg string, formatArgs ...interface{}) {
 // It reads the file, processes and validates the contents, uses the contents to
 // generate policies, and returns the generated policies as a byte array.
 func processGeneratorConfig(filePath string) []byte {
+	cwd, err := os.Getwd()
+	if err != nil {
+		errorAndExit("failed to determine the current directory: %v", err)
+	}
+
 	p := internal.Plugin{}
 	fileData, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		errorAndExit("failed to read file '%s': %s", filePath, err)
 	}
 
-	err = p.Config(fileData)
+	err = p.Config(fileData, path.Dir(cwd))
 	if err != nil {
 		errorAndExit("error processing the PolicyGenerator file '%s': %s", filePath, err)
 	}

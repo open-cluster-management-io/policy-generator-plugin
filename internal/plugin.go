@@ -40,6 +40,8 @@ type Plugin struct {
 	Policies       []types.PolicyConfig `json:"policies" yaml:"policies"`
 	// A set of all placement names that have been processed or generated
 	allPlcs map[string]bool
+	// The base of the directory tree to restrict all manifest files to be within
+	baseDirectory string
 	// This is a mapping of cluster/label selectors formatted as the return value of getCsKey to
 	// placement names. This is used to find common cluster/label selectors that can be consolidated
 	// to a single placement.
@@ -63,7 +65,7 @@ var defaults = types.PolicyDefaults{
 
 // Config validates the input PolicyGenerator configuration, applies any missing defaults, and
 // configures the Policy object.
-func (p *Plugin) Config(config []byte) error {
+func (p *Plugin) Config(config []byte, baseDirectory string) error {
 	err := yaml.Unmarshal(config, p)
 	const errTemplate = "the PolicyGenerator configuration file is invalid: %w"
 	if err != nil {
@@ -76,6 +78,8 @@ func (p *Plugin) Config(config []byte) error {
 		return fmt.Errorf(errTemplate, err)
 	}
 	p.applyDefaults(unmarshaledConfig)
+
+	p.baseDirectory = baseDirectory
 
 	return p.assertValidConfig()
 }
@@ -409,6 +413,11 @@ func (p *Plugin) assertValidConfig() error {
 				return fmt.Errorf(
 					"could not read the manifest path %s in policy %s", manifest.Path, policy.Name,
 				)
+			}
+
+			err = verifyManifestPath(p.baseDirectory, manifest.Path)
+			if err != nil {
+				return err
 			}
 		}
 
