@@ -14,7 +14,9 @@ type NamespaceSelector struct {
 
 type PlacementConfig struct {
 	ClusterSelectors  map[string]string `json:"clusterSelectors,omitempty" yaml:"clusterSelectors,omitempty"`
+	LabelSelector     map[string]string `json:"labelSelector,omitempty" yaml:"labelSelector,omitempty"`
 	Name              string            `json:"name,omitempty" yaml:"name,omitempty"`
+	PlacementPath     string            `json:"placementPath,omitempty" yaml:"placementPath,omitempty"`
 	PlacementRulePath string            `json:"placementRulePath,omitempty" yaml:"placementRulePath,omitempty"`
 }
 

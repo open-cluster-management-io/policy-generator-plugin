@@ -290,6 +290,10 @@ func verifyManifestPath(baseDirectory string, manifestPath string) error {
 	if err != nil {
 		return fmt.Errorf("could not resolve the manifest path %s to an absolute path", manifestPath)
 	}
+	absPath, err = filepath.EvalSymlinks(absPath)
+	if err != nil {
+		return fmt.Errorf("could not resolve symlinks to the manifest path %s", manifestPath)
+	}
 
 	relPath, err := filepath.Rel(baseDirectory, absPath)
 	if err != nil {
