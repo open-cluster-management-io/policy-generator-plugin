@@ -14,6 +14,6 @@ lint-go:
 lint-all: lint-go lint-yaml
 
 format-go:
-	@${FINDFILES} -name '*.go' \( ! \( -name '*.gen.go' -o -name '*.pb.go' \) \) -print0 | ${XARGS} goimports -w -local "github.com/open-cluster-management"
+	@${FINDFILES} -name '*.go' \( ! \( -name '*.gen.go' -o -name '*.pb.go' \) \) -print0 | ${XARGS} goimports -w -local "github.com/stolostron"
 
 .PHONY: lint-go lint-yaml
