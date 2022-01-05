@@ -7,7 +7,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/open-cluster-management/policy-generator-plugin/internal/types"
+	"github.com/stolostron/policy-generator-plugin/internal/types"
 )
 
 func createConfigMap(t *testing.T, tmpDir, filename string) {

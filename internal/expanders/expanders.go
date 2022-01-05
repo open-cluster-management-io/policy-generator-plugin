@@ -2,7 +2,7 @@
 package expanders
 
 import (
-	"github.com/open-cluster-management/policy-generator-plugin/internal/types"
+	"github.com/stolostron/policy-generator-plugin/internal/types"
 )
 
 // GetExpanders returns the list of available expanders.

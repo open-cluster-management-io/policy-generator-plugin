@@ -10,7 +10,7 @@ For more about Open Cluster Management and its Policy Framework:
 
 - [Open Cluster Management website](https://open-cluster-management.io/)
 - [Governance Policy Framework](https://open-cluster-management.io/getting-started/integration/policy-framework/)
-- [Policy Collection repository](https://github.com/open-cluster-management/policy-collection)
+- [Policy Collection repository](https://github.com/stolostron/policy-collection)
 
 ## Using the Policy Generator
 
@@ -21,7 +21,7 @@ For more about Open Cluster Management and its Policy Framework:
 ##### Install from the GitHub release
 
 1. Download the precompiled plugin binary from the
-  [release](https://github.com/open-cluster-management/policy-generator-plugin/releases)
+  [release](https://github.com/stolostron/policy-generator-plugin/releases)
   of your choice.
 
 2. Create the plugin directory:

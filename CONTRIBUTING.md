@@ -22,13 +22,13 @@ By contributing to this project, you agree to the Developer Certificate of
 Origin (DCO). This document was created by the Linux Kernel community and is a
 simple statement that you, as a contributor, have the legal right to make the
 contribution. See the
-[DCO](https://github.com/open-cluster-management/community/blob/main/DCO) file
+[DCO](https://github.com/stolostron/community/blob/main/DCO) file
 for details.
 
 ## DCO Sign Off
 
 You must sign off your commit to state that you certify the
-[DCO](https://github.com/open-cluster-management/community/blob/main/DCO). To
+[DCO](https://github.com/stolostron/community/blob/main/DCO). To
 certify your commit for DCO, add a line like the following at the end of your
 commit message:
 
@@ -44,7 +44,7 @@ for details.
 
 The Open Cluster Management project has adopted the CNCF Code of Conduct. Refer
 to our
-[Community Code of Conduct](https://github.com/open-cluster-management/community/blob/main/CODE_OF_CONDUCT.md)
+[Community Code of Conduct](https://github.com/stolostron/community/blob/main/CODE_OF_CONDUCT.md)
 for details.
 
 ## Contributing a patch
