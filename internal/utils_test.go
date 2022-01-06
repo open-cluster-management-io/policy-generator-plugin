@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/open-cluster-management/policy-generator-plugin/internal/types"
+	"github.com/stolostron/policy-generator-plugin/internal/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 

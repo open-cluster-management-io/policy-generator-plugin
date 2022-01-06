@@ -7,8 +7,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/open-cluster-management/policy-generator-plugin/internal"
 	"github.com/spf13/pflag"
+	"github.com/stolostron/policy-generator-plugin/internal"
 )
 
 var debug = false

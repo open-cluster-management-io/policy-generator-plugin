@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/open-cluster-management/policy-generator-plugin/internal/expanders"
-	"github.com/open-cluster-management/policy-generator-plugin/internal/types"
+	"github.com/stolostron/policy-generator-plugin/internal/expanders"
+	"github.com/stolostron/policy-generator-plugin/internal/types"
 	"gopkg.in/yaml.v3"
 )
 
