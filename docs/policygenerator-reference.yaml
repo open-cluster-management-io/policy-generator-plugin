@@ -60,6 +60,9 @@ policyDefaults:
   # annotation. This defaults to ["NIST SP 800-53"].
   standards:
     - "NIST SP 800-53"
+  # Optional. Array of policysets that policy is going to be part of. Policysets need to be defined
+  # in policysets section.
+  policysets: []
 
 # Required. The list of policies to create along with overrides to either the default values or, if
 # set, the values given in policyDefaults.
@@ -125,3 +128,13 @@ policies:
     # Optional. (See policyDefaults.standards for description.)
     standards:
       - "NIST SP 800-53"
+    # Optional. (See policyDefaults.policysets for description.)
+    policysets: []
+
+# Optional. The list of policysets to create along. To include a policy in the policyset, use 
+# policies[*].policysets or policyDefaults.policysets
+policysets:
+    # Required. The name of the policyset to create.
+  - name: ""
+    # Optional. The description of the policyset to create.
+    description: ""
