@@ -31,14 +31,16 @@ type PolicyConfig struct {
 	Name              string            `json:"name,omitempty" yaml:"name,omitempty"`
 	NamespaceSelector NamespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
 	// This is named Placement so that eventually PlacementRules and Placements will be supported
-	Placement                PlacementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
-	RemediationAction        string          `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
-	Severity                 string          `json:"severity,omitempty" yaml:"severity,omitempty"`
-	Standards                []string        `json:"standards,omitempty" yaml:"standards,omitempty"`
-	ConsolidateManifests     bool            `json:"consolidateManifests,omitempty" yaml:"consolidateManifests,omitempty"`
-	Disabled                 bool            `json:"disabled,omitempty" yaml:"disabled,omitempty"`
-	InformGatekeeperPolicies bool            `json:"informGatekeeperPolicies,omitempty" yaml:"informGatekeeperPolicies,omitempty"`
-	InformKyvernoPolicies    bool            `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
+	Placement                  PlacementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
+	RemediationAction          string          `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
+	Severity                   string          `json:"severity,omitempty" yaml:"severity,omitempty"`
+	Standards                  []string        `json:"standards,omitempty" yaml:"standards,omitempty"`
+	ConsolidateManifests       bool            `json:"consolidateManifests,omitempty" yaml:"consolidateManifests,omitempty"`
+	Disabled                   bool            `json:"disabled,omitempty" yaml:"disabled,omitempty"`
+	InformGatekeeperPolicies   bool            `json:"informGatekeeperPolicies,omitempty" yaml:"informGatekeeperPolicies,omitempty"`
+	InformKyvernoPolicies      bool            `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
+	GeneratePlacementWhenInSet bool            `json:"generatePlacementWhenInSet,omitempty" yaml:"generatePlacementWhenInSet,omitempty"`
+	PolicySets                 []string        `json:"policySets,omitempty" yaml:"policySets,omitempty"`
 }
 
 type PolicyDefaults struct {
@@ -48,11 +50,21 @@ type PolicyDefaults struct {
 	Namespace         string            `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	NamespaceSelector NamespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
 	// This is named Placement so that eventually PlacementRules and Placements will be supported
-	Placement                PlacementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
-	RemediationAction        string          `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
-	Severity                 string          `json:"severity,omitempty" yaml:"severity,omitempty"`
-	Standards                []string        `json:"standards,omitempty" yaml:"standards,omitempty"`
-	ConsolidateManifests     bool            `json:"consolidateManifests,omitempty" yaml:"consolidateManifests,omitempty"`
-	InformGatekeeperPolicies bool            `json:"informGatekeeperPolicies,omitempty" yaml:"informGatekeeperPolicies,omitempty"`
-	InformKyvernoPolicies    bool            `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
+	Placement                  PlacementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
+	RemediationAction          string          `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
+	Severity                   string          `json:"severity,omitempty" yaml:"severity,omitempty"`
+	Standards                  []string        `json:"standards,omitempty" yaml:"standards,omitempty"`
+	ConsolidateManifests       bool            `json:"consolidateManifests,omitempty" yaml:"consolidateManifests,omitempty"`
+	InformGatekeeperPolicies   bool            `json:"informGatekeeperPolicies,omitempty" yaml:"informGatekeeperPolicies,omitempty"`
+	InformKyvernoPolicies      bool            `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
+	GeneratePlacementWhenInSet bool            `json:"generatePlacementWhenInSet,omitempty" yaml:"generatePlacementWhenInSet,omitempty"`
+	PolicySets                 []string        `json:"policySets,omitempty" yaml:"policySets,omitempty"`
+}
+
+type PolicySetConfig struct {
+	Name        string   `json:"name,omitempty" yaml:"name,omitempty"`
+	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
+	Policies    []string `json:"policies,omitempty" yaml:"policies,omitempty"`
+	// This is named Placement so that eventually PlacementRules and Placements will be supported
+	Placement PlacementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
 }
