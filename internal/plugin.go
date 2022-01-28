@@ -19,6 +19,7 @@ const (
 	configPolicyKind           = "ConfigurationPolicy"
 	policyAPIVersion           = "policy.open-cluster-management.io/v1"
 	policyKind                 = "Policy"
+	policySetKind              = "PolicySet"
 	placementBindingAPIVersion = "policy.open-cluster-management.io/v1"
 	placementBindingKind       = "PlacementBinding"
 	placementRuleAPIVersion    = "apps.open-cluster-management.io/v1"
@@ -37,8 +38,9 @@ type Plugin struct {
 	PlacementBindingDefaults struct {
 		Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	} `json:"placementBindingDefaults,omitempty" yaml:"placementBindingDefaults,omitempty"`
-	PolicyDefaults types.PolicyDefaults `json:"policyDefaults,omitempty" yaml:"policyDefaults,omitempty"`
-	Policies       []types.PolicyConfig `json:"policies" yaml:"policies"`
+	PolicyDefaults types.PolicyDefaults    `json:"policyDefaults,omitempty" yaml:"policyDefaults,omitempty"`
+	Policies       []types.PolicyConfig    `json:"policies" yaml:"policies"`
+	PolicySets     []types.PolicySetConfig `json:"policySets" yaml:"policySets"`
 	// A set of all placement names that have been processed or generated
 	allPlcs map[string]bool
 	// The base of the directory tree to restrict all manifest files to be within
@@ -105,15 +107,26 @@ func (p *Plugin) Generate() ([]byte, error) {
 		}
 	}
 
+	for i := range p.PolicySets {
+		err := p.createPolicySet(&p.PolicySets[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Keep track of which placement maps to which policy. This will be used to determine
 	// how many placement bindings are required since one binding per placement is required.
 	plcNameToPolicyIdxs := map[string][]int{}
 	for i := range p.Policies {
-		plcName, err := p.createPlacement(&p.Policies[i])
-		if err != nil {
-			return nil, err
+		// only generate placement when GeneratePlacementWhenInSet equals to true or policy is not
+		// part of any policy sets
+		if p.Policies[i].GeneratePlacementWhenInSet || len(p.Policies[i].PolicySets) == 0 {
+			plcName, err := p.createPlacement(&p.Policies[i])
+			if err != nil {
+				return nil, err
+			}
+			plcNameToPolicyIdxs[plcName] = append(plcNameToPolicyIdxs[plcName], i)
 		}
-		plcNameToPolicyIdxs[plcName] = append(plcNameToPolicyIdxs[plcName], i)
 	}
 
 	// Sort the keys of plcNameToPolicyIdxs so that the policy bindings are generated in a
@@ -201,11 +214,11 @@ func getPolicyBool(
 	return
 }
 
-// applyDefaults applies any missing defaults under Policy.PlacementBindingDefaults and
-// Policy.PolicyDefaults. It then applies the defaults and user provided defaults on each
-// policy entry if they are not overridden by the user. The input unmarshaledConfig is used
-// in situations where it is necessary to know if an explicit false is provided rather than
-// rely on the default Go value on the Plugin struct.
+// applyDefaults applies any missing defaults under Policy.PlacementBindingDefaults,
+// Policy.PolicyDefaults and PolicySets. It then applies the defaults and user provided
+// defaults on each policy and policyset entry if they are not overridden by the user. The
+// input unmarshaledConfig is used in situations where it is necessary to know if an explicit
+// false is provided rather than rely on the default Go value on the Plugin struct.
 func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 	if len(p.Policies) == 0 {
 		return
@@ -258,6 +271,25 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 	if p.PolicyDefaults.Standards == nil {
 		p.PolicyDefaults.Standards = defaults.Standards
 	}
+	// Generate temporary sets to later merge the policy sets declared in p.Policies[*] and p.PolicySets
+	plcsetToPlc := make(map[string]map[string]bool)
+	plcToPlcset := make(map[string]map[string]bool)
+
+	for _, plcset := range p.PolicySets {
+		if plcsetToPlc[plcset.Name] == nil {
+			plcsetToPlc[plcset.Name] = make(map[string]bool)
+		}
+
+		for _, plc := range plcset.Policies {
+			plcsetToPlc[plcset.Name][plc] = true
+
+			if plcToPlcset[plc] == nil {
+				plcToPlcset[plc] = make(map[string]bool)
+			}
+
+			plcToPlcset[plc][plcset.Name] = true
+		}
+	}
 
 	for i := range p.Policies {
 		policy := &p.Policies[i]
@@ -271,6 +303,18 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 		if policy.Controls == nil {
 			policy.Controls = p.PolicyDefaults.Controls
+		}
+
+		if policy.PolicySets == nil {
+			policy.PolicySets = p.PolicyDefaults.PolicySets
+		}
+
+		// GeneratePlacementWhenInSet default to false unless explicitly set in the config.
+		gpValue, setGp := getPolicyBool(unmarshaledConfig, i, "generatePlacementWhenInSet")
+		if setGp {
+			policy.GeneratePlacementWhenInSet = gpValue
+		} else {
+			policy.GeneratePlacementWhenInSet = p.PolicyDefaults.GeneratePlacementWhenInSet
 		}
 
 		// Policy expanders default to the policy default unless explicitly set.
@@ -342,6 +386,42 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 				policy.Manifests[i].ComplianceType = policy.ComplianceType
 			}
 		}
+
+		for _, plcsetInPlc := range policy.PolicySets {
+			if _, ok := plcsetToPlc[plcsetInPlc]; !ok {
+				newPlcset := types.PolicySetConfig{
+					Name: plcsetInPlc,
+				}
+				p.PolicySets = append(p.PolicySets, newPlcset)
+				plcsetToPlc[plcsetInPlc] = make(map[string]bool)
+			}
+			if plcToPlcset[policy.Name] == nil {
+				plcToPlcset[policy.Name] = make(map[string]bool)
+			}
+
+			plcToPlcset[policy.Name][plcsetInPlc] = true
+
+			plcsetToPlc[plcsetInPlc][policy.Name] = true
+		}
+
+		policy.PolicySets = make([]string, 0, len(plcToPlcset[policy.Name]))
+
+		for plcset := range plcToPlcset[policy.Name] {
+			policy.PolicySets = append(policy.PolicySets, plcset)
+		}
+	}
+
+	// Sync up the declared policy sets in p.Policies[*]
+	for i := range p.PolicySets {
+		plcset := &p.PolicySets[i]
+		plcset.Policies = make([]string, 0, len(plcsetToPlc[plcset.Name]))
+
+		for plc := range plcsetToPlc[plcset.Name] {
+			plcset.Policies = append(plcset.Policies, plc)
+		}
+
+		// Sort alphabetically to make it deterministic
+		sort.Strings(plcset.Policies)
 	}
 }
 
@@ -528,6 +608,36 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 
 	p.outputBuffer.Write([]byte("---\n"))
 	p.outputBuffer.Write(policyYAML)
+
+	return nil
+}
+
+// createPolicySet will generate the policyset based on the Policy Generator configuration.
+// The generated policyset is written to the plugin's output buffer. An error is returned if the
+// manifests specified in the configuration are invalid or can't be read.
+func (p *Plugin) createPolicySet(policySetConf *types.PolicySetConfig) error {
+	policyset := map[string]interface{}{
+		"apiVersion": policyAPIVersion,
+		"kind":       policySetKind,
+		"metadata": map[string]interface{}{
+			"name":      policySetConf.Name,
+			"namespace": p.PolicyDefaults.Namespace, // policyset should be generated in the same namespace of policy
+		},
+		"spec": map[string]interface{}{
+			"description": policySetConf.Description,
+			"policies":    policySetConf.Policies,
+		},
+	}
+
+	policysetYAML, err := yaml.Marshal(policyset)
+	if err != nil {
+		return fmt.Errorf(
+			"an unexpected error occurred when converting the policyset to YAML: %w", err,
+		)
+	}
+
+	p.outputBuffer.Write([]byte("---\n"))
+	p.outputBuffer.Write(policysetYAML)
 
 	return nil
 }

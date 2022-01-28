@@ -12,6 +12,13 @@ import (
 	"github.com/stolostron/policy-generator-plugin/internal/types"
 )
 
+type testCase struct {
+	name                            string
+	setupFunc                       func(p *Plugin, policyConf types.PolicyConfig, policyConf2 types.PolicyConfig)
+	expectedPolicySetConfigInPolicy [][]string
+	expectedPolicySetConfigs        []types.PolicySetConfig
+}
+
 func TestGenerate(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -1144,4 +1151,237 @@ subjects:
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, p.outputBuffer.String(), expected)
+}
+
+func TestGeneratePolicySets(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	testCases := []testCase{
+		{
+			name: "Use p.PolicyDefaults.PolicySets only",
+			setupFunc: func(p *Plugin, policyConf types.PolicyConfig, policyConf2 types.PolicyConfig) {
+				// PolicyDefaults.PolicySets should be applied to both policies
+				p.PolicyDefaults.PolicySets = []string{"policyset-default"}
+			},
+			expectedPolicySetConfigInPolicy: [][]string{
+				{"policyset-default"},
+				{"policyset-default"},
+			},
+			expectedPolicySetConfigs: []types.PolicySetConfig{
+				{
+					Name: "policyset-default",
+					Policies: []string{
+						"policy-app-config",
+						"policy-app-config2",
+					},
+				},
+			},
+		},
+		{
+			name: "Use p.Policies[0].PolicySets to override with a different policy set",
+			setupFunc: func(p *Plugin, policyConf types.PolicyConfig, policyConf2 types.PolicyConfig) {
+				// p.PolicyDefaults.PolicySets should be overridden by p.Policies[0].PolicySets
+				p.PolicyDefaults.PolicySets = []string{"policyset-default"}
+				p.Policies[0] = types.PolicyConfig{
+					Name: "policy-app-config",
+					Manifests: []types.Manifest{
+						{
+							Path: path.Join(tmpDir, "configmap.yaml"),
+						},
+					},
+					PolicySets: []string{"policyset0"},
+				}
+			},
+			expectedPolicySetConfigInPolicy: [][]string{
+				{"policyset0"},
+				{"policyset-default"},
+			},
+			expectedPolicySetConfigs: []types.PolicySetConfig{
+				{
+					Name: "policyset0",
+					Policies: []string{
+						"policy-app-config",
+					},
+				},
+				{
+					Name: "policyset-default",
+					Policies: []string{
+						"policy-app-config2",
+					},
+				},
+			},
+		},
+		{
+			name: "Use p.Policies[0].PolicySets to override with an empty policyset",
+			setupFunc: func(p *Plugin, policyConf types.PolicyConfig, policyConf2 types.PolicyConfig) {
+				// p.PolicyDefaults.PolicySets should be overridden by p.Policies[0].PolicySets
+				p.PolicyDefaults.PolicySets = []string{"policyset-default"}
+				p.Policies[0] = types.PolicyConfig{
+					Name: "policy-app-config",
+					Manifests: []types.Manifest{
+						{
+							Path: path.Join(tmpDir, "configmap.yaml"),
+						},
+					},
+					PolicySets: []string{},
+				}
+			},
+			expectedPolicySetConfigInPolicy: [][]string{
+				{},
+				{"policyset-default"},
+			},
+			expectedPolicySetConfigs: []types.PolicySetConfig{
+				{
+					Name: "policyset-default",
+					Policies: []string{
+						"policy-app-config2",
+					},
+				},
+			},
+		},
+		{
+			name: "Use p.Policies[0].PolicySets and p.PolicySets, should merge",
+			setupFunc: func(p *Plugin, policyConf types.PolicyConfig, policyConf2 types.PolicyConfig) {
+				// p.Policies[0].PolicySets and p.PolicySets should merge
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Name:        "policyset-default",
+						Description: "This is a default policyset.",
+						Policies: []string{
+							"policy-app-config",
+							"policy-app-config2",
+							"pre-exists-policy",
+						},
+					},
+				}
+			},
+			expectedPolicySetConfigInPolicy: [][]string{
+				{"policyset-default"},
+				{"policyset-default"},
+			},
+			expectedPolicySetConfigs: []types.PolicySetConfig{
+				{
+					Name:        "policyset-default",
+					Description: "This is a default policyset.",
+					Policies: []string{
+						"policy-app-config",
+						"policy-app-config2",
+						"pre-exists-policy",
+					},
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc // capture range variable
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			p := Plugin{}
+			var err error
+			p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+			if err != nil {
+				t.Fatal(err.Error())
+			}
+			p.PlacementBindingDefaults.Name = "my-placement-binding"
+			p.PolicyDefaults.Placement.Name = "my-placement-rule"
+			p.PolicyDefaults.Namespace = "my-policies"
+			policyConf := types.PolicyConfig{
+				Name: "policy-app-config",
+				Manifests: []types.Manifest{
+					{
+						Path: path.Join(tmpDir, "configmap.yaml"),
+					},
+				},
+			}
+			policyConf2 := types.PolicyConfig{
+				Name: "policy-app-config2",
+				Manifests: []types.Manifest{
+					{Path: path.Join(tmpDir, "configmap.yaml")},
+				},
+			}
+			p.Policies = append(p.Policies, policyConf, policyConf2)
+			tc.setupFunc(&p, policyConf, policyConf2)
+			p.applyDefaults(map[string]interface{}{})
+			assertReflectEqual(t, p.Policies[0].PolicySets, tc.expectedPolicySetConfigInPolicy[0])
+			assertReflectEqual(t, p.Policies[1].PolicySets, tc.expectedPolicySetConfigInPolicy[1])
+			assertReflectEqual(t, p.PolicySets, tc.expectedPolicySetConfigs)
+		})
+	}
+}
+
+func TestCreatePolicyset(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	p := Plugin{}
+	var err error
+	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	p.PlacementBindingDefaults.Name = "my-placement-binding"
+	p.PolicyDefaults.Placement.Name = "my-placement-rule"
+	p.PolicyDefaults.Namespace = "my-policies"
+	patch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"labels": map[string]string{
+				"chandler": "bing",
+			},
+		},
+	}
+	policyConf := types.PolicyConfig{
+		Name: "policy-app-config",
+		Manifests: []types.Manifest{
+			{
+				Path:    path.Join(tmpDir, "configmap.yaml"),
+				Patches: []map[string]interface{}{patch},
+			},
+		},
+	}
+	policyConf2 := types.PolicyConfig{
+		Name: "policy-app-config2",
+		Manifests: []types.Manifest{
+			{Path: path.Join(tmpDir, "configmap.yaml")},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf, policyConf2)
+
+	p.PolicyDefaults.PolicySets = []string{"policyset-default"}
+	p.PolicySets = []types.PolicySetConfig{
+		{
+			Name:        "policyset-default",
+			Description: "This is a default policyset.",
+			Policies: []string{
+				"policy-app-config",
+				"policy-app-config2",
+				"pre-exists-policy",
+			},
+		},
+	}
+	p.applyDefaults(map[string]interface{}{})
+
+	err = p.createPolicySet(&p.PolicySets[0])
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output := p.outputBuffer.String()
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicySet
+metadata:
+    name: policyset-default
+    namespace: my-policies
+spec:
+    description: This is a default policyset.
+    policies:
+        - policy-app-config
+        - policy-app-config2
+        - pre-exists-policy
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
 }

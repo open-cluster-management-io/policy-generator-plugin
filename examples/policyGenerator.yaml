@@ -20,6 +20,8 @@ policyDefaults:
   remediationAction: inform
   severity: medium
   # standards: []
+  policySets: 
+    - policyset-config
 policies:
 - name: policy-app-config-aliens
   disabled: false
@@ -48,6 +50,17 @@ policies:
   disabled: true
   manifests:
     - path: input-kyverno/
+  policySets:
+    - policyset-kyverno
 - name: policy-require-ns-labels
   manifests:
     - path: input-gatekeeper/
+  policySets:
+    - policyset-gatekeeper
+policySets:
+- name: policyset-kyverno
+  description: this is a kyverno policy set.
+  policies:
+    - pre-exists-kyverno-policy
+- name: policyset-gatekeeper
+  description: this is a gatekeeper policy set.

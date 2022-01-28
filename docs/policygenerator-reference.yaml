@@ -60,6 +60,16 @@ policyDefaults:
   # annotation. This defaults to ["NIST SP 800-53"].
   standards:
     - "NIST SP 800-53"
+  # Optional. Array of policy sets that the policy will join. Policy set details can be defined
+  # in the policySets section. When a policy is part of a policy set, a placement binding will not be 
+  # generated for the policy since one is generated for the set. Set policies[*].generatePlacementWhenInSet 
+  # or policyDefaults.generatePlacementWhenInSet to override.
+  policySets: []
+  # Optional. When a policy is part of a policy set, by default the generator will not generate the placement
+  # for this policy since a placement is generated for the policy set. If a placement should still be generated, 
+  # set it to "true" so that the policy will be deployed with both policy placement and policy set placement. 
+  # This defaults to "false".
+  generatePlacementWhenInSet: false
 
 # Required. The list of policies to create along with overrides to either the default values or, if
 # set, the values given in policyDefaults.
@@ -125,3 +135,36 @@ policies:
     # Optional. (See policyDefaults.standards for description.)
     standards:
       - "NIST SP 800-53"
+    # Optional. (See policyDefaults.policySets for description.)
+    policySets: []
+    # Optional. (See policyDefaults.generatePlacementWhenInSet for description.)
+    generatePlacementWhenInSet: false
+
+# Optional. The list of policy sets to create. To include a policy in a policy set, use 
+# policies[*].policySets or policyDefaults.policySets or policySets.policies.
+policySets:
+    # Required. The name of the policy set to create.
+  - name: ""
+    # Optional. The description of the policy set to create.
+    description: ""
+    # Optional. The list of policies to be included in the policy set. If policies[*].policySets or 
+    # policyDefaults.policySets is also specified, the list is merged.
+    policies: []
+    # Optional. The placement configuration for the policy set. This defaults to a placement
+    # configuration that matches all clusters.
+    placement:
+      # To specify a placement rule, specify key:value pair cluster selectors. (See placementRulePath
+      # to specify an existing file instead.)
+      clusterSelectors: {}
+      # To specify a placement, specify key:value pair cluster label selectors. (See placementPath to
+      # specify an existing file instead.)
+      labelSelector: {}
+      # Optional. Specifying a name will consolidate placement rules that contain the same cluster
+      # selectors.
+      name: ""
+      # To reuse an existing placement manifest, specify the path here relative to the
+      # kustomization.yaml file. (See clusterSelectors to generate a new Placement instead.)
+      placementPath: ""
+      # To reuse an existing placement rule manifest, specify the path here relative to the
+      # kustomization.yaml file. (See clusterSelectors to generate a new PlacementRule instead.)
+      placementRulePath: ""
