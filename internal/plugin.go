@@ -114,26 +114,43 @@ func (p *Plugin) Generate() ([]byte, error) {
 		}
 	}
 
-	// Keep track of which placement maps to which policy. This will be used to determine
+	// Keep track of which placement maps to which policy and policySet. This will be used to determine
 	// how many placement bindings are required since one binding per placement is required.
-	plcNameToPolicyIdxs := map[string][]int{}
+	// plcNameToPolicyAndSetIdxs[plcName]["policy"] stores the index of policy
+	// plcNameToPolicyAndSetIdxs[plcName]["policyset"] stores the index of policyset
+	plcNameToPolicyAndSetIdxs := map[string]map[string][]int{}
 	for i := range p.Policies {
 		// only generate placement when GeneratePlacementWhenInSet equals to true or policy is not
 		// part of any policy sets
 		if p.Policies[i].GeneratePlacementWhenInSet || len(p.Policies[i].PolicySets) == 0 {
-			plcName, err := p.createPlacement(&p.Policies[i])
+			plcName, err := p.createPlacement(&p.Policies[i].Placement, p.Policies[i].Name)
 			if err != nil {
 				return nil, err
 			}
-			plcNameToPolicyIdxs[plcName] = append(plcNameToPolicyIdxs[plcName], i)
+			if plcNameToPolicyAndSetIdxs[plcName] == nil {
+				plcNameToPolicyAndSetIdxs[plcName] = map[string][]int{}
+			}
+			plcNameToPolicyAndSetIdxs[plcName]["policy"] = append(plcNameToPolicyAndSetIdxs[plcName]["policy"], i)
 		}
 	}
 
-	// Sort the keys of plcNameToPolicyIdxs so that the policy bindings are generated in a
+	for i := range p.PolicySets {
+		plcName, err := p.createPlacement(&p.PolicySets[i].Placement, p.PolicySets[i].Name)
+		if err != nil {
+			return nil, err
+		}
+		if plcNameToPolicyAndSetIdxs[plcName] == nil {
+			plcNameToPolicyAndSetIdxs[plcName] = map[string][]int{}
+		}
+		plcNameToPolicyAndSetIdxs[plcName]["policyset"] =
+			append(plcNameToPolicyAndSetIdxs[plcName]["policyset"], i)
+	}
+
+	// Sort the keys of plcNameToPolicyseetsIdxs so that the policy bindings are generated in a
 	// consistent order.
-	plcNames := make([]string, len(plcNameToPolicyIdxs))
+	plcNames := make([]string, len(plcNameToPolicyAndSetIdxs))
 	i := 0
-	for k := range plcNameToPolicyIdxs {
+	for k := range plcNameToPolicyAndSetIdxs {
 		plcNames[i] = k
 		i++
 	}
@@ -141,30 +158,40 @@ func (p *Plugin) Generate() ([]byte, error) {
 
 	plcBindingCount := 0
 	for _, plcName := range plcNames {
-		// Determine which policies to be included in the placement binding.
+		// Determine which policies and policy sets to be included in the placement binding.
 		policyConfs := []*types.PolicyConfig{}
-		for _, i := range plcNameToPolicyIdxs[plcName] {
+		for _, i := range plcNameToPolicyAndSetIdxs[plcName]["policy"] {
 			policyConfs = append(policyConfs, &p.Policies[i])
+		}
+		policySetConfs := []*types.PolicySetConfig{}
+		for _, i := range plcNameToPolicyAndSetIdxs[plcName]["policyset"] {
+			policySetConfs = append(policySetConfs, &p.PolicySets[i])
 		}
 
 		// If there is more than one policy associated with a placement but no default binding name
 		// specified, throw an error
-		if len(policyConfs) > 1 && p.PlacementBindingDefaults.Name == "" {
+		if (len(policyConfs) > 1 || len(policySetConfs) > 1) && p.PlacementBindingDefaults.Name == "" {
 			return nil, fmt.Errorf(
-				"placementBindingDefaults.name must be set but is empty (multiple policies were found for the PlacementBinding to placement %s)",
+				"placementBindingDefaults.name must be set but is empty (multiple policies or policy sets were found for the PlacementBinding to placement %s)",
 				plcName,
 			)
 		}
 
 		var bindingName string
-		// If there is only one policy, use the policy name if there is no default
+		existMultiple := false
+		// If there is only one policy or one policy set, use the policy or policy set name if there is no default
 		// binding name specified
-		if len(policyConfs) == 1 && p.PlacementBindingDefaults.Name == "" {
+		if len(policyConfs) == 1 && len(policySetConfs) == 0 {
 			bindingName = "binding-" + policyConfs[0].Name
+		} else if len(policyConfs) == 0 && len(policySetConfs) == 0 {
+			bindingName = "binding-" + policySetConfs[0].Name
 		} else {
+			existMultiple = true
+		}
+		// If there are multiple policies or policy sets, use the default placement binding name
+		// but append a number to it so it's a unique name.
+		if p.PlacementBindingDefaults.Name != "" && existMultiple {
 			plcBindingCount++
-			// If there are multiple policies, use the default placement binding name
-			// but append a number to it so it's a unique name.
 			if plcBindingCount == 1 {
 				bindingName = p.PlacementBindingDefaults.Name
 			} else {
@@ -172,7 +199,7 @@ func (p *Plugin) Generate() ([]byte, error) {
 			}
 		}
 
-		err := p.createPlacementBinding(bindingName, plcName, policyConfs)
+		err := p.createPlacementBinding(bindingName, plcName, policyConfs, policySetConfs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create a placement binding: %w", err)
 		}
@@ -271,6 +298,7 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 	if p.PolicyDefaults.Standards == nil {
 		p.PolicyDefaults.Standards = defaults.Standards
 	}
+
 	// Generate temporary sets to later merge the policy sets declared in p.Policies[*] and p.PolicySets
 	plcsetToPlc := make(map[string]map[string]bool)
 	plcToPlcset := make(map[string]map[string]bool)
@@ -717,21 +745,21 @@ func (p *Plugin) getPlcFromPath(plcPath string) (string, map[string]interface{},
 
 // getCsKey generates the key for the policy's cluster/label selectors to be used in
 // Policies.csToPlc.
-func getCsKey(policyConf *types.PolicyConfig) string {
-	return fmt.Sprintf("%#v", policyConf.Placement.ClusterSelectors)
+func getCsKey(placementConfig *types.PlacementConfig) string {
+	return fmt.Sprintf("%#v", placementConfig.ClusterSelectors)
 }
 
 // getPlcName will generate a placement name for the policy. If the placement has
 // previously been generated, skip will be true.
-func (p *Plugin) getPlcName(policyConf *types.PolicyConfig) (name string, skip bool) {
-	if policyConf.Placement.Name != "" {
+func (p *Plugin) getPlcName(placementConfig *types.PlacementConfig, nameDefault string) (string, bool) {
+	if placementConfig.Name != "" {
 		// If the policy explicitly specifies a placement name, use it
-		return policyConf.Placement.Name, false
+		return placementConfig.Name, false
 	} else if p.PolicyDefaults.Placement.Name != "" {
 		// If the policy doesn't explicitly specify a placement name, and there is a
 		// default placement name set, check if one has already been generated for these
 		// cluster/label selectors
-		csKey := getCsKey(policyConf)
+		csKey := getCsKey(placementConfig)
 		if _, ok := p.csToPlc[csKey]; ok {
 			// Just reuse the previously created placement with the same cluster/label selectors
 			return p.csToPlc[csKey], true
@@ -746,18 +774,18 @@ func (p *Plugin) getPlcName(policyConf *types.PolicyConfig) (name string, skip b
 		return fmt.Sprintf("%s%d", p.PolicyDefaults.Placement.Name, len(p.csToPlc)+1), false
 	}
 	// Default to a placement per policy
-	return "placement-" + policyConf.Name, false
+	return "placement-" + nameDefault, false
 }
 
-// createPlacement creates a placement for the input policy configuration by writing it to
+// createPlacement creates a placement for the input placement config and default name by writing it to
 // the policy generator's output buffer. The name of the placement or an error is returned.
 // If the placement has already been generated, it will be reused and not added to the
 // policy generator's output buffer. An error is returned if the placement cannot be created.
-func (p *Plugin) createPlacement(policyConf *types.PolicyConfig) (
+func (p *Plugin) createPlacement(placementConfig *types.PlacementConfig, nameDefault string) (
 	name string, err error,
 ) {
-	plrPath := policyConf.Placement.PlacementRulePath
-	plcPath := policyConf.Placement.PlacementPath
+	plrPath := placementConfig.PlacementRulePath
+	plcPath := placementConfig.PlacementPath
 	var placement map[string]interface{}
 	// If a path to a placement is provided, find the placement and reuse it.
 	if plrPath != "" || plcPath != "" {
@@ -782,17 +810,17 @@ func (p *Plugin) createPlacement(policyConf *types.PolicyConfig) (
 		p.processedPlcs[name] = true
 	} else {
 		var skip bool
-		name, skip = p.getPlcName(policyConf)
+		name, skip = p.getPlcName(placementConfig, nameDefault)
 		if skip {
 			return
 		}
 
 		// Determine which selectors to use
 		var resolvedSelectors map[string]string
-		if len(policyConf.Placement.ClusterSelectors) > 0 {
-			resolvedSelectors = policyConf.Placement.ClusterSelectors
-		} else if len(policyConf.Placement.LabelSelector) > 0 {
-			resolvedSelectors = policyConf.Placement.LabelSelector
+		if len(placementConfig.ClusterSelectors) > 0 {
+			resolvedSelectors = placementConfig.ClusterSelectors
+		} else if len(placementConfig.LabelSelector) > 0 {
+			resolvedSelectors = placementConfig.LabelSelector
 		}
 
 		// Sort the keys so that the match expressions can be ordered based on the label name
@@ -855,7 +883,7 @@ func (p *Plugin) createPlacement(policyConf *types.PolicyConfig) (
 			}
 		}
 
-		csKey := getCsKey(policyConf)
+		csKey := getCsKey(placementConfig)
 		p.csToPlc[csKey] = name
 	}
 
@@ -880,19 +908,29 @@ func (p *Plugin) createPlacement(policyConf *types.PolicyConfig) (
 	return
 }
 
-// createPlacementBinding creates a placement binding for the input placement and policies by
+// createPlacementBinding creates a placement binding for the input placement, policies and policy sets by
 // writing it to the policy generator's output buffer. An error is returned if the placement binding
 // cannot be created.
 func (p *Plugin) createPlacementBinding(
-	bindingName, plcName string, policyConfs []*types.PolicyConfig,
+	bindingName, plcName string, policyConfs []*types.PolicyConfig, policySetConfs []*types.PolicySetConfig,
 ) error {
-	subjects := make([]map[string]string, 0, len(policyConfs))
+	subjects := make([]map[string]string, 0, len(policyConfs)+len(policySetConfs))
 	for _, policyConf := range policyConfs {
 		subject := map[string]string{
 			// Remove the version at the end
 			"apiGroup": strings.Split(policyAPIVersion, "/")[0],
 			"kind":     policyKind,
 			"name":     policyConf.Name,
+		}
+		subjects = append(subjects, subject)
+	}
+
+	for _, policySetConf := range policySetConfs {
+		subject := map[string]string{
+			// Remove the version at the end
+			"apiGroup": strings.Split(policyAPIVersion, "/")[0],
+			"kind":     policySetKind,
+			"name":     policySetConf.Name,
 		}
 		subjects = append(subjects, subject)
 	}
