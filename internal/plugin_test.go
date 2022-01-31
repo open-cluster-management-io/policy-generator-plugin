@@ -355,7 +355,7 @@ func TestGenerateMissingBindingName(t *testing.T) {
 	}
 
 	expected := fmt.Sprintf(
-		"placementBindingDefaults.name must be set but is empty (multiple policies were found for the "+
+		"placementBindingDefaults.name must be set but is empty (multiple policies or policy sets were found for the "+
 			"PlacementBinding to placement %s)",
 		p.PolicyDefaults.Placement.Name,
 	)
@@ -524,7 +524,7 @@ func TestCreatePlacementDefault(t *testing.T) {
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{Name: "policy-app-config"}
 
-	name, err := p.createPlacement(&policyConf)
+	name, err := p.createPlacement(&policyConf.Placement, policyConf.Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -557,12 +557,12 @@ func TestCreatePlacementSinglePlr(t *testing.T) {
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	policyConf := types.PolicyConfig{Name: "policy-app-config"}
 
-	name, err := p.createPlacement(&policyConf)
+	name, err := p.createPlacement(&policyConf.Placement, policyConf.Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 
-	name2, err := p.createPlacement(&policyConf)
+	name2, err := p.createPlacement(&policyConf.Placement, policyConf.Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -602,7 +602,7 @@ func TestCreatePlacementClusterSelectors(t *testing.T) {
 		"game":   "pacman",
 	}
 
-	name, err := p.createPlacement(&policyConf)
+	name, err := p.createPlacement(&policyConf.Placement, policyConf.Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -650,7 +650,7 @@ func TestCreatePlacementLabelSelector(t *testing.T) {
 		"game":   "pacman",
 	}
 
-	name, err := p.createPlacement(&policyConf)
+	name, err := p.createPlacement(&policyConf.Placement, policyConf.Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -704,12 +704,12 @@ func TestCreatePlacementDuplicateName(t *testing.T) {
 		},
 	}
 
-	_, err := p.createPlacement(&policyConf)
+	_, err := p.createPlacement(&policyConf.Placement, policyConf.Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 
-	_, err = p.createPlacement(&policyConf2)
+	_, err = p.createPlacement(&policyConf2.Placement, policyConf2.Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -766,7 +766,7 @@ spec:
 	plrYAML = strings.TrimPrefix(plrYAML, "\n")
 	p, _ := plPathHelper(t, plrYAML, true)
 
-	name, err := p.createPlacement(&p.Policies[0])
+	name, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -790,7 +790,7 @@ metadata:
 	p, _ := plPathHelper(t, plrYAML, true)
 
 	p.processedPlcs = map[string]bool{"my-plr": true}
-	name, err := p.createPlacement(&p.Policies[0])
+	name, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -816,7 +816,7 @@ spec:
 `
 	p, plrPath := plPathHelper(t, plrYAML, true)
 
-	_, err := p.createPlacement(&p.Policies[0])
+	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -842,7 +842,7 @@ spec:
 `
 	p, plrPath := plPathHelper(t, plrYAML, true)
 
-	_, err := p.createPlacement(&p.Policies[0])
+	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -869,7 +869,7 @@ spec:
 `
 	p, plrPath := plPathHelper(t, plrYAML, true)
 
-	_, err := p.createPlacement(&p.Policies[0])
+	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -896,7 +896,7 @@ data:
 `
 	p, plrPath := plPathHelper(t, plrYAML, true)
 
-	_, err := p.createPlacement(&p.Policies[0])
+	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -927,7 +927,7 @@ spec:
 	plrYAML = strings.TrimPrefix(plrYAML, "\n")
 	p, _ := plPathHelper(t, plrYAML, false)
 
-	name, err := p.createPlacement(&p.Policies[0])
+	name, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -951,7 +951,7 @@ metadata:
 	p, _ := plPathHelper(t, plrYAML, false)
 
 	p.processedPlcs = map[string]bool{"my-plr": true}
-	name, err := p.createPlacement(&p.Policies[0])
+	name, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -976,7 +976,7 @@ spec:
 `
 	p, plrPath := plPathHelper(t, plrYAML, false)
 
-	_, err := p.createPlacement(&p.Policies[0])
+	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1001,7 +1001,7 @@ spec:
 `
 	p, plrPath := plPathHelper(t, plrYAML, false)
 
-	_, err := p.createPlacement(&p.Policies[0])
+	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1027,7 +1027,7 @@ spec:
 `
 	p, plrPath := plPathHelper(t, plrYAML, false)
 
-	_, err := p.createPlacement(&p.Policies[0])
+	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1052,7 +1052,7 @@ metadata:
 `
 	p, plrPath := plPathHelper(t, plrYAML, false)
 
-	_, err := p.createPlacement(&p.Policies[0])
+	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1076,7 +1076,7 @@ metadata:
 `
 	p, plrPath := plPathHelper(t, plrYAML, true)
 
-	_, err := p.createPlacement(&p.Policies[0])
+	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1102,7 +1102,7 @@ data:
 `
 	p, plrPath := plPathHelper(t, plrYAML, false)
 
-	_, err := p.createPlacement(&p.Policies[0])
+	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1125,7 +1125,13 @@ func TestCreatePlacementBinding(t *testing.T) {
 	policyConfs := []*types.PolicyConfig{}
 	policyConfs = append(policyConfs, &p.Policies[0], &p.Policies[1])
 
-	err := p.createPlacementBinding(bindingName, plrName, policyConfs)
+	policySetConfs := []*types.PolicySetConfig{
+		{
+			Name: "my-policyset",
+		},
+	}
+
+	err := p.createPlacementBinding(bindingName, plrName, policyConfs, policySetConfs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1148,6 +1154,9 @@ subjects:
     - apiGroup: policy.open-cluster-management.io
       kind: Policy
       name: policy-app-config2
+    - apiGroup: policy.open-cluster-management.io
+      kind: PolicySet
+      name: my-policyset
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, p.outputBuffer.String(), expected)
@@ -1311,7 +1320,252 @@ func TestGeneratePolicySets(t *testing.T) {
 	}
 }
 
-func TestCreatePolicyset(t *testing.T) {
+func TestGeneratePolicySetsWithPlacement(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	p := Plugin{}
+	var err error
+	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	p.PlacementBindingDefaults.Name = "my-placement-binding"
+	p.PolicyDefaults.Placement.Name = "my-placement-rule"
+	p.PolicyDefaults.Namespace = "my-policies"
+
+	policyConf := types.PolicyConfig{
+		Name: "policy-app-config",
+		Manifests: []types.Manifest{
+			{
+				Path: path.Join(tmpDir, "configmap.yaml"),
+			},
+		},
+		PolicySets: []string{"policyset"},
+	}
+	p.Policies = append(p.Policies, policyConf)
+
+	p.applyDefaults(map[string]interface{}{})
+
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicySet
+metadata:
+    name: policyset
+    namespace: my-policies
+spec:
+    description: ""
+    policies:
+        - policy-app-config
+---
+apiVersion: cluster.open-cluster-management.io/v1alpha1
+kind: Placement
+metadata:
+    name: my-placement-rule
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions: []
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+    name: my-placement-binding
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: my-placement-rule
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: PolicySet
+      name: policyset
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	output, err := p.Generate()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, string(output), expected)
+}
+
+func TestGeneratePolicySetsWithPolicyPlacement(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	p := Plugin{}
+	var err error
+	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	p.PlacementBindingDefaults.Name = "my-placement-binding"
+	p.PolicyDefaults.Placement.Name = "my-placement"
+	p.PolicyDefaults.Namespace = "my-policies"
+
+	policyConf := types.PolicyConfig{
+		Name: "policy-app-config",
+		Manifests: []types.Manifest{
+			{
+				Path: path.Join(tmpDir, "configmap.yaml"),
+			},
+		},
+		PolicySets: []string{"my-policyset"},
+	}
+	p.Policies = append(p.Policies, policyConf)
+	p.PolicySets = []types.PolicySetConfig{
+		{
+			Name: "my-policyset",
+			Placement: types.PlacementConfig{
+				Name:             "policyset-placement",
+				ClusterSelectors: map[string]string{"my": "app"},
+			},
+		},
+	}
+
+	p.applyDefaults(map[string]interface{}{})
+	p.Policies[0].GeneratePlacementWhenInSet = true
+
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicySet
+metadata:
+    name: my-policyset
+    namespace: my-policies
+spec:
+    description: ""
+    policies:
+        - policy-app-config
+---
+apiVersion: cluster.open-cluster-management.io/v1alpha1
+kind: Placement
+metadata:
+    name: my-placement
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions: []
+---
+apiVersion: cluster.open-cluster-management.io/v1alpha1
+kind: Placement
+metadata:
+    name: policyset-placement
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions:
+                    - key: my
+                      operator: In
+                      values:
+                        - app
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+    name: binding-policy-app-config
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: my-placement
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+    name: my-placement-binding
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: policyset-placement
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: PolicySet
+      name: my-policyset
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	output, err := p.Generate()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, string(output), expected)
+}
+
+func TestCreatePolicySet(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")

@@ -62,5 +62,9 @@ policySets:
   description: this is a kyverno policy set.
   policies:
     - pre-exists-kyverno-policy
+  placement:
+    placementRulePath: input/placementrule.yaml
 - name: policyset-gatekeeper
   description: this is a gatekeeper policy set.
+  placement:
+    placementRulePath: input/placementrule.yaml
