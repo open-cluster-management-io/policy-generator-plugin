@@ -1347,6 +1347,10 @@ func TestGeneratePolicySetsWithPlacement(t *testing.T) {
 
 	p.applyDefaults(map[string]interface{}{})
 
+	if err := p.assertValidConfig(); err != nil {
+		t.Fatal(err.Error())
+	}
+
 	expected := `
 ---
 apiVersion: policy.open-cluster-management.io/v1
@@ -1389,16 +1393,17 @@ spec:
     policies:
         - policy-app-config
 ---
-apiVersion: cluster.open-cluster-management.io/v1alpha1
-kind: Placement
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
 metadata:
     name: my-placement-rule
     namespace: my-policies
 spec:
-    predicates:
-        - requiredClusterSelector:
-            labelSelector:
-                matchExpressions: []
+    clusterConditions:
+        - status: "True"
+          type: ManagedClusterConditionAvailable
+    clusterSelector:
+        matchExpressions: []
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
@@ -1406,8 +1411,8 @@ metadata:
     name: my-placement-binding
     namespace: my-policies
 placementRef:
-    apiGroup: cluster.open-cluster-management.io
-    kind: Placement
+    apiGroup: apps.open-cluster-management.io
+    kind: PlacementRule
     name: my-placement-rule
 subjects:
     - apiGroup: policy.open-cluster-management.io
@@ -1458,6 +1463,9 @@ func TestGeneratePolicySetsWithPolicyPlacement(t *testing.T) {
 	}
 
 	p.applyDefaults(map[string]interface{}{})
+	if err := p.assertValidConfig(); err != nil {
+		t.Fatal(err.Error())
+	}
 	p.Policies[0].GeneratePlacementWhenInSet = true
 
 	expected := `
@@ -1502,31 +1510,33 @@ spec:
     policies:
         - policy-app-config
 ---
-apiVersion: cluster.open-cluster-management.io/v1alpha1
-kind: Placement
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
 metadata:
     name: my-placement
     namespace: my-policies
 spec:
-    predicates:
-        - requiredClusterSelector:
-            labelSelector:
-                matchExpressions: []
+    clusterConditions:
+        - status: "True"
+          type: ManagedClusterConditionAvailable
+    clusterSelector:
+        matchExpressions: []
 ---
-apiVersion: cluster.open-cluster-management.io/v1alpha1
-kind: Placement
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
 metadata:
     name: policyset-placement
     namespace: my-policies
 spec:
-    predicates:
-        - requiredClusterSelector:
-            labelSelector:
-                matchExpressions:
-                    - key: my
-                      operator: In
-                      values:
-                        - app
+    clusterConditions:
+        - status: "True"
+          type: ManagedClusterConditionAvailable
+    clusterSelector:
+        matchExpressions:
+            - key: my
+              operator: In
+              values:
+                - app
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
@@ -1534,8 +1544,8 @@ metadata:
     name: binding-policy-app-config
     namespace: my-policies
 placementRef:
-    apiGroup: cluster.open-cluster-management.io
-    kind: Placement
+    apiGroup: apps.open-cluster-management.io
+    kind: PlacementRule
     name: my-placement
 subjects:
     - apiGroup: policy.open-cluster-management.io
@@ -1548,8 +1558,8 @@ metadata:
     name: my-placement-binding
     namespace: my-policies
 placementRef:
-    apiGroup: cluster.open-cluster-management.io
-    kind: Placement
+    apiGroup: apps.open-cluster-management.io
+    kind: PlacementRule
     name: policyset-placement
 subjects:
     - apiGroup: policy.open-cluster-management.io
