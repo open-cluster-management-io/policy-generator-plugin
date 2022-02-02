@@ -587,6 +587,76 @@ func (p *Plugin) assertValidConfig() error {
 		}
 	}
 
+	for i := range p.PolicySets {
+		seen := map[string]bool{}
+		plcset := &p.PolicySets[i]
+
+		if plcset.Name == "" {
+			return fmt.Errorf(
+				"each policySet must have a name set, but did not find a name at policySet array index %d", i,
+			)
+		}
+
+		if seen[plcset.Name] {
+			return fmt.Errorf(
+				"each policySet must have a unique name set, but found a duplicate name: %s", plcset.Name,
+			)
+		}
+		seen[plcset.Name] = true
+
+		// Validate policy Placement settings
+		if plcset.Placement.PlacementRulePath != "" && plcset.Placement.PlacementPath != "" {
+			return fmt.Errorf(
+				"policySet %s must provide only one of placementRulePath or placementPath", plcset.Name,
+			)
+		}
+
+		if len(plcset.Placement.ClusterSelectors) > 0 && len(plcset.Placement.LabelSelector) > 0 {
+			return fmt.Errorf(
+				"policySet %s must provide only one of placement.labelSelector or placement.clusterselectors",
+				plcset.Name,
+			)
+		}
+		if (len(plcset.Placement.ClusterSelectors) != 0 || len(plcset.Placement.LabelSelector) != 0) &&
+			(plcset.Placement.PlacementRulePath != "" || plcset.Placement.PlacementPath != "") {
+			return fmt.Errorf(
+				"policySet %s may not specify a placement selector and placement path together", plcset.Name,
+			)
+		}
+		if plcset.Placement.PlacementRulePath != "" {
+			_, err := os.Stat(plcset.Placement.PlacementRulePath)
+			if err != nil {
+				return fmt.Errorf(
+					"could not read the placement rule path %s",
+					plcset.Placement.PlacementRulePath,
+				)
+			}
+		}
+		if plcset.Placement.PlacementPath != "" {
+			_, err := os.Stat(plcset.Placement.PlacementPath)
+			if err != nil {
+				return fmt.Errorf(
+					"could not read the placement path %s",
+					plcset.Placement.PlacementPath,
+				)
+			}
+		}
+
+		foundPl := false
+		if len(plcset.Placement.LabelSelector) != 0 || plcset.Placement.PlacementPath != "" {
+			plCount.plc++
+			foundPl = true
+		}
+		if len(plcset.Placement.ClusterSelectors) != 0 || plcset.Placement.PlacementRulePath != "" {
+			plCount.plr++
+			if foundPl {
+				return fmt.Errorf(
+					"policySet %s may not use both Placement and PlacementRule kinds", plcset.Name,
+				)
+			}
+		}
+	}
+
 	// Validate only one type of placement kind is in use
 	if plCount.plc != 0 && plCount.plr != 0 {
 		return fmt.Errorf(
