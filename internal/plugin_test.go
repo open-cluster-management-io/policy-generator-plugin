@@ -14,9 +14,10 @@ import (
 
 type testCase struct {
 	name                            string
-	setupFunc                       func(p *Plugin, policyConf types.PolicyConfig, policyConf2 types.PolicyConfig)
+	setupFunc                       func(p *Plugin)
 	expectedPolicySetConfigInPolicy [][]string
 	expectedPolicySetConfigs        []types.PolicySetConfig
+	expectedErrMsg                  string
 }
 
 func TestGenerate(t *testing.T) {
@@ -1170,7 +1171,7 @@ func TestGeneratePolicySets(t *testing.T) {
 	testCases := []testCase{
 		{
 			name: "Use p.PolicyDefaults.PolicySets only",
-			setupFunc: func(p *Plugin, policyConf types.PolicyConfig, policyConf2 types.PolicyConfig) {
+			setupFunc: func(p *Plugin) {
 				// PolicyDefaults.PolicySets should be applied to both policies
 				p.PolicyDefaults.PolicySets = []string{"policyset-default"}
 			},
@@ -1190,7 +1191,7 @@ func TestGeneratePolicySets(t *testing.T) {
 		},
 		{
 			name: "Use p.Policies[0].PolicySets to override with a different policy set",
-			setupFunc: func(p *Plugin, policyConf types.PolicyConfig, policyConf2 types.PolicyConfig) {
+			setupFunc: func(p *Plugin) {
 				// p.PolicyDefaults.PolicySets should be overridden by p.Policies[0].PolicySets
 				p.PolicyDefaults.PolicySets = []string{"policyset-default"}
 				p.Policies[0] = types.PolicyConfig{
@@ -1224,7 +1225,7 @@ func TestGeneratePolicySets(t *testing.T) {
 		},
 		{
 			name: "Use p.Policies[0].PolicySets to override with an empty policyset",
-			setupFunc: func(p *Plugin, policyConf types.PolicyConfig, policyConf2 types.PolicyConfig) {
+			setupFunc: func(p *Plugin) {
 				// p.PolicyDefaults.PolicySets should be overridden by p.Policies[0].PolicySets
 				p.PolicyDefaults.PolicySets = []string{"policyset-default"}
 				p.Policies[0] = types.PolicyConfig{
@@ -1252,7 +1253,7 @@ func TestGeneratePolicySets(t *testing.T) {
 		},
 		{
 			name: "Use p.Policies[0].PolicySets and p.PolicySets, should merge",
-			setupFunc: func(p *Plugin, policyConf types.PolicyConfig, policyConf2 types.PolicyConfig) {
+			setupFunc: func(p *Plugin) {
 				// p.Policies[0].PolicySets and p.PolicySets should merge
 				p.PolicySets = []types.PolicySetConfig{
 					{
@@ -1311,7 +1312,7 @@ func TestGeneratePolicySets(t *testing.T) {
 				},
 			}
 			p.Policies = append(p.Policies, policyConf, policyConf2)
-			tc.setupFunc(&p, policyConf, policyConf2)
+			tc.setupFunc(&p)
 			p.applyDefaults(map[string]interface{}{})
 			assertReflectEqual(t, p.Policies[0].PolicySets, tc.expectedPolicySetConfigInPolicy[0])
 			assertReflectEqual(t, p.Policies[1].PolicySets, tc.expectedPolicySetConfigInPolicy[1])
