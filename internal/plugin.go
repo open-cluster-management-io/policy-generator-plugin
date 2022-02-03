@@ -482,7 +482,7 @@ func (p *Plugin) assertValidConfig() error {
 		return errors.New("policies is empty but it must be set")
 	}
 
-	seen := map[string]bool{}
+	seenPlc := map[string]bool{}
 	plCount := struct {
 		plc int
 		plr int
@@ -495,12 +495,12 @@ func (p *Plugin) assertValidConfig() error {
 			)
 		}
 
-		if seen[policy.Name] {
+		if seenPlc[policy.Name] {
 			return fmt.Errorf(
 				"each policy must have a unique name set, but found a duplicate name: %s", policy.Name,
 			)
 		}
-		seen[policy.Name] = true
+		seenPlc[policy.Name] = true
 
 		if len(p.PolicyDefaults.Namespace+"."+policy.Name) > maxObjectNameLength {
 			return fmt.Errorf("the policy namespace and name cannot be more than 63 characters: %s.%s",
@@ -587,8 +587,8 @@ func (p *Plugin) assertValidConfig() error {
 		}
 	}
 
+	seenPlcset := map[string]bool{}
 	for i := range p.PolicySets {
-		seen := map[string]bool{}
 		plcset := &p.PolicySets[i]
 
 		if plcset.Name == "" {
@@ -597,12 +597,12 @@ func (p *Plugin) assertValidConfig() error {
 			)
 		}
 
-		if seen[plcset.Name] {
+		if seenPlcset[plcset.Name] {
 			return fmt.Errorf(
 				"each policySet must have a unique name set, but found a duplicate name: %s", plcset.Name,
 			)
 		}
-		seen[plcset.Name] = true
+		seenPlcset[plcset.Name] = true
 
 		// Validate policy Placement settings
 		if plcset.Placement.PlacementRulePath != "" && plcset.Placement.PlacementPath != "" {
@@ -660,7 +660,7 @@ func (p *Plugin) assertValidConfig() error {
 	// Validate only one type of placement kind is in use
 	if plCount.plc != 0 && plCount.plr != 0 {
 		return fmt.Errorf(
-			"may not use a mix of Placement and PlacementRule for policies; found %d Placement and %d PlacementRule",
+			"may not use a mix of Placement and PlacementRule for policies and policysets; found %d Placement and %d PlacementRule",
 			plCount.plc, plCount.plr,
 		)
 	}

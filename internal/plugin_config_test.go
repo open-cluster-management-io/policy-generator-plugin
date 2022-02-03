@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stolostron/policy-generator-plugin/internal/types"
@@ -582,7 +583,7 @@ policies:
 	}
 
 	expected := "may not use a mix of Placement and PlacementRule for " +
-		"policies; found 1 Placement and 1 PlacementRule"
+		"policies and policysets; found 1 Placement and 1 PlacementRule"
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -765,4 +766,216 @@ policies:
 
 	expected := fmt.Sprintf("could not read the placement rule path %s", plrPath)
 	assertEqual(t, err.Error(), expected)
+}
+
+func TestPolicySetConfig(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	testCases := []testCase{
+		{
+			name: "policySet must have a name set",
+			setupFunc: func(p *Plugin) {
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Placement: types.PlacementConfig{
+							Name:             "policyset-placement",
+							ClusterSelectors: map[string]string{"my": "app"},
+						},
+					},
+				}
+			},
+			expectedErrMsg: "each policySet must have a name set, but did not find a name at policySet array index 0",
+		},
+		{
+			name: "policySet must be unique",
+			setupFunc: func(p *Plugin) {
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Name: "my-policyset",
+					},
+					{
+						Name: "my-policyset",
+					},
+				}
+			},
+			expectedErrMsg: "each policySet must have a unique name set, but found a duplicate name: my-policyset",
+		},
+		{
+			name: "policySet must provide only one of placementRulePath or placementPath",
+			setupFunc: func(p *Plugin) {
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Name: "my-policyset",
+						Placement: types.PlacementConfig{
+							PlacementPath:     "../config/plc.yaml",
+							PlacementRulePath: "../config/plr.yaml",
+						},
+					},
+				}
+			},
+			expectedErrMsg: "policySet my-policyset must provide only one of placementRulePath or placementPath",
+		},
+		{
+			name: "policySet must provide only one of labelSelector or clusterselectors",
+			setupFunc: func(p *Plugin) {
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Name: "my-policyset",
+						Placement: types.PlacementConfig{
+							LabelSelector:    map[string]string{"cloud": "red hat"},
+							ClusterSelectors: map[string]string{"cloud": "red hat"},
+						},
+					},
+				}
+			},
+			expectedErrMsg: "policySet my-policyset must provide only one of placement.labelSelector or placement.clusterselectors",
+		},
+		{
+			name: "policySet may not specify a cluster selector and placement path together",
+			setupFunc: func(p *Plugin) {
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Name: "my-policyset",
+						Placement: types.PlacementConfig{
+							PlacementPath:    "../config/plc.yaml",
+							ClusterSelectors: map[string]string{"cloud": "red hat"},
+						},
+					},
+				}
+			},
+			expectedErrMsg: "policySet my-policyset may not specify a placement selector and placement path together",
+		},
+		{
+			name: "policySet may not specify a label selector and placement path together",
+			setupFunc: func(p *Plugin) {
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Name: "my-policyset",
+						Placement: types.PlacementConfig{
+							PlacementPath: "../config/plc.yaml",
+							LabelSelector: map[string]string{"cloud": "red hat"},
+						},
+					},
+				}
+			},
+			expectedErrMsg: "policySet my-policyset may not specify a placement selector and placement path together",
+		},
+		{
+			name: "policySet may not specify a cluster selector and placementrule path together",
+			setupFunc: func(p *Plugin) {
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Name: "my-policyset",
+						Placement: types.PlacementConfig{
+							PlacementRulePath: "../config/plc.yaml",
+							ClusterSelectors:  map[string]string{"cloud": "red hat"},
+						},
+					},
+				}
+			},
+			expectedErrMsg: "policySet my-policyset may not specify a placement selector and placement path together",
+		},
+		{
+			name: "policySet may not specify a label selector and placementrule path together",
+			setupFunc: func(p *Plugin) {
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Name: "my-policyset",
+						Placement: types.PlacementConfig{
+							PlacementRulePath: "../config/plc.yaml",
+							LabelSelector:     map[string]string{"cloud": "red hat"},
+						},
+					},
+				}
+			},
+			expectedErrMsg: "policySet my-policyset may not specify a placement selector and placement path together",
+		},
+		{
+			name: "policySet placementrule path not resolvable",
+			setupFunc: func(p *Plugin) {
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Name: "my-policyset",
+						Placement: types.PlacementConfig{
+							PlacementRulePath: "../config/plc.yaml",
+						},
+					},
+				}
+			},
+			expectedErrMsg: "could not read the placement rule path ../config/plc.yaml",
+		},
+		{
+			name: "policySet placement path not resolvable",
+			setupFunc: func(p *Plugin) {
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Name: "my-policyset",
+						Placement: types.PlacementConfig{
+							PlacementPath: "../config/plc.yaml",
+						},
+					},
+				}
+			},
+			expectedErrMsg: "could not read the placement path ../config/plc.yaml",
+		},
+		{
+			name: "Placement and PlacementRule can't be mixed",
+			setupFunc: func(p *Plugin) {
+				p.Policies[0].Placement = types.PlacementConfig{
+					LabelSelector: map[string]string{"cloud": "red hat"},
+				}
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Name: "my-policyset",
+						Placement: types.PlacementConfig{
+							ClusterSelectors: map[string]string{"cloud": "red hat"},
+						},
+					},
+				}
+			},
+			expectedErrMsg: "may not use a mix of Placement and PlacementRule for policies and policysets; found 1 Placement and 1 PlacementRule",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc // capture range variable
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			p := Plugin{}
+			var err error
+			p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+			if err != nil {
+				t.Fatal(err.Error())
+			}
+			p.PlacementBindingDefaults.Name = "my-placement-binding"
+			p.PolicyDefaults.Placement.Name = "my-placement-rule"
+			p.PolicyDefaults.Namespace = "my-policies"
+			policyConf1 := types.PolicyConfig{
+				Name: "policy-app-config",
+				Manifests: []types.Manifest{
+					{
+						Path: path.Join(tmpDir, "configmap.yaml"),
+					},
+				},
+			}
+			policyConf2 := types.PolicyConfig{
+				Name: "policy-app-config2",
+				Manifests: []types.Manifest{
+					{
+						Path: path.Join(tmpDir, "configmap.yaml"),
+					},
+				},
+			}
+			p.Policies = append(p.Policies, policyConf1, policyConf2)
+			tc.setupFunc(&p)
+			p.applyDefaults(map[string]interface{}{})
+			err = p.assertValidConfig()
+			if err == nil {
+				t.Fatal("Expected an error but did not get one")
+			}
+			assertEqual(t, err.Error(), tc.expectedErrMsg)
+		})
+	}
 }
