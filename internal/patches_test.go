@@ -271,7 +271,7 @@ func TestApplyPatchesInvalidPatch(t *testing.T) {
 	_, err := patcher.ApplyPatches()
 
 	expected := "failed to apply the patch(es) to the manifest(s) using Kustomize: no matches " +
-		"for Id ~G_v1_ToasterOven|default|configmap2; failed to find unique target for patch " +
-		"~G_v1_ToasterOven|configmap2"
+		"for Id ToasterOven.v1.[noGrp]/configmap2.default; failed to find unique target for patch " +
+		"ToasterOven.v1.[noGrp]/configmap2.default"
 	assertEqual(t, err.Error(), expected)
 }
