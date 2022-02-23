@@ -24,7 +24,7 @@ const (
 	placementBindingKind       = "PlacementBinding"
 	placementRuleAPIVersion    = "apps.open-cluster-management.io/v1"
 	placementRuleKind          = "PlacementRule"
-	placementAPIVersion        = "cluster.open-cluster-management.io/v1alpha1"
+	placementAPIVersion        = "cluster.open-cluster-management.io/v1beta1"
 	placementKind              = "Placement"
 	maxObjectNameLength        = 63
 )
