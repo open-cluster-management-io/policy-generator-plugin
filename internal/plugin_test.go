@@ -534,7 +534,7 @@ func TestCreatePlacementDefault(t *testing.T) {
 	output := p.outputBuffer.String()
 	expected := `
 ---
-apiVersion: cluster.open-cluster-management.io/v1alpha1
+apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
     name: placement-policy-app-config
@@ -574,7 +574,7 @@ func TestCreatePlacementSinglePlr(t *testing.T) {
 	output := p.outputBuffer.String()
 	expected := `
 ---
-apiVersion: cluster.open-cluster-management.io/v1alpha1
+apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
     name: my-placement-rule
@@ -660,7 +660,7 @@ func TestCreatePlacementLabelSelector(t *testing.T) {
 	output := p.outputBuffer.String()
 	expected := `
 ---
-apiVersion: cluster.open-cluster-management.io/v1alpha1
+apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
     name: placement-policy-app-config
@@ -910,7 +910,7 @@ func TestCreatePlacementPlPath(t *testing.T) {
 	t.Parallel()
 	plrYAML := `
 ---
-apiVersion: cluster.open-cluster-management.io/v1alpha1
+apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
     name: my-plr
@@ -942,7 +942,7 @@ func TestCreatePlacementPlPathSkip(t *testing.T) {
 	t.Parallel()
 	plrYAML := `
 ---
-apiVersion: cluster.open-cluster-management.io/v1alpha1
+apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
     name: my-plr
@@ -965,7 +965,7 @@ func TestCreatePlacementPlPathNoName(t *testing.T) {
 	t.Parallel()
 	plrYAML := `
 ---
-apiVersion: cluster.open-cluster-management.io/v1alpha1
+apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
     namespace: my-policies
@@ -990,7 +990,7 @@ func TestCreatePlacementPlPathNoNamespace(t *testing.T) {
 	t.Parallel()
 	plrYAML := `
 ---
-apiVersion: cluster.open-cluster-management.io/v1alpha1
+apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
     name: my-plr
@@ -1015,7 +1015,7 @@ func TestCreatePlacementPlPathWrongNamespace(t *testing.T) {
 	t.Parallel()
 	plrYAML := `
 ---
-apiVersion: cluster.open-cluster-management.io/v1alpha1
+apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
     name: my-plr
@@ -1069,7 +1069,7 @@ func TestCreatePlacementPlrPathFoundPl(t *testing.T) {
 	t.Parallel()
 	plrYAML := `
 ---
-apiVersion: cluster.open-cluster-management.io/v1alpha1
+apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
     name: my-plr
