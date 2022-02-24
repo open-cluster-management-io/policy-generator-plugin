@@ -25,6 +25,14 @@ policyDefaults:
   # manifests being wrapped in the policy. If set to false, a configuration policy per manifest will
   # be generated. This defaults to true.
   consolidateManifests: true
+  # Optional. This is how often a policy should be evaluated when in a particular compliance state.
+  # When managed clusters have low CPU resources, the evaluation interval can be increased to
+  # to reduce CPU usage on the Kubernetes API.
+  evaluationInterval:
+    # These are in the format of durations (e.g. "1h25m3s"). These can also be set to "never" to
+    # avoid evaluating the policy after it has become a particular compliance state.
+    compliant: 30m
+    noncompliant: 45s
   # Optional. When the policy references a Kyverno policy manifest, this determines if an additional
   # configuration policy should be generated in order to receive policy violations in Open Cluster
   # Management when the Kyverno policy has been violated. This defaults to true.
@@ -85,6 +93,8 @@ policies:
       - path: ""
         # Optional. (See policy[0].complianceType for description.)
         complianceType: "musthave"
+         # Optional. (See policyDefaults.evaluationInterval for description.)
+        evaluationInterval: {}
         # Optional. A Kustomize patch to apply to the manifest(s) at the path. If there
         # are multiple manifests, the patch requires the apiVersion, kind, metadata.name,
         # and metadata.namespace (if applicable) fields to be set so Kustomize
@@ -116,6 +126,8 @@ policies:
       - "CM-2 Baseline Configuration"
     # Optional. (See policyDefaults.disabled for description.)
     disabled: false
+    # Optional. (See policyDefaults.evaluationInterval for description.)
+    evaluationInterval: {}
     # Optional. (See policyDefaults.informKyvernoPolicies for description.)
     informKyvernoPolicies: true
     # Optional. (See policyDefaults.consolidateManifests for description.)

@@ -1650,3 +1650,161 @@ spec:
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
 }
+
+func getYAMLEvaluationInterval(t *testing.T, policyTemplate interface{}, skipFinalValidation bool) map[string]interface{} {
+	t.Helper()
+
+	plcTemplate, ok := policyTemplate.(map[string]interface{})
+	assertEqual(t, ok, true)
+
+	configPolicy, ok := plcTemplate["objectDefinition"].(map[string]interface{})
+	assertEqual(t, ok, true)
+
+	configPolicySpec, ok := configPolicy["spec"].(map[string]interface{})
+	assertEqual(t, ok, true)
+
+	evaluationInterval, ok := configPolicySpec["evaluationInterval"].(map[string]interface{})
+
+	if !skipFinalValidation {
+		assertEqual(t, ok, true)
+	}
+
+	return evaluationInterval
+}
+
+func TestGenerateEvaluationInterval(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	p := Plugin{}
+
+	var err error
+	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	p.PolicyDefaults.Namespace = "my-policies"
+	p.PolicyDefaults.EvaluationInterval = types.EvaluationInterval{
+		Compliant:    "never",
+		NonCompliant: "15s",
+	}
+
+	// Test that the policy evaluation interval gets inherited when not set on a manifest.
+	policyConf := types.PolicyConfig{
+		ConsolidateManifests: false,
+		EvaluationInterval: types.EvaluationInterval{
+			Compliant:    "30m",
+			NonCompliant: "30s",
+		},
+		Name: "policy-app-config",
+		Manifests: []types.Manifest{
+			{Path: path.Join(tmpDir, "configmap.yaml")},
+			{
+				EvaluationInterval: types.EvaluationInterval{
+					Compliant:    "25m",
+					NonCompliant: "5m",
+				},
+				Path: path.Join(tmpDir, "configmap.yaml"),
+			},
+			// Test that it does not get an inherited value when it is explicitly set to empty in the YAML below.
+			{
+				Path: path.Join(tmpDir, "configmap.yaml"),
+			},
+		},
+	}
+	// Test that the policy defaults get inherited.
+	policyConf2 := types.PolicyConfig{
+		Name: "policy-app-config2",
+		Manifests: []types.Manifest{
+			{Path: path.Join(tmpDir, "configmap.yaml")},
+		},
+	}
+	// Test that explicitly setting evaluationInterval to an empty value overrides the policy default.
+	policyConf3 := types.PolicyConfig{
+		EvaluationInterval: types.EvaluationInterval{},
+		Name:               "policy-app-config3",
+		Manifests: []types.Manifest{
+			{Path: path.Join(tmpDir, "configmap.yaml")},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf, policyConf2, policyConf3)
+	p.applyDefaults(
+		map[string]interface{}{
+			"policies": []interface{}{
+				map[string]interface{}{
+					"consolidateManifests": false,
+					"manifests": []interface{}{
+						map[string]interface{}{},
+						map[string]interface{}{},
+						map[string]interface{}{
+							"evaluationInterval": map[string]interface{}{
+								"compliant":    "",
+								"noncompliant": "",
+							},
+						},
+					},
+				},
+				map[string]interface{}{},
+				map[string]interface{}{
+					"evaluationInterval": map[string]interface{}{
+						"compliant":    "",
+						"noncompliant": "",
+					},
+				},
+			},
+		},
+	)
+	if err := p.assertValidConfig(); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output, err := p.Generate()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	generatedManifests, err := unmarshalManifestBytes(output)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, len(*generatedManifests), 9)
+
+	for _, manifest := range *generatedManifests {
+		kind, _ := manifest["kind"].(string)
+		if kind != "Policy" {
+			continue
+		}
+
+		metadata, _ := manifest["metadata"].(map[string]interface{})
+
+		name, _ := metadata["name"].(string)
+
+		spec, _ := manifest["spec"].(map[string]interface{})
+		policyTemplates, _ := spec["policy-templates"].([]interface{})
+
+		if name == "policy-app-config" {
+			assertEqual(t, len(policyTemplates), 3)
+			evaluationInterval := getYAMLEvaluationInterval(t, policyTemplates[0], false)
+			assertEqual(t, evaluationInterval["compliant"], "30m")
+			assertEqual(t, evaluationInterval["noncompliant"], "30s")
+
+			evaluationInterval = getYAMLEvaluationInterval(t, policyTemplates[1], false)
+			assertEqual(t, evaluationInterval["compliant"], "25m")
+			assertEqual(t, evaluationInterval["noncompliant"], "5m")
+
+			evaluationInterval = getYAMLEvaluationInterval(t, policyTemplates[2], true)
+			assertEqual(t, len(evaluationInterval), 0)
+		} else if name == "policy-app-config2" {
+			assertEqual(t, len(policyTemplates), 1)
+			evaluationInterval := getYAMLEvaluationInterval(t, policyTemplates[0], false)
+			assertEqual(t, evaluationInterval["compliant"], "never")
+			assertEqual(t, evaluationInterval["noncompliant"], "15s")
+		} else if name == "policy-app-config3" {
+			assertEqual(t, len(policyTemplates), 1)
+			evaluationInterval := getYAMLEvaluationInterval(t, policyTemplates[0], true)
+			assertEqual(t, len(evaluationInterval), 0)
+		}
+	}
+}

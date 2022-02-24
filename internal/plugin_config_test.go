@@ -653,6 +653,117 @@ policies:
 	assertEqual(t, err.Error(), expected)
 }
 
+func TestConfigInvalidEvalInterval(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	tests := []struct {
+		// Individual values can't be used for compliant/noncompliant since an empty string means
+		// to not inherit from the policy defaults.
+		defaultEvalInterval  string
+		policyEvalInterval   string
+		manifestEvalInterval string
+		expectedMsg          string
+	}{
+		{
+			`{"compliant": "not a duration"}`,
+			"",
+			"",
+			`the policy policy-app has an invalid policy.evaluationInterval.compliant value: time: invalid duration ` +
+				`"not a duration"`,
+		},
+		{
+			`{"noncompliant": "not a duration"}`,
+			"",
+			"",
+			`the policy policy-app has an invalid policy.evaluationInterval.noncompliant value: time: invalid ` +
+				`duration "not a duration"`,
+		},
+		{
+			"",
+			`{"compliant": "not a duration"}`,
+			"",
+			`the policy policy-app has an invalid policy.evaluationInterval.compliant value: time: invalid duration ` +
+				`"not a duration"`,
+		},
+		{
+			"",
+			`{"noncompliant": "not a duration"}`,
+			"",
+			`the policy policy-app has an invalid policy.evaluationInterval.noncompliant value: time: invalid ` +
+				`duration "not a duration"`,
+		},
+		{
+			"",
+			"",
+			`{"compliant": "not a duration"}`,
+			`the policy policy-app has the evaluationInterval value set on manifest[0] but consolidateManifests is ` +
+				`true`,
+		},
+		{
+			"",
+			"",
+			`{"noncompliant": "not a duration"}`,
+			`the policy policy-app has the evaluationInterval value set on manifest[0] but consolidateManifests is ` +
+				`true`,
+		},
+		{
+			"",
+			`{"compliant": "10d5h1m"}`,
+			"",
+			`the policy policy-app has an invalid policy.evaluationInterval.compliant value: time: unknown unit "d" ` +
+				`in duration "10d5h1m"`,
+		},
+		{
+			"",
+			`{"noncompliant": "1w2d"}`,
+			"",
+			`the policy policy-app has an invalid policy.evaluationInterval.noncompliant value: time: unknown unit ` +
+				`"w" in duration "1w2d"`,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(
+			fmt.Sprintf("expected=%s", test.expectedMsg),
+			func(t *testing.T) {
+				t.Parallel()
+				config := fmt.Sprintf(`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: my-policies
+  evaluationInterval: %s
+policies:
+- name: policy-app
+  evaluationInterval: %s
+  manifests:
+    - path: %s
+      evaluationInterval: %s
+`,
+					test.defaultEvalInterval,
+					test.policyEvalInterval,
+					path.Join(tmpDir, "configmap.yaml"),
+					test.manifestEvalInterval,
+				)
+
+				p := Plugin{}
+				err := p.Config([]byte(config), tmpDir)
+				if err == nil {
+					t.Fatal("Expected an error but did not get one")
+				}
+
+				assertEqual(t, err.Error(), test.expectedMsg)
+			},
+		)
+	}
+}
+
 func TestConfigNoManifests(t *testing.T) {
 	t.Parallel()
 	const config = `

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/stolostron/policy-generator-plugin/internal/types"
 	"gopkg.in/yaml.v3"
@@ -222,23 +223,85 @@ func getDefaultBool(config map[string]interface{}, key string) (value bool, set 
 func getPolicyBool(
 	config map[string]interface{}, policyIndex int, key string,
 ) (value bool, set bool) {
-	policies, ok := config["policies"].([]interface{})
-	if !ok {
-		return false, false
-	}
-
-	if len(policies)-1 < policyIndex {
-		return false, false
-	}
-
-	policy, ok := policies[policyIndex].(map[string]interface{})
-	if !ok {
+	policy := getPolicy(config, policyIndex)
+	if policy == nil {
 		return false, false
 	}
 
 	value, set = policy[key].(bool)
 
 	return
+}
+
+// getPolicy will return a policy at the specified index in the Policy Generator configuration YAML.
+func getPolicy(config map[string]interface{}, policyIndex int) map[string]interface{} {
+	policies, ok := config["policies"].([]interface{})
+	if !ok {
+		return nil
+	}
+
+	if len(policies)-1 < policyIndex {
+		return nil
+	}
+
+	policy, ok := policies[policyIndex].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	return policy
+}
+
+// getEvaluationInterval will return the evaluation interval of specified policy in the Policy Generator configuration
+// YAML.
+func isEvaluationIntervalSet(config map[string]interface{}, policyIndex int, complianceType string) bool {
+	policy := getPolicy(config, policyIndex)
+	if policy == nil {
+		return false
+	}
+
+	evaluationInterval, ok := policy["evaluationInterval"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	_, set := evaluationInterval[complianceType].(string)
+
+	return set
+}
+
+// isEvaluationIntervalSetManifest will return the evaluation interval of the specified manifest of the specified policy
+// in the Policy Generator configuration YAML.
+func isEvaluationIntervalSetManifest(
+	config map[string]interface{}, policyIndex int, manifestIndex int, complianceType string,
+) bool {
+	policy := getPolicy(config, policyIndex)
+	if policy == nil {
+		return false
+	}
+
+	manifests, ok := policy["manifests"].([]interface{})
+	if !ok {
+		return false
+	}
+
+	if len(manifests)-1 < manifestIndex {
+		return false
+	}
+
+	manifest, ok := manifests[manifestIndex].(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	evaluationInterval, ok := manifest["evaluationInterval"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	_, set := evaluationInterval[complianceType].(string)
+
+	return set
 }
 
 // applyDefaults applies any missing defaults under Policy.PlacementBindingDefaults,
@@ -333,6 +396,21 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.Controls = p.PolicyDefaults.Controls
 		}
 
+		// Only use the policyDefault evaluationInterval value when it's not explicitly set on the policy.
+		if policy.EvaluationInterval.Compliant == "" {
+			set := isEvaluationIntervalSet(unmarshaledConfig, i, "compliant")
+			if !set {
+				policy.EvaluationInterval.Compliant = p.PolicyDefaults.EvaluationInterval.Compliant
+			}
+		}
+
+		if policy.EvaluationInterval.NonCompliant == "" {
+			set := isEvaluationIntervalSet(unmarshaledConfig, i, "noncompliant")
+			if !set {
+				policy.EvaluationInterval.NonCompliant = p.PolicyDefaults.EvaluationInterval.NonCompliant
+			}
+		}
+
 		if policy.PolicySets == nil {
 			policy.PolicySets = p.PolicyDefaults.PolicySets
 		}
@@ -409,9 +487,32 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.Standards = p.PolicyDefaults.Standards
 		}
 
-		for i := range policy.Manifests {
-			if policy.Manifests[i].ComplianceType == "" {
-				policy.Manifests[i].ComplianceType = policy.ComplianceType
+		for j := range policy.Manifests {
+			manifest := &policy.Manifests[j]
+
+			if manifest.ComplianceType == "" {
+				manifest.ComplianceType = policy.ComplianceType
+			}
+
+			// If the manifests are consolidated to a single ConfigurationPolicy object, don't set
+			// the evaluation interval per manifest.
+			if policy.ConsolidateManifests {
+				continue
+			}
+
+			// Only use the policy's evaluationInterval value when it's not explicitly set in the manifest.
+			if manifest.EvaluationInterval.Compliant == "" {
+				set := isEvaluationIntervalSetManifest(unmarshaledConfig, i, j, "compliant")
+				if !set {
+					manifest.EvaluationInterval.Compliant = policy.EvaluationInterval.Compliant
+				}
+			}
+
+			if manifest.EvaluationInterval.NonCompliant == "" {
+				set := isEvaluationIntervalSetManifest(unmarshaledConfig, i, j, "noncompliant")
+				if !set {
+					manifest.EvaluationInterval.NonCompliant = policy.EvaluationInterval.NonCompliant
+				}
 			}
 		}
 
@@ -507,13 +608,33 @@ func (p *Plugin) assertValidConfig() error {
 				p.PolicyDefaults.Namespace, policy.Name)
 		}
 
+		if policy.EvaluationInterval.Compliant != "" && policy.EvaluationInterval.Compliant != "never" {
+			_, err := time.ParseDuration(policy.EvaluationInterval.Compliant)
+			if err != nil {
+				return fmt.Errorf(
+					"the policy %s has an invalid policy.evaluationInterval.compliant value: %w", policy.Name, err,
+				)
+			}
+		}
+
+		if policy.EvaluationInterval.NonCompliant != "" && policy.EvaluationInterval.NonCompliant != "never" {
+			_, err := time.ParseDuration(policy.EvaluationInterval.NonCompliant)
+			if err != nil {
+				return fmt.Errorf(
+					"the policy %s has an invalid policy.evaluationInterval.noncompliant value: %w", policy.Name, err,
+				)
+			}
+		}
+
 		if len(policy.Manifests) == 0 {
 			return fmt.Errorf(
 				"each policy must have at least one manifest, but found none in policy %s", policy.Name,
 			)
 		}
 
-		for _, manifest := range policy.Manifests {
+		for j := range policy.Manifests {
+			manifest := &policy.Manifests[j]
+
 			if manifest.Path == "" {
 				return fmt.Errorf(
 					"each policy manifest entry must have path set, but did not find a path in policy %s",
@@ -531,6 +652,40 @@ func (p *Plugin) assertValidConfig() error {
 			err = verifyManifestPath(p.baseDirectory, manifest.Path)
 			if err != nil {
 				return err
+			}
+
+			evalInterval := &manifest.EvaluationInterval
+			if policy.ConsolidateManifests && (evalInterval.Compliant != "" || evalInterval.NonCompliant != "") {
+				return fmt.Errorf(
+					"the policy %s has the evaluationInterval value set on manifest[%d] but "+
+						"consolidateManifests is true",
+					policy.Name,
+					j,
+				)
+			}
+
+			if evalInterval.Compliant != "" && evalInterval.Compliant != "never" {
+				_, err := time.ParseDuration(evalInterval.Compliant)
+				if err != nil {
+					return fmt.Errorf(
+						"the policy %s has an invalid policy.evaluationInterval.manifest[%d].compliant value: %w",
+						policy.Name,
+						j,
+						err,
+					)
+				}
+			}
+
+			if evalInterval.NonCompliant != "" && evalInterval.NonCompliant != "never" {
+				_, err := time.ParseDuration(evalInterval.NonCompliant)
+				if err != nil {
+					return fmt.Errorf(
+						"the policy %s has an invalid policy.evaluationInterval.manifest[%d].noncompliant value: %w",
+						policy.Name,
+						j,
+						err,
+					)
+				}
 			}
 		}
 
