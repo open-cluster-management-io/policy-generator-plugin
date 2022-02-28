@@ -150,7 +150,10 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 				// casting each objTemplate with manifest to objectTemplates type
 				// build policyTemplate for each objectTemplates
 				policyTemplate := buildPolicyTemplate(
-					policyConf, len(policyTemplates)+1, &[]map[string]interface{}{objTemplate},
+					policyConf,
+					len(policyTemplates)+1,
+					&[]map[string]interface{}{objTemplate},
+					&policyConf.Manifests[i].EvaluationInterval,
 				)
 				setNamespaceSelector(policyConf, policyTemplate)
 				policyTemplates = append(policyTemplates, *policyTemplate)
@@ -166,7 +169,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 
 	//  just build one policyTemplate by using the above consolidated objectTemplates
 	if policyConf.ConsolidateManifests {
-		policyTemplate := buildPolicyTemplate(policyConf, 1, &objectTemplates)
+		policyTemplate := buildPolicyTemplate(policyConf, 1, &objectTemplates, &policyConf.EvaluationInterval)
 		setNamespaceSelector(policyConf, policyTemplate)
 		policyTemplates = append(policyTemplates, *policyTemplate)
 	}
@@ -191,7 +194,10 @@ func setNamespaceSelector(policyConf *types.PolicyConfig, policyTemplate *map[st
 // policyNum defines which number the configuration policy is in the policy. If it is greater than
 // one then the configuration policy name will have policyNum appended to it.
 func buildPolicyTemplate(
-	policyConf *types.PolicyConfig, policyNum int, objectTemplates *[]map[string]interface{},
+	policyConf *types.PolicyConfig,
+	policyNum int,
+	objectTemplates *[]map[string]interface{},
+	evaluationInterval *types.EvaluationInterval,
 ) *map[string]map[string]interface{} {
 	var name string
 	if policyNum > 1 {
@@ -212,6 +218,20 @@ func buildPolicyTemplate(
 				"severity":          policyConf.Severity,
 			},
 		},
+	}
+
+	if evaluationInterval.Compliant != "" || evaluationInterval.NonCompliant != "" {
+		evalInterval := map[string]interface{}{}
+
+		if evaluationInterval.Compliant != "" {
+			evalInterval["compliant"] = evaluationInterval.Compliant
+		}
+
+		if evaluationInterval.NonCompliant != "" {
+			evalInterval["noncompliant"] = evaluationInterval.NonCompliant
+		}
+
+		policyTemplate["objectDefinition"]["spec"].(map[string]interface{})["evaluationInterval"] = evalInterval
 	}
 
 	return &policyTemplate
