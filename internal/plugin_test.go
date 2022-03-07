@@ -1384,7 +1384,7 @@ spec:
                 remediationAction: inform
                 severity: low
 ---
-apiVersion: policy.open-cluster-management.io/v1
+apiVersion: policy.open-cluster-management.io/v1beta1
 kind: PolicySet
 metadata:
     name: policyset
@@ -1501,7 +1501,7 @@ spec:
                 remediationAction: inform
                 severity: low
 ---
-apiVersion: policy.open-cluster-management.io/v1
+apiVersion: policy.open-cluster-management.io/v1beta1
 kind: PolicySet
 metadata:
     name: my-policyset
@@ -1635,7 +1635,7 @@ func TestCreatePolicySet(t *testing.T) {
 	output := p.outputBuffer.String()
 	expected := `
 ---
-apiVersion: policy.open-cluster-management.io/v1
+apiVersion: policy.open-cluster-management.io/v1beta1
 kind: PolicySet
 metadata:
     name: policyset-default

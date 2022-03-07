@@ -18,10 +18,12 @@ import (
 
 const (
 	configPolicyKind           = "ConfigurationPolicy"
-	policyAPIVersion           = "policy.open-cluster-management.io/v1"
+	policyAPIGroup             = "policy.open-cluster-management.io"
+	policyAPIVersion           = policyAPIGroup + "/v1"
 	policyKind                 = "Policy"
+	poilcySetAPIVersion        = policyAPIGroup + "/v1beta1"
 	policySetKind              = "PolicySet"
-	placementBindingAPIVersion = "policy.open-cluster-management.io/v1"
+	placementBindingAPIVersion = policyAPIGroup + "/v1"
 	placementBindingKind       = "PlacementBinding"
 	placementRuleAPIVersion    = "apps.open-cluster-management.io/v1"
 	placementRuleKind          = "PlacementRule"
@@ -870,7 +872,7 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 // manifests specified in the configuration are invalid or can't be read.
 func (p *Plugin) createPolicySet(policySetConf *types.PolicySetConfig) error {
 	policyset := map[string]interface{}{
-		"apiVersion": policyAPIVersion,
+		"apiVersion": poilcySetAPIVersion,
 		"kind":       policySetKind,
 		"metadata": map[string]interface{}{
 			"name":      policySetConf.Name,
@@ -1142,8 +1144,7 @@ func (p *Plugin) createPlacementBinding(
 	subjects := make([]map[string]string, 0, len(policyConfs)+len(policySetConfs))
 	for _, policyConf := range policyConfs {
 		subject := map[string]string{
-			// Remove the version at the end
-			"apiGroup": strings.Split(policyAPIVersion, "/")[0],
+			"apiGroup": policyAPIGroup,
 			"kind":     policyKind,
 			"name":     policyConf.Name,
 		}
@@ -1152,8 +1153,7 @@ func (p *Plugin) createPlacementBinding(
 
 	for _, policySetConf := range policySetConfs {
 		subject := map[string]string{
-			// Remove the version at the end
-			"apiGroup": strings.Split(policyAPIVersion, "/")[0],
+			"apiGroup": policyAPIGroup,
 			"kind":     policySetKind,
 			"name":     policySetConf.Name,
 		}
