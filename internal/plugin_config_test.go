@@ -28,6 +28,28 @@ data:
 	}
 }
 
+func createIamPolicyManifest(t *testing.T, tmpDir, filename string) {
+	t.Helper()
+	manifestsPath := path.Join(tmpDir, filename)
+	yamlContent := `
+apiVersion: policy.open-cluster-management.io/v1
+kind: IamPolicy
+metadata:
+  name: policy-limitclusteradmin-example
+spec:
+  severity: medium
+  namespaceSelector:
+    include: ["*"]
+    exclude: ["kube-*", "openshift-*"]
+  remediationAction: enforce
+  maxClusterRoleBindingUsers: 5
+`
+	err := ioutil.WriteFile(manifestsPath, []byte(yamlContent), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestsPath)
+	}
+}
+
 func TestConfig(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()

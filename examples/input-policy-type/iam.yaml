@@ -1,0 +1,11 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: IamPolicy
+metadata:
+  name: policy-limitclusteradmin-example
+spec:
+  severity: medium
+  namespaceSelector:
+    include: ["*"]
+    exclude: ["kube-*", "openshift-*"]
+  remediationAction: inform
+  maxClusterRoleBindingUsers: 5

@@ -90,6 +90,12 @@ policies:
         # kustomization.yaml file. This path cannot be in a directory outside of the directory with
         # the kustomization.yaml file. Subdirectories within the directory with kustomization.yaml
         # file are allowed.
+        # Supported manifests:
+        #   1) Non-root policy type manifests such as IamPolicy, CertificatePolicy, and ConfigurationPolicy
+        #      that have a "Policy" suffix. These are not modified except for patches and are directly added 
+        #      as a Policy's policy-templates entry.
+        #   2) For everything else, ConfigurationPolicy objects are generated to wrap these manifests. 
+        #      The resulting ConfigurationPolicy is added as a Policy's policy-templates entry.
       - path: ""
         # Optional. (See policy[0].complianceType for description.)
         complianceType: "musthave"
