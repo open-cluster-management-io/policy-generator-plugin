@@ -15,6 +15,7 @@ import (
 	"github.com/stolostron/policy-generator-plugin/internal/expanders"
 	"github.com/stolostron/policy-generator-plugin/internal/types"
 	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // getManifests will get all of the manifest files associated with the input policy configuration
@@ -139,12 +140,28 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 	for i, manifestGroup := range manifestGroups {
 		complianceType := policyConf.Manifests[i].ComplianceType
 		for _, manifest := range manifestGroup {
+			isPolicyTypeManifest, err := isPolicyTypeManifest(manifest)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"%w in manifest path: %s",
+					err,
+					policyConf.Manifests[i].Path,
+				)
+			}
+
+			if isPolicyTypeManifest {
+				policyTemplate := map[string]map[string]interface{}{"objectDefinition": manifest}
+				policyTemplates = append(policyTemplates, policyTemplate)
+
+				continue
+			}
+
 			objTemplate := map[string]interface{}{
 				"complianceType":   complianceType,
 				"objectDefinition": manifest,
 			}
 			if policyConf.ConsolidateManifests {
-				// put all objTemplate with manifest into single consolidated objectTemplates object
+				// put all objTemplate with manifest into single consolidated objectTemplates
 				objectTemplates = append(objectTemplates, objTemplate)
 			} else {
 				// casting each objTemplate with manifest to objectTemplates type
@@ -167,8 +184,9 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 		)
 	}
 
-	//  just build one policyTemplate by using the above consolidated objectTemplates
-	if policyConf.ConsolidateManifests {
+	// just build one policyTemplate by using the above non-empty consolidated objectTemplates
+	// ConsolidateManifests = true or there is non-policy-type manifest
+	if policyConf.ConsolidateManifests && len(objectTemplates) > 0 {
 		policyTemplate := buildPolicyTemplate(policyConf, 1, &objectTemplates, &policyConf.EvaluationInterval)
 		setNamespaceSelector(policyConf, policyTemplate)
 		policyTemplates = append(policyTemplates, *policyTemplate)
@@ -181,6 +199,24 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 	}
 
 	return policyTemplates, nil
+}
+
+// isPolicyTypeManifest determines if the manifest is a non-root policy manifest
+// by checking apiVersion and kind fields.
+// Return error when apiVersion and kind fields aren't string.
+func isPolicyTypeManifest(manifest map[string]interface{}) (bool, error) {
+	apiVersion, _, isAPIStr := unstructured.NestedString(manifest, "apiVersion")
+	kind, _, isKindStr := unstructured.NestedString(manifest, "kind")
+	if isAPIStr != nil {
+		return false, fmt.Errorf("invalid non-string apiVersion format")
+	} else if isKindStr != nil {
+		return false, fmt.Errorf("invalid non-string kind format")
+	} else if strings.HasPrefix(apiVersion, "policy.open-cluster-management.io") &&
+		kind != "Policy" && strings.HasSuffix(kind, "Policy") {
+		return true, nil // non-root policy-type manifest contains policy api
+	}
+
+	return false, nil
 }
 
 // setNamespaceSelector sets the namespace selector, if set, on the input policy template.

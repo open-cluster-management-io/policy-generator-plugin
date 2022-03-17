@@ -420,6 +420,67 @@ spec:
 	assertEqual(t, output, expected)
 }
 
+func TestCreatePolicyFromIamPolicyTypeManifest(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createIamPolicyManifest(t, tmpDir, "iamKindManifestPluginTest.yaml")
+	p := Plugin{}
+	p.PolicyDefaults.Namespace = "Iam-policies"
+	policyConf := types.PolicyConfig{
+		Categories: []string{"AC Access Control"},
+		Controls:   []string{"AC-3 Access Enforcement"},
+		Standards:  []string{"NIST SP 800-53"},
+		Name:       "policy-limitclusteradmin",
+		Manifests: []types.Manifest{
+			{Path: path.Join(tmpDir, "iamKindManifestPluginTest.yaml")},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf)
+	p.applyDefaults(map[string]interface{}{})
+
+	err := p.createPolicy(&p.Policies[0])
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output := p.outputBuffer.String()
+	// expected Iam policy generated from
+	// non-root IAM policy type manifest
+	// in createIamPolicyTypeConfigMap()
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: AC Access Control
+        policy.open-cluster-management.io/controls: AC-3 Access Enforcement
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-limitclusteradmin
+    namespace: Iam-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: IamPolicy
+            metadata:
+                name: policy-limitclusteradmin-example
+            spec:
+                maxClusterRoleBindingUsers: 5
+                namespaceSelector:
+                    exclude:
+                        - kube-*
+                        - openshift-*
+                    include:
+                        - '*'
+                remediationAction: enforce
+                severity: medium
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+}
+
 func TestCreatePolicyDir(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -513,6 +574,43 @@ func TestCreatePolicyInvalidYAML(t *testing.T) {
 	expected := fmt.Sprintf(
 		"failed to decode the manifest file at %s: the input manifests must be in the format of "+
 			"YAML objects", manifestPath,
+	)
+	assertEqual(t, err.Error(), expected)
+}
+
+func TestCreatePolicyInvalidAPIOrKind(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestPath := path.Join(tmpDir, "invalidAPIOrKind.yaml")
+	yamlContent := `
+apiVersion: policy.open-cluster-management.io/v1
+kind:
+  - IamPolicy
+  - CertificatePolicy
+metadata:
+  name: policy-limitclusteradmin-example
+`
+	err := ioutil.WriteFile(manifestPath, []byte(yamlContent), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to create %s: %v", manifestPath, err)
+	}
+
+	p := Plugin{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := types.PolicyConfig{
+		Name:      "policy-limitclusteradmin",
+		Manifests: []types.Manifest{{Path: manifestPath}},
+	}
+	p.Policies = append(p.Policies, policyConf)
+	p.applyDefaults(map[string]interface{}{})
+
+	err = p.createPolicy(&p.Policies[0])
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := fmt.Sprintf(
+		"invalid non-string kind format in manifest path: %s", manifestPath,
 	)
 	assertEqual(t, err.Error(), expected)
 }

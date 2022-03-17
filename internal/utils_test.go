@@ -233,6 +233,130 @@ data:
 	}
 }
 
+func TestIsPolicyTypeManifest(t *testing.T) {
+	t.Parallel()
+
+	invalidAPI := []string{
+		"policy.open-cluster-management.io/v1",
+		"apps.open-cluster-management.io/v1",
+	}
+
+	invalidKind := []string{
+		"CertificatePolicy",
+		"IamPolicy",
+	}
+
+	tests := []struct {
+		apiVersion     string
+		kind           string
+		invalidAPI     []string
+		invalidKind    []string
+		expectedFlag   bool
+		expectedErrMsg string
+	}{
+		{"policy.open-cluster-management.io/v1", "IamPolicy", nil, nil, true, ""},
+		{"policy.open-cluster-management.io/v1", "CertificatePolicy", nil, nil, true, ""},
+		{"policy.open-cluster-management.io/v1", "ConfigurationPolicy", nil, nil, true, ""},
+		{"policy.open-cluster-management.io/v1", "Policy", nil, nil, false, ""},
+		{"apps.open-cluster-management.io/v1", "PlacementRule", nil, nil, false, ""},
+		{"", "", nil, nil, false, ""},
+		{"", "IamPolicy", invalidAPI, nil, false, "invalid non-string apiVersion format"},
+		{"policy.open-cluster-management.io/v1", "", nil, invalidKind, false, "invalid non-string kind format"},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(
+			fmt.Sprintf("apiVersion=%s, kind=%s", test.apiVersion, test.kind),
+			func(t *testing.T) {
+				t.Parallel()
+				manifest := map[string]interface{}{}
+
+				if test.invalidAPI == nil {
+					manifest["apiVersion"] = test.apiVersion
+				} else {
+					manifest["apiVersion"] = test.invalidAPI
+				}
+
+				if test.invalidKind == nil {
+					manifest["kind"] = test.kind
+				} else {
+					manifest["kind"] = test.invalidKind
+				}
+
+				isPolicyType, err := isPolicyTypeManifest(manifest)
+				assertEqual(t, isPolicyType, test.expectedFlag)
+
+				if test.expectedErrMsg == "" {
+					assertEqual(t, err, nil)
+				} else {
+					assertEqual(t, err.Error(), test.expectedErrMsg)
+				}
+			},
+		)
+	}
+}
+
+func TestGetPolicyTemplateFromPolicyTypeManifest(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestFiles := []types.Manifest{}
+	createIamPolicyManifest(t, tmpDir, "iamKindManifest.yaml")
+	// Test manifest is non-root IAM policy type.
+	IamManifestPath := path.Join(tmpDir, "iamKindManifest.yaml")
+
+	manifestFiles = append(
+		manifestFiles, types.Manifest{Path: IamManifestPath},
+	)
+
+	// Test both passing in individual files and a flat directory.
+	tests := []struct {
+		Manifests []types.Manifest
+	}{
+		{Manifests: manifestFiles},
+		{
+			Manifests: []types.Manifest{{Path: tmpDir}},
+		},
+	}
+
+	for _, test := range tests {
+		policyConf := types.PolicyConfig{
+			Manifests:         test.Manifests,
+			Name:              "policy-limitclusteradmin",
+			RemediationAction: "inform",
+			Severity:          "low",
+		}
+
+		policyTemplates, err := getPolicyTemplates(&policyConf)
+		if err != nil {
+			t.Fatalf("Failed to get the policy templates: %v", err)
+		}
+		assertEqual(t, len(policyTemplates), 1)
+
+		IamPolicyTemplate := policyTemplates[0]
+		IamObjdef := IamPolicyTemplate["objectDefinition"]
+		assertEqual(t, IamObjdef["apiVersion"], "policy.open-cluster-management.io/v1")
+		// kind will not be overridden by "ConfigurationPolicy".
+		assertEqual(t, IamObjdef["kind"], "IamPolicy")
+		assertEqual(t, IamObjdef["metadata"].(map[string]interface{})["name"], "policy-limitclusteradmin-example")
+		IamSpec, ok := IamObjdef["spec"].(map[string]interface{})
+		if !ok {
+			t.Fatal("The spec field is an invalid format")
+		}
+		// remediationAction will not be overridden by policyConf.
+		assertEqual(t, IamSpec["remediationAction"], "enforce")
+		// severity will not be overridden by policyConf.
+		assertEqual(t, IamSpec["severity"], "medium")
+		assertEqual(t, IamSpec["maxClusterRoleBindingUsers"], 5)
+		namespaceSelector, ok := IamSpec["namespaceSelector"].(map[string]interface{})
+		if !ok {
+			t.Fatal("The namespaceSelector field is an invalid format")
+		}
+		assertReflectEqual(t, namespaceSelector["include"], []interface{}{"*"})
+		assertReflectEqual(t, namespaceSelector["exclude"], []interface{}{"kube-*", "openshift-*"})
+	}
+}
+
 func TestGetPolicyTemplatePatches(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
