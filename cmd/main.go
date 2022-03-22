@@ -1,6 +1,7 @@
 package main
 
 import (
+	"C"
 	"bytes"
 	"fmt"
 	"io/ioutil"
@@ -73,4 +74,14 @@ func processGeneratorConfig(filePath string) []byte {
 	}
 
 	return generatedOutput
+}
+
+// C compatible function for processGeneratorConfig
+// Enable C shared-library to be compiled and used by Python
+//export processGeneratorConfigC
+func processGeneratorConfigC(filePathPtr *C.char) *C.char {
+	filePath := C.GoString(filePathPtr)
+	res := string(processGeneratorConfig(filePath))
+
+	return C.CString(res)
 }

@@ -13,6 +13,8 @@ export PATH := $(PATH):$(GOBIN)
 TESTARGS_DEFAULT := "-v"
 export TESTARGS ?= $(TESTARGS_DEFAULT)
 export DEPENDENCY_OVERRIDE ?= false
+export OS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
+export ARCH ?= $(shell uname -m | sed 's/x86_64/amd64/g')
 
 # Kustomize plugin configuration
 XDG_CONFIG_HOME ?= ${HOME}/.config
@@ -35,6 +37,10 @@ build: layout
 
 build-binary:
 	go build -o PolicyGenerator cmd/main.go
+
+build-so:
+	@mkdir -p build_output
+	go build -buildmode=c-shared -o build_output/_processGeneratorConfigC_$(OS)_$(ARCH).so cmd/main.go
 
 build-release:
 	@if [[ $(shell git status --porcelain | wc -l) -gt 0 ]]; \
