@@ -33,6 +33,7 @@ func TestGenerate(t *testing.T) {
 	p.PlacementBindingDefaults.Name = "my-placement-binding"
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	p.PolicyDefaults.Namespace = "my-policies"
+	p.PolicyDefaults.MetadataComplianceType = "musthave"
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
@@ -52,7 +53,10 @@ func TestGenerate(t *testing.T) {
 	policyConf2 := types.PolicyConfig{
 		Name: "policy-app-config2",
 		Manifests: []types.Manifest{
-			{Path: path.Join(tmpDir, "configmap.yaml")},
+			{
+				MetadataComplianceType: "mustonlyhave",
+				Path:                   path.Join(tmpDir, "configmap.yaml"),
+			},
 		},
 	}
 	p.Policies = append(p.Policies, policyConf, policyConf2)
@@ -87,6 +91,7 @@ spec:
             spec:
                 object-templates:
                     - complianceType: musthave
+                      metadataComplianceType: musthave
                       objectDefinition:
                         apiVersion: v1
                         data:
@@ -119,6 +124,7 @@ spec:
             spec:
                 object-templates:
                     - complianceType: musthave
+                      metadataComplianceType: mustonlyhave
                       objectDefinition:
                         apiVersion: v1
                         data:

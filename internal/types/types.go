@@ -2,10 +2,11 @@
 package types
 
 type Manifest struct {
-	ComplianceType     string                   `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
-	EvaluationInterval EvaluationInterval       `json:"evaluationInterval,omitempty" yaml:"evaluationInterval,omitempty"`
-	Patches            []map[string]interface{} `json:"patches,omitempty" yaml:"patches,omitempty"`
-	Path               string                   `json:"path,omitempty" yaml:"path,omitempty"`
+	ComplianceType         string                   `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
+	MetadataComplianceType string                   `json:"metadataComplianceType,omitempty" yaml:"metadataComplianceType,omitempty"`
+	EvaluationInterval     EvaluationInterval       `json:"evaluationInterval,omitempty" yaml:"evaluationInterval,omitempty"`
+	Patches                []map[string]interface{} `json:"patches,omitempty" yaml:"patches,omitempty"`
+	Path                   string                   `json:"path,omitempty" yaml:"path,omitempty"`
 }
 
 type NamespaceSelector struct {
@@ -28,9 +29,10 @@ type EvaluationInterval struct {
 
 // PolicyConfig represents a policy entry in the PolicyGenerator configuration.
 type PolicyConfig struct {
-	Categories     []string `json:"categories,omitempty" yaml:"categories,omitempty"`
-	ComplianceType string   `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
-	Controls       []string `json:"controls,omitempty" yaml:"controls,omitempty"`
+	Categories             []string `json:"categories,omitempty" yaml:"categories,omitempty"`
+	ComplianceType         string   `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
+	MetadataComplianceType string   `json:"metadataComplianceType,omitempty" yaml:"metadataComplianceType,omitempty"`
+	Controls               []string `json:"controls,omitempty" yaml:"controls,omitempty"`
 	// This a slice of structs to allow additional configuration related to a manifest such as
 	// accepting patches.
 	Manifests         []Manifest        `json:"manifests,omitempty" yaml:"manifests,omitempty"`
@@ -51,11 +53,12 @@ type PolicyConfig struct {
 }
 
 type PolicyDefaults struct {
-	Categories        []string          `json:"categories,omitempty" yaml:"categories,omitempty"`
-	ComplianceType    string            `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
-	Controls          []string          `json:"controls,omitempty" yaml:"controls,omitempty"`
-	Namespace         string            `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	NamespaceSelector NamespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
+	Categories             []string          `json:"categories,omitempty" yaml:"categories,omitempty"`
+	ComplianceType         string            `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
+	MetadataComplianceType string            `json:"metadataComplianceType,omitempty" yaml:"metadataComplianceType,omitempty"`
+	Controls               []string          `json:"controls,omitempty" yaml:"controls,omitempty"`
+	Namespace              string            `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	NamespaceSelector      NamespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
 	// This is named Placement so that eventually PlacementRules and Placements will be supported
 	Placement                  PlacementConfig    `json:"placement,omitempty" yaml:"placement,omitempty"`
 	RemediationAction          string             `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`

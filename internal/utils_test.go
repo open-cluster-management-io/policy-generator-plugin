@@ -53,11 +53,19 @@ data:
 
 		// The applyDefaults method would normally fill in ComplianceType on each manifest entry.
 		manifestFiles = append(
-			manifestFiles, types.Manifest{ComplianceType: "musthave", Path: manifestPath},
+			manifestFiles, types.Manifest{
+				ComplianceType:         "musthave",
+				MetadataComplianceType: "mustonlyhave",
+				Path:                   manifestPath,
+			},
 		)
 		manifestFilesMustNotHave = append(
 			manifestFilesMustNotHave,
-			types.Manifest{ComplianceType: "mustnothave", Path: manifestPath},
+			types.Manifest{
+				ComplianceType:         "mustnothave",
+				MetadataComplianceType: "musthave",
+				Path:                   manifestPath,
+			},
 		)
 	}
 
@@ -71,15 +79,25 @@ data:
 
 	// Test both passing in individual files and a flat directory
 	tests := []struct {
-		ExpectedComplianceType string
-		Manifests              []types.Manifest
+		ExpectedComplianceType         string
+		ExpectedMetadataComplianceType string
+		Manifests                      []types.Manifest
 	}{
-		{ExpectedComplianceType: "musthave", Manifests: manifestFiles},
-		{ExpectedComplianceType: "mustnothave", Manifests: manifestFilesMustNotHave},
+		{
+			ExpectedComplianceType:         "musthave",
+			ExpectedMetadataComplianceType: "mustonlyhave",
+			Manifests:                      manifestFiles,
+		},
+		{
+			ExpectedComplianceType:         "mustnothave",
+			ExpectedMetadataComplianceType: "musthave",
+			Manifests:                      manifestFilesMustNotHave,
+		},
 		// The applyDefaults method would normally fill in ComplianceType on each manifest entry.
 		{
-			ExpectedComplianceType: "musthave",
-			Manifests:              []types.Manifest{{ComplianceType: "musthave", Path: tmpDir}},
+			ExpectedComplianceType:         "musthave",
+			ExpectedMetadataComplianceType: "",
+			Manifests:                      []types.Manifest{{ComplianceType: "musthave", Path: tmpDir}},
 		},
 	}
 	// test ConsolidateManifests = true (default case)
@@ -116,12 +134,22 @@ data:
 		}
 		assertEqual(t, len(objTemplates), 2)
 		assertEqual(t, objTemplates[0]["complianceType"], test.ExpectedComplianceType)
+		if test.ExpectedMetadataComplianceType != "" {
+			assertEqual(t, objTemplates[0]["metadataComplianceType"], test.ExpectedMetadataComplianceType)
+		} else {
+			assertEqual(t, objTemplates[0]["metadataComplianceType"], nil)
+		}
 		kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
 		if !ok {
 			t.Fatal("The objectDefinition field is an invalid format")
 		}
 		assertEqual(t, kind1, "ConfigMap")
 		assertEqual(t, objTemplates[1]["complianceType"], test.ExpectedComplianceType)
+		if test.ExpectedMetadataComplianceType != "" {
+			assertEqual(t, objTemplates[0]["metadataComplianceType"], test.ExpectedMetadataComplianceType)
+		} else {
+			assertEqual(t, objTemplates[0]["metadataComplianceType"], nil)
+		}
 		kind2, ok := objTemplates[1]["objectDefinition"].(map[string]interface{})["kind"]
 		if !ok {
 			t.Fatal("The objectDefinition field is an invalid format")
@@ -162,7 +190,11 @@ data:
 
 		// The applyDefaults method would normally fill in ComplianceType on each manifest entry.
 		manifestFiles = append(
-			manifestFiles, types.Manifest{ComplianceType: "musthave", Path: manifestPath},
+			manifestFiles, types.Manifest{
+				ComplianceType:         "musthave",
+				MetadataComplianceType: "mustonlyhave",
+				Path:                   manifestPath,
+			},
 		)
 	}
 
@@ -181,7 +213,11 @@ data:
 		{Manifests: manifestFiles},
 		// The applyDefaults method would normally fill in ComplianceType on each manifest entry.
 		{
-			Manifests: []types.Manifest{{ComplianceType: "musthave", Path: tmpDir}},
+			Manifests: []types.Manifest{{
+				ComplianceType:         "musthave",
+				MetadataComplianceType: "mustonlyhave",
+				Path:                   tmpDir,
+			}},
 		},
 	}
 
@@ -190,12 +226,13 @@ data:
 	// and each policyTemplate has only one objTemplate
 	for _, test := range tests {
 		policyConf := types.PolicyConfig{
-			ComplianceType:       "musthave",
-			ConsolidateManifests: false,
-			Manifests:            test.Manifests,
-			Name:                 "policy-app-config",
-			RemediationAction:    "inform",
-			Severity:             "low",
+			ComplianceType:         "musthave",
+			MetadataComplianceType: "musthave",
+			ConsolidateManifests:   false,
+			Manifests:              test.Manifests,
+			Name:                   "policy-app-config",
+			RemediationAction:      "inform",
+			Severity:               "low",
 		}
 
 		policyTemplates, err := getPolicyTemplates(&policyConf)
@@ -224,6 +261,7 @@ data:
 			}
 			assertEqual(t, len(objTemplates), 1)
 			assertEqual(t, objTemplates[0]["complianceType"], "musthave")
+			assertEqual(t, objTemplates[0]["metadataComplianceType"], "mustonlyhave")
 			kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
 			if !ok {
 				t.Fatal("The objectDefinition field is an invalid format")
@@ -625,6 +663,7 @@ metadata:
 	}
 	assertEqual(t, len(objTemplates), 2)
 	assertEqual(t, objTemplates[0]["complianceType"], "mustnothave")
+	assertEqual(t, objTemplates[0]["metadataComplianceType"], nil)
 	kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
 	if !ok {
 		t.Fatal("The objectDefinition field is an invalid format")
@@ -632,6 +671,7 @@ metadata:
 	assertEqual(t, kind1, "ClusterPolicyReport")
 
 	assertEqual(t, objTemplates[1]["complianceType"], "mustnothave")
+	assertEqual(t, objTemplates[1]["metadataComplianceType"], nil)
 	kind2, ok := objTemplates[1]["objectDefinition"].(map[string]interface{})["kind"]
 	if !ok {
 		t.Fatal("The objectDefinition field is an invalid format")

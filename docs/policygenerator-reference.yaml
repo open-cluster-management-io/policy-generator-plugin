@@ -37,6 +37,9 @@ policyDefaults:
   # configuration policy should be generated in order to receive policy violations in Open Cluster
   # Management when the Kyverno policy has been violated. This defaults to true.
   informKyvernoPolicies: true
+  # Optional. Overrides complianceType when comparing the manifest's metadata section to objects on
+  # the cluster ("musthave",  "mustonlyhave"). Default is unset to not override complianceType for metadata.
+  metadataComplianceType: ""
   # Required. The namespace of all the policies.
   namespace: ""
   # Optional. The placement configuration for the policies. This defaults to a placement
@@ -99,6 +102,8 @@ policies:
       - path: ""
         # Optional. (See policy[0].complianceType for description.)
         complianceType: "musthave"
+        # Optional. (See policyDefaults.metadataComplianceType for description.)
+        metadataComplianceType: ""
          # Optional. (See policyDefaults.evaluationInterval for description.)
         evaluationInterval: {}
         # Optional. A Kustomize patch to apply to the manifest(s) at the path. If there
@@ -127,6 +132,8 @@ policies:
     # Optional. Determines the policy controller behavior when comparing the manifest to objects on
     # the cluster ("musthave",  "mustonlyhave", or "mustnothave"). Defaults to "musthave".
     complianceType: "musthave"
+    # Optional. (See policyDefaults.metadataComplianceType for description.)
+    metadataComplianceType: ""
     # Optional. (See policyDefaults.controls for description.)
     controls:
       - "CM-2 Baseline Configuration"
