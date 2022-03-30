@@ -57,6 +57,8 @@ func TestConfig(t *testing.T) {
 	configMapPath := path.Join(tmpDir, "configmap.yaml")
 	createConfigMap(t, tmpDir, "configmap2.yaml")
 	configMapPath2 := path.Join(tmpDir, "configmap.yaml")
+	createConfigMap(t, tmpDir, "configmap3.yaml")
+	configMapPath3 := path.Join(tmpDir, "configmap.yaml")
 	exampleConfig := fmt.Sprintf(
 		`
 apiVersion: policy.open-cluster-management.io/v1
@@ -68,6 +70,7 @@ placementBindingDefaults:
 policyDefaults:
   controls: 
     - PR.DS-1 Data-at-rest
+  metadataComplianceType: musthave 
   namespace: my-policies
   namespaceSelector:
     include:
@@ -89,8 +92,11 @@ policies:
       - app-ns
   remediationAction: inform
 - name: policy-app-config2
+  metadataComplianceType: mustonlyhave
   disabled: true
   manifests:
+    - path: %s
+      metadataComplianceType: musthave
     - path: %s
   placement:
     clusterSelectors:
@@ -98,6 +104,7 @@ policies:
 `,
 		configMapPath,
 		configMapPath2,
+		configMapPath3,
 	)
 
 	p := Plugin{}
@@ -132,10 +139,12 @@ policies:
 	policy1 := p.Policies[0]
 	assertReflectEqual(t, policy1.Categories, []string{"CM Configuration Management"})
 	assertEqual(t, policy1.ComplianceType, "musthave")
+	assertEqual(t, policy1.MetadataComplianceType, "musthave")
 	assertReflectEqual(t, policy1.Controls, []string{"PR.DS-1 Data-at-rest"})
 	assertEqual(t, policy1.Disabled, false)
 	assertEqual(t, len(policy1.Manifests), 1)
 	assertEqual(t, policy1.Manifests[0].Path, configMapPath)
+	assertEqual(t, policy1.Manifests[0].MetadataComplianceType, "musthave")
 	assertEqual(t, policy1.Name, "policy-app-config")
 	p1ExpectedNsSelector := types.NamespaceSelector{
 		Exclude: nil, Include: []string{"app-ns"},
@@ -153,10 +162,14 @@ policies:
 	policy2 := p.Policies[1]
 	assertReflectEqual(t, policy2.Categories, []string{"CM Configuration Management"})
 	assertEqual(t, policy2.ComplianceType, "musthave")
+	assertEqual(t, policy2.MetadataComplianceType, "mustonlyhave")
 	assertReflectEqual(t, policy2.Controls, []string{"PR.DS-1 Data-at-rest"})
 	assertEqual(t, policy2.Disabled, true)
-	assertEqual(t, len(policy2.Manifests), 1)
+	assertEqual(t, len(policy2.Manifests), 2)
 	assertEqual(t, policy2.Manifests[0].Path, configMapPath2)
+	assertEqual(t, policy2.Manifests[0].MetadataComplianceType, "musthave")
+	assertEqual(t, policy2.Manifests[1].Path, configMapPath3)
+	assertEqual(t, policy2.Manifests[1].MetadataComplianceType, "mustonlyhave")
 	assertEqual(t, policy2.Name, "policy-app-config2")
 	assertReflectEqual(t, policy2.NamespaceSelector, expectedNsSelector)
 	assertReflectEqual(
@@ -199,6 +212,7 @@ policies:
 	assertEqual(t, p.PlacementBindingDefaults.Name, "")
 	assertReflectEqual(t, p.PolicyDefaults.Categories, []string{"CM Configuration Management"})
 	assertEqual(t, p.PolicyDefaults.ComplianceType, "musthave")
+	assertEqual(t, p.PolicyDefaults.MetadataComplianceType, "")
 	assertReflectEqual(t, p.PolicyDefaults.Controls, []string{"CM-2 Baseline Configuration"})
 	assertEqual(t, p.PolicyDefaults.Namespace, "my-policies")
 	expectedNsSelector := types.NamespaceSelector{Exclude: nil, Include: nil}
@@ -215,6 +229,7 @@ policies:
 	policy := p.Policies[0]
 	assertReflectEqual(t, policy.Categories, []string{"CM Configuration Management"})
 	assertEqual(t, policy.ComplianceType, "musthave")
+	assertEqual(t, policy.MetadataComplianceType, "")
 	assertReflectEqual(t, policy.Controls, []string{"CM-2 Baseline Configuration"})
 	assertEqual(t, policy.Disabled, false)
 	assertEqual(t, len(policy.Manifests), 1)

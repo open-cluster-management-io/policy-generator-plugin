@@ -394,6 +394,10 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.ComplianceType = p.PolicyDefaults.ComplianceType
 		}
 
+		if policy.MetadataComplianceType == "" && p.PolicyDefaults.MetadataComplianceType != "" {
+			policy.MetadataComplianceType = p.PolicyDefaults.MetadataComplianceType
+		}
+
 		if policy.Controls == nil {
 			policy.Controls = p.PolicyDefaults.Controls
 		}
@@ -494,6 +498,10 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 			if manifest.ComplianceType == "" {
 				manifest.ComplianceType = policy.ComplianceType
+			}
+
+			if manifest.MetadataComplianceType == "" && policy.MetadataComplianceType != "" {
+				manifest.MetadataComplianceType = policy.MetadataComplianceType
 			}
 
 			// If the manifests are consolidated to a single ConfigurationPolicy object, don't set

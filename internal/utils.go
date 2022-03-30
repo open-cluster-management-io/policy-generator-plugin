@@ -139,6 +139,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 	policyTemplates := make([]map[string]map[string]interface{}, 0, policyTemplatesLength)
 	for i, manifestGroup := range manifestGroups {
 		complianceType := policyConf.Manifests[i].ComplianceType
+		metadataComplianceType := policyConf.Manifests[i].MetadataComplianceType
 		for _, manifest := range manifestGroup {
 			isPolicyTypeManifest, err := isPolicyTypeManifest(manifest)
 			if err != nil {
@@ -160,6 +161,11 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 				"complianceType":   complianceType,
 				"objectDefinition": manifest,
 			}
+
+			if metadataComplianceType != "" {
+				objTemplate["metadataComplianceType"] = metadataComplianceType
+			}
+
 			if policyConf.ConsolidateManifests {
 				// put all objTemplate with manifest into single consolidated objectTemplates
 				objectTemplates = append(objectTemplates, objTemplate)
