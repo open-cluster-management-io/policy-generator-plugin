@@ -426,6 +426,157 @@ spec:
 	assertEqual(t, output, expected)
 }
 
+func TestCreatePolicyWithAnnotations(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	p := Plugin{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	p.PolicyDefaults.PolicyAnnotations = map[string]string{"test-default-annotation": "default"}
+
+	policyConf := types.PolicyConfig{
+		Name: "policy-app-config",
+		Manifests: []types.Manifest{
+			{Path: path.Join(tmpDir, "configmap.yaml")},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf)
+	p.applyDefaults(map[string]interface{}{})
+
+	err := p.createPolicy(&p.Policies[0])
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output := p.outputBuffer.String()
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+        test-default-annotation: default
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+
+	// Check for override default policy with empty map to skip default annotations from the policy
+	p.outputBuffer.Reset()
+	p.Policies[0].PolicyAnnotations = map[string]string{}
+	p.applyDefaults(map[string]interface{}{})
+	err = p.createPolicy(&p.Policies[0])
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output = p.outputBuffer.String()
+	expected = `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+
+	// Check for override default policy annotation
+	p.outputBuffer.Reset()
+	p.Policies[0].PolicyAnnotations = map[string]string{"test-wave-annotation": "100"}
+	p.applyDefaults(map[string]interface{}{})
+	err = p.createPolicy(&p.Policies[0])
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output = p.outputBuffer.String()
+	expected = `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+        test-wave-annotation: "100"
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+}
+
 func TestCreatePolicyFromIamPolicyTypeManifest(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()

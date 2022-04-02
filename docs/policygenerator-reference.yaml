@@ -81,7 +81,9 @@ policyDefaults:
   # set it to "true" so that the policy will be deployed with both policy placement and policy set placement. 
   # This defaults to "false".
   generatePlacementWhenInSet: false
-
+  # Optional. Annotations that the policy will include under its metadata.annotations. It will be applied for all
+  # policies unless specified in the policy.
+  policyAnnotations: {}
 # Required. The list of policies to create along with overrides to either the default values or, if
 # set, the values given in policyDefaults.
 policies:
@@ -164,6 +166,9 @@ policies:
     policySets: []
     # Optional. (See policyDefaults.generatePlacementWhenInSet for description.)
     generatePlacementWhenInSet: false
+    # Optional. Annotations that the policy will include under its metadata.annotations. It will overwrite
+    # the policyAnnotation defined in the policyDefaults.
+    policyAnnotations: {}
 
 # Optional. The list of policy sets to create. To include a policy in a policy set, use 
 # policies[*].policySets or policyDefaults.policySets or policySets.policies.
