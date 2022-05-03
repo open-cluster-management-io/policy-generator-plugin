@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stolostron/policy-generator-plugin/internal/types"
+	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
 )
 
 type testCase struct {

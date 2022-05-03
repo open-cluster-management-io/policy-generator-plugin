@@ -8,7 +8,7 @@ import (
 	"path"
 
 	"github.com/spf13/pflag"
-	"github.com/stolostron/policy-generator-plugin/internal"
+	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal"
 )
 
 var debug = false

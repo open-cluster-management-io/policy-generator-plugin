@@ -12,10 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/stolostron/policy-generator-plugin/internal/expanders"
-	"github.com/stolostron/policy-generator-plugin/internal/types"
-	"gopkg.in/yaml.v3"
+	yaml "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/expanders"
+	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
 )
 
 // getManifests will get all of the manifest files associated with the input policy configuration
