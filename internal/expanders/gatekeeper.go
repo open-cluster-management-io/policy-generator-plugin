@@ -4,8 +4,8 @@ package expanders
 import (
 	"fmt"
 
-	"github.com/stolostron/policy-generator-plugin/internal/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
 )
 
 type GatekeeperPolicyExpander struct{}

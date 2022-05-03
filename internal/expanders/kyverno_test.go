@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stolostron/policy-generator-plugin/internal/types"
+	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
 )
 
 func TestKyvernoCanHandle(t *testing.T) {

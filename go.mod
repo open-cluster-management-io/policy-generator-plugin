@@ -1,4 +1,4 @@
-module github.com/stolostron/policy-generator-plugin
+module open-cluster-management.io/ocm-kustomize-generator-plugins
 
 go 1.17
 

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stolostron/policy-generator-plugin/internal/types"
+	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
 )
 
 func createConfigMap(t *testing.T, tmpDir, filename string) {
