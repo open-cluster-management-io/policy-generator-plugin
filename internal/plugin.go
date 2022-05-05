@@ -386,8 +386,25 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 	for i := range p.Policies {
 		policy := &p.Policies[i]
+
+		if policy.PolicyAnnotations == nil {
+			annotations := map[string]string{}
+			for k, v := range p.PolicyDefaults.PolicyAnnotations {
+				annotations[k] = v
+			}
+			policy.PolicyAnnotations = annotations
+		}
+
 		if policy.Categories == nil {
 			policy.Categories = p.PolicyDefaults.Categories
+		}
+
+		if policy.Standards == nil {
+			policy.Standards = p.PolicyDefaults.Standards
+		}
+
+		if policy.Controls == nil {
+			policy.Controls = p.PolicyDefaults.Controls
 		}
 
 		if policy.ComplianceType == "" {
@@ -396,10 +413,6 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 		if policy.MetadataComplianceType == "" && p.PolicyDefaults.MetadataComplianceType != "" {
 			policy.MetadataComplianceType = p.PolicyDefaults.MetadataComplianceType
-		}
-
-		if policy.Controls == nil {
-			policy.Controls = p.PolicyDefaults.Controls
 		}
 
 		// Only use the policyDefault evaluationInterval value when it's not explicitly set on the policy.
@@ -487,10 +500,6 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 		if policy.Severity == "" {
 			policy.Severity = p.PolicyDefaults.Severity
-		}
-
-		if policy.Standards == nil {
-			policy.Standards = p.PolicyDefaults.Standards
 		}
 
 		for j := range policy.Manifests {
@@ -844,17 +853,21 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 		return err
 	}
 
+	if policyConf.PolicyAnnotations == nil {
+		policyConf.PolicyAnnotations = map[string]string{}
+	}
+
+	policyConf.PolicyAnnotations["policy.open-cluster-management.io/categories"] = strings.Join(policyConf.Categories, ",")
+	policyConf.PolicyAnnotations["policy.open-cluster-management.io/controls"] = strings.Join(policyConf.Controls, ",")
+	policyConf.PolicyAnnotations["policy.open-cluster-management.io/standards"] = strings.Join(policyConf.Standards, ",")
+
 	policy := map[string]interface{}{
 		"apiVersion": policyAPIVersion,
 		"kind":       policyKind,
 		"metadata": map[string]interface{}{
-			"annotations": map[string]string{
-				"policy.open-cluster-management.io/categories": strings.Join(policyConf.Categories, ","),
-				"policy.open-cluster-management.io/controls":   strings.Join(policyConf.Controls, ","),
-				"policy.open-cluster-management.io/standards":  strings.Join(policyConf.Standards, ","),
-			},
-			"name":      policyConf.Name,
-			"namespace": p.PolicyDefaults.Namespace,
+			"annotations": policyConf.PolicyAnnotations,
+			"name":        policyConf.Name,
+			"namespace":   p.PolicyDefaults.Namespace,
 		},
 		"spec": map[string]interface{}{
 			"disabled":         policyConf.Disabled,

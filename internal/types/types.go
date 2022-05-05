@@ -50,6 +50,7 @@ type PolicyConfig struct {
 	GeneratePlacementWhenInSet bool               `json:"generatePlacementWhenInSet,omitempty" yaml:"generatePlacementWhenInSet,omitempty"`
 	PolicySets                 []string           `json:"policySets,omitempty" yaml:"policySets,omitempty"`
 	EvaluationInterval         EvaluationInterval `json:"evaluationInterval,omitempty" yaml:"evaluationInterval,omitempty"`
+	PolicyAnnotations          map[string]string  `json:"policyAnnotations,omitempty" yaml:"policyAnnotations,omitempty"`
 }
 
 type PolicyDefaults struct {
@@ -70,6 +71,7 @@ type PolicyDefaults struct {
 	GeneratePlacementWhenInSet bool               `json:"generatePlacementWhenInSet,omitempty" yaml:"generatePlacementWhenInSet,omitempty"`
 	PolicySets                 []string           `json:"policySets,omitempty" yaml:"policySets,omitempty"`
 	EvaluationInterval         EvaluationInterval `json:"evaluationInterval,omitempty" yaml:"evaluationInterval,omitempty"`
+	PolicyAnnotations          map[string]string  `json:"policyAnnotations,omitempty" yaml:"policyAnnotations,omitempty"`
 }
 
 type PolicySetConfig struct {
