@@ -465,6 +465,13 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.ConsolidateManifests = p.PolicyDefaults.ConsolidateManifests
 		}
 
+		disabledValue, setDisabled := getPolicyBool(unmarshaledConfig, i, "disabled")
+		if setDisabled {
+			policy.Disabled = disabledValue
+		} else {
+			policy.Disabled = p.PolicyDefaults.Disabled
+		}
+
 		// Determine whether defaults are set for placement
 		plcDefaultSet := len(p.PolicyDefaults.Placement.LabelSelector) != 0 || p.PolicyDefaults.Placement.PlacementPath != ""
 		plrDefaultSet := len(p.PolicyDefaults.Placement.ClusterSelectors) != 0 || p.PolicyDefaults.Placement.PlacementRulePath != ""

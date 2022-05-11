@@ -25,6 +25,9 @@ policyDefaults:
   # manifests being wrapped in the policy. If set to false, a configuration policy per manifest will
   # be generated. This defaults to true.
   consolidateManifests: true
+  # Optional. Determines whether the policy is enabled or disabled. A disabled policy will not be
+  # propagated to any managed clusters and will show no status as a result.
+  disabled: false
   # Optional. This is how often a policy should be evaluated when in a particular compliance state.
   # When managed clusters have low CPU resources, the evaluation interval can be increased to
   # to reduce CPU usage on the Kubernetes API.
