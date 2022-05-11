@@ -66,6 +66,7 @@ type PolicyDefaults struct {
 	Severity                   string             `json:"severity,omitempty" yaml:"severity,omitempty"`
 	Standards                  []string           `json:"standards,omitempty" yaml:"standards,omitempty"`
 	ConsolidateManifests       bool               `json:"consolidateManifests,omitempty" yaml:"consolidateManifests,omitempty"`
+	Disabled                   bool               `json:"disabled,omitempty" yaml:"disabled,omitempty"`
 	InformGatekeeperPolicies   bool               `json:"informGatekeeperPolicies,omitempty" yaml:"informGatekeeperPolicies,omitempty"`
 	InformKyvernoPolicies      bool               `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
 	GeneratePlacementWhenInSet bool               `json:"generatePlacementWhenInSet,omitempty" yaml:"generatePlacementWhenInSet,omitempty"`

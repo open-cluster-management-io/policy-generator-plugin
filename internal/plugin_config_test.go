@@ -211,6 +211,7 @@ policies:
 	assertEqual(t, p.Metadata.Name, "policy-generator-name")
 	assertEqual(t, p.PlacementBindingDefaults.Name, "")
 	assertReflectEqual(t, p.PolicyDefaults.Categories, []string{"CM Configuration Management"})
+	assertEqual(t, p.PolicyDefaults.Disabled, false)
 	assertEqual(t, p.PolicyDefaults.ComplianceType, "musthave")
 	assertEqual(t, p.PolicyDefaults.MetadataComplianceType, "")
 	assertReflectEqual(t, p.PolicyDefaults.Controls, []string{"CM-2 Baseline Configuration"})
@@ -228,6 +229,7 @@ policies:
 
 	policy := p.Policies[0]
 	assertReflectEqual(t, policy.Categories, []string{"CM Configuration Management"})
+	assertEqual(t, policy.Disabled, false)
 	assertEqual(t, policy.ComplianceType, "musthave")
 	assertEqual(t, policy.MetadataComplianceType, "")
 	assertReflectEqual(t, policy.Controls, []string{"CM-2 Baseline Configuration"})
@@ -1126,4 +1128,47 @@ func TestPolicySetConfig(t *testing.T) {
 			assertEqual(t, err.Error(), tc.expectedErrMsg)
 		})
 	}
+}
+
+func TestDisabled(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	configMapPath := path.Join(tmpDir, "configmap.yaml")
+	defaultsConfig := fmt.Sprintf(
+		`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: my-policies
+  disabled: true
+policies:
+- name: policy-app-config
+  disabled: false
+  manifests:
+    - path: %s
+  namespaceSelector:
+    include:
+      - app-ns
+  remediationAction: inform
+- name: policy-app-config2
+  manifests:
+    - path: %s
+`,
+		configMapPath,
+		configMapPath,
+	)
+	p := Plugin{}
+	err := p.Config([]byte(defaultsConfig), tmpDir)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, p.PolicyDefaults.Disabled, true)
+	enabledPolicy := p.Policies[0]
+	assertEqual(t, enabledPolicy.Disabled, false)
+	disabledPolicy := p.Policies[1]
+	assertEqual(t, disabledPolicy.Disabled, true)
 }
