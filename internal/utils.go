@@ -333,13 +333,15 @@ func unmarshalManifestBytes(manifestBytes []byte) (*[]map[string]interface{}, er
 			return nil, err
 		}
 
-		if _, ok := obj.(map[string]interface{}); !ok {
+		if _, ok := obj.(map[string]interface{}); !ok && obj != nil {
 			err := errors.New("the input manifests must be in the format of YAML objects")
 
 			return nil, err
 		}
 
-		yamlDocs = append(yamlDocs, obj.(map[string]interface{}))
+		if obj != nil {
+			yamlDocs = append(yamlDocs, obj.(map[string]interface{}))
+		}
 	}
 
 	return &yamlDocs, nil

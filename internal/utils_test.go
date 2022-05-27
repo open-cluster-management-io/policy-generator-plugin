@@ -788,6 +788,48 @@ data:
 	assertEqual(t, name2, "my-configmap2")
 }
 
+func TestUnmarshalManifestFileNilYaml(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestsPath := path.Join(tmpDir, "configmaps.yaml")
+	yamlContent := `
+---
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-configmap
+data:
+  game.properties: |
+    enemies=goldfish
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-configmap2
+data:
+  game.properties: |
+    enemies=potato
+---
+---
+`
+	err := ioutil.WriteFile(manifestsPath, []byte(yamlContent), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestsPath)
+	}
+
+	manifests, err := unmarshalManifestFile(manifestsPath)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal the YAML content, got: %v", err)
+	}
+
+	assertEqual(t, len(*manifests), 2)
+	name1, _, _ := unstructured.NestedString((*manifests)[0], "metadata", "name")
+	assertEqual(t, name1, "my-configmap")
+	name2, _, _ := unstructured.NestedString((*manifests)[1], "metadata", "name")
+	assertEqual(t, name2, "my-configmap2")
+}
+
 func TestUnmarshalManifestFileUnreadable(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
