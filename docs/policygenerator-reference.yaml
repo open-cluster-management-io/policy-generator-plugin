@@ -184,20 +184,5 @@ policySets:
     # policyDefaults.policySets is also specified, the list is merged.
     policies: []
     # Optional. The placement configuration for the policy set. This defaults to a placement
-    # configuration that matches all clusters.
-    placement:
-      # To specify a placement rule, specify key:value pair cluster selectors. (See placementRulePath
-      # to specify an existing file instead.)
-      clusterSelectors: {}
-      # To specify a placement, specify key:value pair cluster label selectors. (See placementPath to
-      # specify an existing file instead.)
-      labelSelector: {}
-      # Optional. Specifying a name will consolidate placement rules that contain the same cluster
-      # selectors.
-      name: ""
-      # To reuse an existing placement manifest, specify the path here relative to the
-      # kustomization.yaml file. (See clusterSelectors to generate a new Placement instead.)
-      placementPath: ""
-      # To reuse an existing placement rule manifest, specify the path here relative to the
-      # kustomization.yaml file. (See clusterSelectors to generate a new PlacementRule instead.)
-      placementRulePath: ""
+    # configuration that matches all clusters. (See policyDefaults.placement for description.)
+    placement: {}
