@@ -473,22 +473,33 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		}
 
 		// Determine whether defaults are set for placement
-		plcDefaultSet := len(p.PolicyDefaults.Placement.LabelSelector) != 0 || p.PolicyDefaults.Placement.PlacementPath != ""
-		plrDefaultSet := len(p.PolicyDefaults.Placement.ClusterSelectors) != 0 || p.PolicyDefaults.Placement.PlacementRulePath != ""
+		plcDefaultSet := len(p.PolicyDefaults.Placement.LabelSelector) != 0 ||
+			p.PolicyDefaults.Placement.PlacementPath != "" ||
+			p.PolicyDefaults.Placement.PlacementName != ""
+		plrDefaultSet := len(p.PolicyDefaults.Placement.ClusterSelectors) != 0 ||
+			p.PolicyDefaults.Placement.PlacementRulePath != "" ||
+			p.PolicyDefaults.Placement.PlacementRuleName != ""
 
-		// If both cluster label selectors and placement path aren't set, then use the defaults with a
-		// priority on placement path.
-		if len(policy.Placement.LabelSelector) == 0 && policy.Placement.PlacementPath == "" && plcDefaultSet {
+		// If both cluster label selectors and placement path/name aren't set, then use the defaults with a
+		// priority on placement path followed by placement name.
+		if len(policy.Placement.LabelSelector) == 0 && policy.Placement.PlacementPath == "" && policy.Placement.PlacementName == "" && plcDefaultSet {
 			if p.PolicyDefaults.Placement.PlacementPath != "" {
 				policy.Placement.PlacementPath = p.PolicyDefaults.Placement.PlacementPath
+			} else if p.PolicyDefaults.Placement.PlacementName != "" {
+				policy.Placement.PlacementName = p.PolicyDefaults.Placement.PlacementName
 			} else if len(p.PolicyDefaults.Placement.LabelSelector) > 0 {
 				policy.Placement.LabelSelector = p.PolicyDefaults.Placement.LabelSelector
 			}
-			// Else if both cluster selectors and placement rule path aren't set, then use the defaults with a
-			// priority on placement rule path.
-		} else if len(policy.Placement.ClusterSelectors) == 0 && policy.Placement.PlacementRulePath == "" && plrDefaultSet {
+			// Else if both cluster selectors and placement rule path/name aren't set, then use the defaults with a
+			// priority on placement rule path followed by placement rule name.
+		} else if len(policy.Placement.ClusterSelectors) == 0 &&
+			policy.Placement.PlacementRulePath == "" &&
+			policy.Placement.PlacementRuleName == "" &&
+			plrDefaultSet {
 			if p.PolicyDefaults.Placement.PlacementRulePath != "" {
 				policy.Placement.PlacementRulePath = p.PolicyDefaults.Placement.PlacementRulePath
+			} else if p.PolicyDefaults.Placement.PlacementRuleName != "" {
+				policy.Placement.PlacementRuleName = p.PolicyDefaults.Placement.PlacementRuleName
 			} else if len(p.PolicyDefaults.Placement.ClusterSelectors) > 0 {
 				policy.Placement.ClusterSelectors = p.PolicyDefaults.Placement.ClusterSelectors
 			}
@@ -598,10 +609,25 @@ func (p *Plugin) assertValidConfig() error {
 			"policyDefaults must provide only one of placement.labelSelector or placement.clusterSelectors",
 		)
 	}
-	if (len(p.PolicyDefaults.Placement.LabelSelector) != 0 || len(p.PolicyDefaults.Placement.ClusterSelectors) != 0) &&
-		(p.PolicyDefaults.Placement.PlacementRulePath != "" || p.PolicyDefaults.Placement.PlacementPath != "") {
+	if p.PolicyDefaults.Placement.PlacementRuleName != "" && p.PolicyDefaults.Placement.PlacementName != "" {
 		return errors.New(
-			"policyDefaults may not specify a placement selector and placement path together",
+			"policyDefaults must provide only one of placement.placementName or placement.placementRuleName",
+		)
+	}
+
+	defaultPlacementOptions := 0
+	if len(p.PolicyDefaults.Placement.LabelSelector) != 0 || len(p.PolicyDefaults.Placement.ClusterSelectors) != 0 {
+		defaultPlacementOptions++
+	}
+	if p.PolicyDefaults.Placement.PlacementRulePath != "" || p.PolicyDefaults.Placement.PlacementPath != "" {
+		defaultPlacementOptions++
+	}
+	if p.PolicyDefaults.Placement.PlacementRuleName != "" || p.PolicyDefaults.Placement.PlacementName != "" {
+		defaultPlacementOptions++
+	}
+	if defaultPlacementOptions > 1 {
+		return errors.New(
+			"policyDefaults must specify only one of placement selector, placement path, or placement name",
 		)
 	}
 
@@ -722,18 +748,35 @@ func (p *Plugin) assertValidConfig() error {
 			)
 		}
 
+		if policy.Placement.PlacementRuleName != "" && policy.Placement.PlacementName != "" {
+			return fmt.Errorf(
+				"policy %s must provide only one of placementRuleName or placementName", policy.Name,
+			)
+		}
+
 		if len(policy.Placement.ClusterSelectors) > 0 && len(policy.Placement.LabelSelector) > 0 {
 			return fmt.Errorf(
 				"policy %s must provide only one of placement.labelSelector or placement.clusterselectors",
 				policy.Name,
 			)
 		}
-		if (len(policy.Placement.ClusterSelectors) != 0 || len(policy.Placement.LabelSelector) != 0) &&
-			(policy.Placement.PlacementRulePath != "" || policy.Placement.PlacementPath != "") {
+
+		policyPlacementOptions := 0
+		if len(policy.Placement.LabelSelector) != 0 || len(policy.Placement.ClusterSelectors) != 0 {
+			policyPlacementOptions++
+		}
+		if policy.Placement.PlacementRulePath != "" || policy.Placement.PlacementPath != "" {
+			policyPlacementOptions++
+		}
+		if policy.Placement.PlacementRuleName != "" || policy.Placement.PlacementName != "" {
+			policyPlacementOptions++
+		}
+		if policyPlacementOptions > 1 {
 			return fmt.Errorf(
-				"policy %s may not specify a placement selector and placement path together", policy.Name,
+				"policy %s must specify only one of placement selector, placement path, or placement name", policy.Name,
 			)
 		}
+
 		if policy.Placement.PlacementRulePath != "" {
 			_, err := os.Stat(policy.Placement.PlacementRulePath)
 			if err != nil {
@@ -754,11 +797,11 @@ func (p *Plugin) assertValidConfig() error {
 		}
 
 		foundPl := false
-		if len(policy.Placement.LabelSelector) != 0 || policy.Placement.PlacementPath != "" {
+		if len(policy.Placement.LabelSelector) != 0 || policy.Placement.PlacementPath != "" || policy.Placement.PlacementName != "" {
 			plCount.plc++
 			foundPl = true
 		}
-		if len(policy.Placement.ClusterSelectors) != 0 || policy.Placement.PlacementRulePath != "" {
+		if len(policy.Placement.ClusterSelectors) != 0 || policy.Placement.PlacementRulePath != "" || policy.Placement.PlacementRuleName != "" {
 			plCount.plr++
 			if foundPl {
 				return fmt.Errorf(
@@ -792,18 +835,35 @@ func (p *Plugin) assertValidConfig() error {
 			)
 		}
 
+		if plcset.Placement.PlacementRuleName != "" && plcset.Placement.PlacementName != "" {
+			return fmt.Errorf(
+				"policySet %s must provide only one of placementRuleName or placementName", plcset.Name,
+			)
+		}
+
 		if len(plcset.Placement.ClusterSelectors) > 0 && len(plcset.Placement.LabelSelector) > 0 {
 			return fmt.Errorf(
 				"policySet %s must provide only one of placement.labelSelector or placement.clusterselectors",
 				plcset.Name,
 			)
 		}
-		if (len(plcset.Placement.ClusterSelectors) != 0 || len(plcset.Placement.LabelSelector) != 0) &&
-			(plcset.Placement.PlacementRulePath != "" || plcset.Placement.PlacementPath != "") {
+
+		policySetPlacementOptions := 0
+		if len(plcset.Placement.LabelSelector) != 0 || len(plcset.Placement.ClusterSelectors) != 0 {
+			policySetPlacementOptions++
+		}
+		if plcset.Placement.PlacementRulePath != "" || plcset.Placement.PlacementPath != "" {
+			policySetPlacementOptions++
+		}
+		if plcset.Placement.PlacementRuleName != "" || plcset.Placement.PlacementName != "" {
+			policySetPlacementOptions++
+		}
+		if policySetPlacementOptions > 1 {
 			return fmt.Errorf(
-				"policySet %s may not specify a placement selector and placement path together", plcset.Name,
+				"policySet %s must specify only one of placement selector, placement path, or placement name", plcset.Name,
 			)
 		}
+
 		if plcset.Placement.PlacementRulePath != "" {
 			_, err := os.Stat(plcset.Placement.PlacementRulePath)
 			if err != nil {
@@ -824,11 +884,11 @@ func (p *Plugin) assertValidConfig() error {
 		}
 
 		foundPl := false
-		if len(plcset.Placement.LabelSelector) != 0 || plcset.Placement.PlacementPath != "" {
+		if len(plcset.Placement.LabelSelector) != 0 || plcset.Placement.PlacementPath != "" || plcset.Placement.PlacementName != "" {
 			plCount.plc++
 			foundPl = true
 		}
-		if len(plcset.Placement.ClusterSelectors) != 0 || plcset.Placement.PlacementRulePath != "" {
+		if len(plcset.Placement.ClusterSelectors) != 0 || plcset.Placement.PlacementRulePath != "" || plcset.Placement.PlacementRuleName != "" {
 			plCount.plr++
 			if foundPl {
 				return fmt.Errorf(
@@ -1039,6 +1099,18 @@ func (p *Plugin) getPlcName(placementConfig *types.PlacementConfig, nameDefault 
 func (p *Plugin) createPlacement(placementConfig *types.PlacementConfig, nameDefault string) (
 	name string, err error,
 ) {
+	// If a placementName or placementRuleName is defined just return it
+	if placementConfig.PlacementName != "" {
+		name = placementConfig.PlacementName
+
+		return
+	}
+	if placementConfig.PlacementRuleName != "" {
+		name = placementConfig.PlacementRuleName
+
+		return
+	}
+
 	plrPath := placementConfig.PlacementRulePath
 	plcPath := placementConfig.PlacementPath
 	var placement map[string]interface{}
