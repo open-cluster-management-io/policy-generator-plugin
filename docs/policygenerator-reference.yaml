@@ -65,6 +65,18 @@ policyDefaults:
     # kustomization.yaml file. If given, this placement rule will be used by all policies by
     # default. (See clusterSelectors to generate a new PlacementRule instead.)
     placementRulePath: ""
+    # Use a placement that already exists in the cluster in the same namespace as the policy to be
+    # generated. It is the responsibility of the administrator to ensure the placement exists. Use
+    # of this setting will prevent a Placement from being generated, but the Placement Binding will
+    # still be created.
+    placementName: ""
+    # Use a placement rule that already exists in the cluster in the same namespace as the policy to
+    # be generated. It is the responsibility of the administrator to ensure the placement rule
+    # exists. Use of this setting will prevent a placement rule from being generated, but the
+    # placement binding will still be created.
+    placementRuleName: ""
+
+
   # Optional. The remediation action ("inform" or "enforce") for each configuration policy. This
   # defaults to "inform".
   remediationAction: "inform"

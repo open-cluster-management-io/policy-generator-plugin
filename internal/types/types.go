@@ -20,6 +20,8 @@ type PlacementConfig struct {
 	Name              string            `json:"name,omitempty" yaml:"name,omitempty"`
 	PlacementPath     string            `json:"placementPath,omitempty" yaml:"placementPath,omitempty"`
 	PlacementRulePath string            `json:"placementRulePath,omitempty" yaml:"placementRulePath,omitempty"`
+	PlacementName     string            `json:"placementName,omitempty" yaml:"placementName,omitempty"`
+	PlacementRuleName string            `json:"placementRuleName,omitempty" yaml:"placementRuleName,omitempty"`
 }
 
 type EvaluationInterval struct {
