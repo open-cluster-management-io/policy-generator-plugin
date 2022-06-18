@@ -1055,7 +1055,7 @@ spec:
               values:
                 - red hat
             - key: doesIt
-              operator: Exist
+              operator: Exists
             - key: game
               operator: In
               values:
@@ -1102,7 +1102,7 @@ spec:
                       values:
                         - red hat
                     - key: doesIt
-                      operator: Exist
+                      operator: Exists
                     - key: game
                       operator: In
                       values:
