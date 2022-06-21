@@ -1163,7 +1163,7 @@ func (p *Plugin) createPlacement(placementConfig *types.PlacementConfig, nameDef
 				"key": label,
 			}
 			if resolvedSelectors[label] == "" {
-				matchExpression["operator"] = "Exist"
+				matchExpression["operator"] = "Exists"
 			} else {
 				matchExpression["operator"] = "In"
 				matchExpression["values"] = []string{resolvedSelectors[label]}
