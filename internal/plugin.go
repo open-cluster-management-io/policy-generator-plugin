@@ -145,8 +145,7 @@ func (p *Plugin) Generate() ([]byte, error) {
 		if plcNameToPolicyAndSetIdxs[plcName] == nil {
 			plcNameToPolicyAndSetIdxs[plcName] = map[string][]int{}
 		}
-		plcNameToPolicyAndSetIdxs[plcName]["policyset"] =
-			append(plcNameToPolicyAndSetIdxs[plcName]["policyset"], i)
+		plcNameToPolicyAndSetIdxs[plcName]["policyset"] = append(plcNameToPolicyAndSetIdxs[plcName]["policyset"], i)
 	}
 
 	// Sort the keys of plcNameToPolicyseetsIdxs so that the policy bindings are generated in a

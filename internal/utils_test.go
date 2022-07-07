@@ -908,11 +908,11 @@ func TestVerifyManifestPath(t *testing.T) {
 	workingDir := path.Join(baseDirectory, "workingdir")
 	subDir := path.Join(workingDir, "subdir")
 	otherDir := path.Join(baseDirectory, "otherdir")
-	err = os.MkdirAll(subDir, 0777)
+	err = os.MkdirAll(subDir, 0o777)
 	if err != nil {
 		t.Fatalf("Failed to create the directory structure %s: %v", subDir, err)
 	}
-	err = os.Mkdir(otherDir, 0777)
+	err = os.Mkdir(otherDir, 0o777)
 	if err != nil {
 		t.Fatalf("Failed to create the directory structure %s: %v", otherDir, err)
 	}
