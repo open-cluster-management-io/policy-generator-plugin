@@ -17,6 +17,10 @@ policyDefaults:
   # annotation. This defaults to ["CM Configuration Management"].
   categories:
     - "CM Configuration Management"
+  # Optional. Key-value pairs of annotations to set on generated configuration policies. For
+  # example, to disable policy templates, you can set this to:
+  # {"policy.open-cluster-management.io/disable-templates": "true"}. This defaults to {}.
+  configurationPolicyAnnotations: {}
   # Optional. Array of controls to be used in the policy.open-cluster-management.io/controls
   # annotation. This defaults to ["CM-2 Baseline Configuration"].
   controls:
@@ -149,6 +153,8 @@ policies:
     # Optional. Determines the policy controller behavior when comparing the manifest to objects on
     # the cluster ("musthave",  "mustonlyhave", or "mustnothave"). Defaults to "musthave".
     complianceType: "musthave"
+    # Optional. (See policyDefaults.configurationPolicyAnnotations for description.)
+    configurationPolicyAnnotations: {}
     # Optional. (See policyDefaults.metadataComplianceType for description.)
     metadataComplianceType: ""
     # Optional. (See policyDefaults.controls for description.)

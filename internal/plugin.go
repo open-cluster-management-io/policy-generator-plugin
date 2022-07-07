@@ -399,6 +399,14 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.Categories = p.PolicyDefaults.Categories
 		}
 
+		if policy.ConfigurationPolicyAnnotations == nil {
+			annotations := map[string]string{}
+			for k, v := range p.PolicyDefaults.ConfigurationPolicyAnnotations {
+				annotations[k] = v
+			}
+			policy.ConfigurationPolicyAnnotations = annotations
+		}
+
 		if policy.Standards == nil {
 			policy.Standards = p.PolicyDefaults.Standards
 		}

@@ -251,7 +251,7 @@ func buildPolicyTemplate(
 		"objectDefinition": {
 			"apiVersion": policyAPIVersion,
 			"kind":       configPolicyKind,
-			"metadata": map[string]string{
+			"metadata": map[string]interface{}{
 				"name": name,
 			},
 			"spec": map[string]interface{}{
@@ -260,6 +260,10 @@ func buildPolicyTemplate(
 				"severity":          policyConf.Severity,
 			},
 		},
+	}
+
+	if len(policyConf.ConfigurationPolicyAnnotations) > 0 {
+		policyTemplate["objectDefinition"]["metadata"].(map[string]interface{})["annotations"] = policyConf.ConfigurationPolicyAnnotations
 	}
 
 	if evaluationInterval.Compliant != "" || evaluationInterval.NonCompliant != "" {
