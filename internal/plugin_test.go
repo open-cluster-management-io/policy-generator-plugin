@@ -2235,3 +2235,81 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 		}
 	}
 }
+
+func TestCreatePolicyWithConfigPolicyAnnotations(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	tests := []struct {
+		name        string
+		annotations map[string]string
+	}{
+		{name: "no-override", annotations: nil},
+		{
+			name: "override",
+			annotations: map[string]string{
+				"policy.open-cluster-management.io/disable-templates": "true",
+			},
+		},
+		{
+			name:        "override-empty",
+			annotations: map[string]string{},
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			p := Plugin{}
+			p.PolicyDefaults.Namespace = "my-policies"
+			p.PolicyDefaults.ConfigurationPolicyAnnotations = map[string]string{"test-default-annotation": "default"}
+			policyConf := types.PolicyConfig{
+				Name: "policy-app-config", Manifests: []types.Manifest{
+					{Path: path.Join(tmpDir, "configmap.yaml")},
+				},
+			}
+			if test.annotations != nil {
+				policyConf.ConfigurationPolicyAnnotations = test.annotations
+			}
+
+			p.Policies = append(p.Policies, policyConf)
+			p.applyDefaults(map[string]interface{}{})
+
+			err := p.createPolicy(&p.Policies[0])
+			if err != nil {
+				t.Fatal(err.Error())
+			}
+
+			output := p.outputBuffer.Bytes()
+			policyManifests, err := unmarshalManifestBytes(output)
+			if err != nil {
+				t.Fatal(err.Error())
+			}
+			// nolint: forcetypeassert
+			policyTemplates := (*policyManifests)[0]["spec"].(map[string]interface{})["policy-templates"].([]interface{})
+			// nolint: forcetypeassert
+			configPolicy := policyTemplates[0].(map[string]interface{})["objectDefinition"].(map[string]interface{})
+			// nolint: forcetypeassert
+			metadata := configPolicy["metadata"].(map[string]interface{})
+
+			if test.annotations != nil && len(test.annotations) == 0 {
+				assertEqual(t, metadata["annotations"], nil)
+			} else {
+				annotations := map[string]string{}
+				for key, val := range metadata["annotations"].(map[string]interface{}) {
+					// nolint: forcetypeassert
+					annotations[key] = val.(string)
+				}
+
+				if test.annotations == nil {
+					assertReflectEqual(t, annotations, map[string]string{"test-default-annotation": "default"})
+				} else {
+					assertReflectEqual(t, annotations, test.annotations)
+				}
+			}
+		})
+	}
+}

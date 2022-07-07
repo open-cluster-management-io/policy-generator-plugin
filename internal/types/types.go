@@ -41,18 +41,19 @@ type PolicyConfig struct {
 	Name              string            `json:"name,omitempty" yaml:"name,omitempty"`
 	NamespaceSelector NamespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
 	// This is named Placement so that eventually PlacementRules and Placements will be supported
-	Placement                  PlacementConfig    `json:"placement,omitempty" yaml:"placement,omitempty"`
-	RemediationAction          string             `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
-	Severity                   string             `json:"severity,omitempty" yaml:"severity,omitempty"`
-	Standards                  []string           `json:"standards,omitempty" yaml:"standards,omitempty"`
-	ConsolidateManifests       bool               `json:"consolidateManifests,omitempty" yaml:"consolidateManifests,omitempty"`
-	Disabled                   bool               `json:"disabled,omitempty" yaml:"disabled,omitempty"`
-	InformGatekeeperPolicies   bool               `json:"informGatekeeperPolicies,omitempty" yaml:"informGatekeeperPolicies,omitempty"`
-	InformKyvernoPolicies      bool               `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
-	GeneratePlacementWhenInSet bool               `json:"generatePlacementWhenInSet,omitempty" yaml:"generatePlacementWhenInSet,omitempty"`
-	PolicySets                 []string           `json:"policySets,omitempty" yaml:"policySets,omitempty"`
-	EvaluationInterval         EvaluationInterval `json:"evaluationInterval,omitempty" yaml:"evaluationInterval,omitempty"`
-	PolicyAnnotations          map[string]string  `json:"policyAnnotations,omitempty" yaml:"policyAnnotations,omitempty"`
+	Placement                      PlacementConfig    `json:"placement,omitempty" yaml:"placement,omitempty"`
+	RemediationAction              string             `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
+	Severity                       string             `json:"severity,omitempty" yaml:"severity,omitempty"`
+	Standards                      []string           `json:"standards,omitempty" yaml:"standards,omitempty"`
+	ConsolidateManifests           bool               `json:"consolidateManifests,omitempty" yaml:"consolidateManifests,omitempty"`
+	Disabled                       bool               `json:"disabled,omitempty" yaml:"disabled,omitempty"`
+	InformGatekeeperPolicies       bool               `json:"informGatekeeperPolicies,omitempty" yaml:"informGatekeeperPolicies,omitempty"`
+	InformKyvernoPolicies          bool               `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
+	GeneratePlacementWhenInSet     bool               `json:"generatePlacementWhenInSet,omitempty" yaml:"generatePlacementWhenInSet,omitempty"`
+	PolicySets                     []string           `json:"policySets,omitempty" yaml:"policySets,omitempty"`
+	EvaluationInterval             EvaluationInterval `json:"evaluationInterval,omitempty" yaml:"evaluationInterval,omitempty"`
+	PolicyAnnotations              map[string]string  `json:"policyAnnotations,omitempty" yaml:"policyAnnotations,omitempty"`
+	ConfigurationPolicyAnnotations map[string]string  `json:"configurationPolicyAnnotations,omitempty" yaml:"configurationPolicyAnnotations,omitempty"`
 }
 
 type PolicyDefaults struct {
@@ -63,18 +64,19 @@ type PolicyDefaults struct {
 	Namespace              string            `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	NamespaceSelector      NamespaceSelector `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
 	// This is named Placement so that eventually PlacementRules and Placements will be supported
-	Placement                  PlacementConfig    `json:"placement,omitempty" yaml:"placement,omitempty"`
-	RemediationAction          string             `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
-	Severity                   string             `json:"severity,omitempty" yaml:"severity,omitempty"`
-	Standards                  []string           `json:"standards,omitempty" yaml:"standards,omitempty"`
-	ConsolidateManifests       bool               `json:"consolidateManifests,omitempty" yaml:"consolidateManifests,omitempty"`
-	Disabled                   bool               `json:"disabled,omitempty" yaml:"disabled,omitempty"`
-	InformGatekeeperPolicies   bool               `json:"informGatekeeperPolicies,omitempty" yaml:"informGatekeeperPolicies,omitempty"`
-	InformKyvernoPolicies      bool               `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
-	GeneratePlacementWhenInSet bool               `json:"generatePlacementWhenInSet,omitempty" yaml:"generatePlacementWhenInSet,omitempty"`
-	PolicySets                 []string           `json:"policySets,omitempty" yaml:"policySets,omitempty"`
-	EvaluationInterval         EvaluationInterval `json:"evaluationInterval,omitempty" yaml:"evaluationInterval,omitempty"`
-	PolicyAnnotations          map[string]string  `json:"policyAnnotations,omitempty" yaml:"policyAnnotations,omitempty"`
+	Placement                      PlacementConfig    `json:"placement,omitempty" yaml:"placement,omitempty"`
+	RemediationAction              string             `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
+	Severity                       string             `json:"severity,omitempty" yaml:"severity,omitempty"`
+	Standards                      []string           `json:"standards,omitempty" yaml:"standards,omitempty"`
+	ConsolidateManifests           bool               `json:"consolidateManifests,omitempty" yaml:"consolidateManifests,omitempty"`
+	Disabled                       bool               `json:"disabled,omitempty" yaml:"disabled,omitempty"`
+	InformGatekeeperPolicies       bool               `json:"informGatekeeperPolicies,omitempty" yaml:"informGatekeeperPolicies,omitempty"`
+	InformKyvernoPolicies          bool               `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
+	GeneratePlacementWhenInSet     bool               `json:"generatePlacementWhenInSet,omitempty" yaml:"generatePlacementWhenInSet,omitempty"`
+	PolicySets                     []string           `json:"policySets,omitempty" yaml:"policySets,omitempty"`
+	EvaluationInterval             EvaluationInterval `json:"evaluationInterval,omitempty" yaml:"evaluationInterval,omitempty"`
+	PolicyAnnotations              map[string]string  `json:"policyAnnotations,omitempty" yaml:"policyAnnotations,omitempty"`
+	ConfigurationPolicyAnnotations map[string]string  `json:"configurationPolicyAnnotations,omitempty" yaml:"configurationPolicyAnnotations,omitempty"`
 }
 
 type PolicySetConfig struct {

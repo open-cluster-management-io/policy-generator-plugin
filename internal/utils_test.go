@@ -121,7 +121,7 @@ data:
 
 		policyTemplate := policyTemplates[0]
 		objdef := policyTemplate["objectDefinition"]
-		assertEqual(t, objdef["metadata"].(map[string]string)["name"], "policy-app-config")
+		assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
 		spec, ok := objdef["spec"].(map[string]interface{})
 		if !ok {
 			t.Fatal("The spec field is an invalid format")
@@ -248,7 +248,7 @@ data:
 			if i > 0 {
 				name += fmt.Sprintf("%d", i+1)
 			}
-			assertEqual(t, objdef["metadata"].(map[string]string)["name"], name)
+			assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), name)
 			spec, ok := objdef["spec"].(map[string]interface{})
 			if !ok {
 				t.Fatal("The spec field is an invalid format")
@@ -440,7 +440,7 @@ data:
 
 	policyTemplate := policyTemplates[0]
 	objdef := policyTemplate["objectDefinition"]
-	assertEqual(t, objdef["metadata"].(map[string]string)["name"], "policy-app-config")
+	assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
 	spec, ok := objdef["spec"].(map[string]interface{})
 	if !ok {
 		t.Fatal("The spec field is an invalid format")
@@ -522,7 +522,7 @@ data:
 
 	policyTemplate := policyTemplates[0]
 	objdef := policyTemplate["objectDefinition"]
-	assertEqual(t, objdef["metadata"].(map[string]string)["name"], "policy-app-config")
+	assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
 	spec, ok := objdef["spec"].(map[string]interface{})
 	if !ok {
 		t.Fatal("The spec field is an invalid format")
