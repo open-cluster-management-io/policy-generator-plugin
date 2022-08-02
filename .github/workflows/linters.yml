@@ -11,10 +11,6 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go:
-          - '1.17'
     name: Linting
     steps:
     - name: Checkout the repo
@@ -22,11 +18,10 @@ jobs:
       with:
         fetch-depth: 0 # Fetch all history for all tags and branches
 
-    - name: Set up Go - ${{ matrix.go }}
-      uses: actions/setup-go@v2
-      id: go
+    - name: Set up Go
+      uses: actions/setup-go@v3
       with:
-        go-version: ${{ matrix.go }}
+        go-version-file: go.mod
 
     - name: Verify modules
       run: |

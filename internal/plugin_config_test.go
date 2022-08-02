@@ -13,6 +13,7 @@ import (
 
 func createConfigMap(t *testing.T, tmpDir, filename string) {
 	t.Helper()
+
 	manifestsPath := path.Join(tmpDir, filename)
 	yamlContent := `
 apiVersion: v1
@@ -22,6 +23,7 @@ metadata:
 data:
   game.properties: enemies=potato
 `
+
 	err := ioutil.WriteFile(manifestsPath, []byte(yamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestsPath)
@@ -30,6 +32,7 @@ data:
 
 func createIamPolicyManifest(t *testing.T, tmpDir, filename string) {
 	t.Helper()
+
 	manifestsPath := path.Join(tmpDir, filename)
 	yamlContent := `
 apiVersion: policy.open-cluster-management.io/v1
@@ -44,6 +47,7 @@ spec:
   remediationAction: enforce
   maxClusterRoleBindingUsers: 5
 `
+
 	err := ioutil.WriteFile(manifestsPath, []byte(yamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestsPath)
@@ -108,6 +112,7 @@ policies:
 	)
 
 	p := Plugin{}
+
 	err := p.Config([]byte(exampleConfig), tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -119,9 +124,11 @@ policies:
 	assertEqual(t, p.PolicyDefaults.ComplianceType, "musthave")
 	assertReflectEqual(t, p.PolicyDefaults.Controls, []string{"PR.DS-1 Data-at-rest"})
 	assertEqual(t, p.PolicyDefaults.Namespace, "my-policies")
+
 	expectedNsSelector := types.NamespaceSelector{
 		Exclude: []string{"my-protected-ns"}, Include: []string{"default"},
 	}
+
 	assertReflectEqual(t, p.PolicyDefaults.NamespaceSelector, expectedNsSelector)
 	assertEqual(t, p.PolicyDefaults.Placement.PlacementRulePath, "")
 	assertEqual(t, p.PolicyDefaults.Placement.PlacementPath, "")
@@ -146,9 +153,11 @@ policies:
 	assertEqual(t, policy1.Manifests[0].Path, configMapPath)
 	assertEqual(t, policy1.Manifests[0].MetadataComplianceType, "musthave")
 	assertEqual(t, policy1.Name, "policy-app-config")
+
 	p1ExpectedNsSelector := types.NamespaceSelector{
 		Exclude: nil, Include: []string{"app-ns"},
 	}
+
 	assertReflectEqual(t, policy1.NamespaceSelector, p1ExpectedNsSelector)
 	assertReflectEqual(
 		t,
@@ -203,6 +212,7 @@ policies:
 		configMapPath,
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(defaultsConfig), tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -216,7 +226,9 @@ policies:
 	assertEqual(t, p.PolicyDefaults.MetadataComplianceType, "")
 	assertReflectEqual(t, p.PolicyDefaults.Controls, []string{"CM-2 Baseline Configuration"})
 	assertEqual(t, p.PolicyDefaults.Namespace, "my-policies")
+
 	expectedNsSelector := types.NamespaceSelector{Exclude: nil, Include: nil}
+
 	assertReflectEqual(t, p.PolicyDefaults.NamespaceSelector, expectedNsSelector)
 	assertEqual(t, p.PolicyDefaults.Placement.PlacementRulePath, "")
 	assertEqual(t, len(p.PolicyDefaults.Placement.ClusterSelectors), 0)
@@ -259,7 +271,9 @@ policies:
   manifests:
     - path: input/configmap.yaml
 `
+
 	p := Plugin{}
+
 	err := p.Config([]byte(config), "")
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -293,12 +307,15 @@ policies:
 	)
 
 	p := Plugin{}
+
 	err := p.Config([]byte(defaultsConfig), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	expected := fmt.Sprintf("the policy namespace and name cannot be more than 63 characters: %s.%s", policyNS, policyName)
+	expected := fmt.Sprintf(
+		"the policy namespace and name cannot be more than 63 characters: %s.%s", policyNS, policyName,
+	)
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -312,7 +329,9 @@ metadata:
 policyDefaults:
   namespace: my-policies
 `
+
 	p := Plugin{}
+
 	err := p.Config([]byte(config), "")
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -348,6 +367,7 @@ policies:
 	p := Plugin{}
 	// Provide a base directory that isn't in the same directory tree as tmpDir.
 	baseDir := t.TempDir()
+
 	err := p.Config([]byte(defaultsConfig), baseDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -382,6 +402,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -415,6 +436,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -448,6 +470,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -481,6 +504,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -514,6 +538,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -547,6 +572,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -576,7 +602,9 @@ policies:
   manifests:
     - path: input/configmap.yaml
 `
+
 	p := Plugin{}
+
 	err := p.Config([]byte(config), "")
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -610,7 +638,9 @@ policies:
 `,
 		path.Join(tmpDir, "configmap.yaml"),
 	)
+
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -642,7 +672,9 @@ policies:
   manifests:
     - path: input/configmap.yaml
 `
+
 	p := Plugin{}
+
 	err := p.Config([]byte(config), "")
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -674,7 +706,9 @@ policies:
   manifests:
     - path: input/configmap.yaml
 `
+
 	p := Plugin{}
+
 	err := p.Config([]byte(config), "")
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -709,6 +743,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -742,7 +777,9 @@ policies:
 `,
 		path.Join(tmpDir, "configmap.yaml"),
 	)
+
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -781,6 +818,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"), path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -812,6 +850,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -847,6 +886,7 @@ policies:
 		path.Join(tmpDir, "configmap2.yaml"),
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -980,7 +1020,9 @@ policyDefaults:
 policies:
 - name: policy-app-config
 `
+
 	p := Plugin{}
+
 	err := p.Config([]byte(config), "")
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -1011,6 +1053,7 @@ policies:
 		manifestPath,
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -1041,6 +1084,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -1074,6 +1118,7 @@ policies:
 		path.Join(tmpDir, "configmap.yaml"),
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -1160,7 +1205,8 @@ func TestPolicySetConfig(t *testing.T) {
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset must provide only one of placement.labelSelector or placement.clusterselectors",
+			expectedErrMsg: "policySet my-policyset must provide only one of placement.labelSelector or " +
+				"placement.clusterselectors",
 		},
 		{
 			name: "policySet may not specify a cluster selector and placement path together",
@@ -1175,7 +1221,8 @@ func TestPolicySetConfig(t *testing.T) {
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or placement name",
+			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
+				"placement name",
 		},
 		{
 			name: "policySet may not specify a cluster selector and placement name together",
@@ -1190,7 +1237,8 @@ func TestPolicySetConfig(t *testing.T) {
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or placement name",
+			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
+				"placement name",
 		},
 		{
 			name: "policySet may not specify a label selector and placement path together",
@@ -1205,7 +1253,8 @@ func TestPolicySetConfig(t *testing.T) {
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or placement name",
+			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
+				"placement name",
 		},
 		{
 			name: "policySet may not specify a label selector and placement name together",
@@ -1220,7 +1269,8 @@ func TestPolicySetConfig(t *testing.T) {
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or placement name",
+			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
+				"placement name",
 		},
 		{
 			name: "policySet may not specify a cluster selector and placementrule path together",
@@ -1235,7 +1285,8 @@ func TestPolicySetConfig(t *testing.T) {
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or placement name",
+			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
+				"placement name",
 		},
 		{
 			name: "policySet may not specify a cluster selector and placementrule name together",
@@ -1250,7 +1301,8 @@ func TestPolicySetConfig(t *testing.T) {
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or placement name",
+			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
+				"placement name",
 		},
 		{
 			name: "policySet may not specify a label selector and placementrule path together",
@@ -1265,7 +1317,8 @@ func TestPolicySetConfig(t *testing.T) {
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or placement name",
+			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
+				"placement name",
 		},
 		{
 			name: "policySet may not specify a label selector and placementrule name together",
@@ -1280,7 +1333,8 @@ func TestPolicySetConfig(t *testing.T) {
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or placement name",
+			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
+				"placement name",
 		},
 		{
 			name: "policySet placementrule path not resolvable",
@@ -1325,7 +1379,8 @@ func TestPolicySetConfig(t *testing.T) {
 					},
 				}
 			},
-			expectedErrMsg: "may not use a mix of Placement and PlacementRule for policies and policysets; found 1 Placement and 1 PlacementRule",
+			expectedErrMsg: "may not use a mix of Placement and PlacementRule for policies and policysets; found 1 " +
+				"Placement and 1 PlacementRule",
 		},
 	}
 
@@ -1401,14 +1456,17 @@ policies:
 		configMapPath,
 	)
 	p := Plugin{}
+
 	err := p.Config([]byte(defaultsConfig), tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 
 	assertEqual(t, p.PolicyDefaults.Disabled, true)
+
 	enabledPolicy := p.Policies[0]
 	assertEqual(t, enabledPolicy.Disabled, false)
+
 	disabledPolicy := p.Policies[1]
 	assertEqual(t, disabledPolicy.Disabled, true)
 }

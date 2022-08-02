@@ -7,6 +7,7 @@ import (
 
 func assertEqual(t *testing.T, a interface{}, b interface{}) {
 	t.Helper()
+
 	if a != b {
 		t.Fatalf("%s != %s", a, b)
 	}
@@ -14,6 +15,7 @@ func assertEqual(t *testing.T, a interface{}, b interface{}) {
 
 func assertReflectEqual(t *testing.T, a interface{}, b interface{}) {
 	t.Helper()
+
 	if !reflect.DeepEqual(a, b) {
 		t.Fatalf("%s != %s", a, b)
 	}

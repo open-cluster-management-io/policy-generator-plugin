@@ -23,10 +23,12 @@ import (
 // be read.
 func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, error) {
 	manifests := [][]map[string]interface{}{}
+
 	for _, manifest := range policyConf.Manifests {
 		manifestPaths := []string{}
 		manifestFiles := []map[string]interface{}{}
 		readErr := fmt.Errorf("failed to read the manifest path %s", manifest.Path)
+
 		manifestPathInfo, err := os.Stat(manifest.Path)
 		if err != nil {
 			return nil, readErr
@@ -98,6 +100,7 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 		if len(manifest.Patches) > 0 {
 			patcher := manifestPatcher{manifests: manifestFiles, patches: manifest.Patches}
 			const errTemplate = `failed to process the manifest at "%s": %w`
+
 			err = patcher.Validate()
 			if err != nil {
 				return nil, fmt.Errorf(errTemplate, manifest.Path, err)
@@ -131,15 +134,19 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 
 	objectTemplatesLength := len(manifestGroups)
 	policyTemplatesLength := 1
+
 	if !policyConf.ConsolidateManifests {
 		policyTemplatesLength = len(manifestGroups)
 		objectTemplatesLength = 0
 	}
+
 	objectTemplates := make([]map[string]interface{}, 0, objectTemplatesLength)
 	policyTemplates := make([]map[string]map[string]interface{}, 0, policyTemplatesLength)
+
 	for i, manifestGroup := range manifestGroups {
 		complianceType := policyConf.Manifests[i].ComplianceType
 		metadataComplianceType := policyConf.Manifests[i].MetadataComplianceType
+
 		for _, manifest := range manifestGroup {
 			isPolicyTypeManifest, err := isPolicyTypeManifest(manifest)
 			if err != nil {
@@ -213,6 +220,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 func isPolicyTypeManifest(manifest map[string]interface{}) (bool, error) {
 	apiVersion, _, isAPIStr := unstructured.NestedString(manifest, "apiVersion")
 	kind, _, isKindStr := unstructured.NestedString(manifest, "kind")
+
 	if isAPIStr != nil {
 		return false, fmt.Errorf("invalid non-string apiVersion format")
 	} else if isKindStr != nil {
@@ -228,7 +236,8 @@ func isPolicyTypeManifest(manifest map[string]interface{}) (bool, error) {
 // setNamespaceSelector sets the namespace selector, if set, on the input policy template.
 func setNamespaceSelector(policyConf *types.PolicyConfig, policyTemplate *map[string]map[string]interface{}) {
 	if policyConf.NamespaceSelector.Exclude != nil || policyConf.NamespaceSelector.Include != nil {
-		(*policyTemplate)["objectDefinition"]["spec"].(map[string]interface{})["namespaceSelector"] = policyConf.NamespaceSelector
+		spec := (*policyTemplate)["objectDefinition"]["spec"].(map[string]interface{})
+		spec["namespaceSelector"] = policyConf.NamespaceSelector
 	}
 }
 
@@ -247,6 +256,7 @@ func buildPolicyTemplate(
 	} else {
 		name = policyConf.Name
 	}
+
 	policyTemplate := map[string]map[string]interface{}{
 		"objectDefinition": {
 			"apiVersion": policyAPIVersion,
@@ -263,7 +273,8 @@ func buildPolicyTemplate(
 	}
 
 	if len(policyConf.ConfigurationPolicyAnnotations) > 0 {
-		policyTemplate["objectDefinition"]["metadata"].(map[string]interface{})["annotations"] = policyConf.ConfigurationPolicyAnnotations
+		metadata := policyTemplate["objectDefinition"]["metadata"].(map[string]interface{})
+		metadata["annotations"] = policyConf.ConfigurationPolicyAnnotations
 	}
 
 	if evaluationInterval.Compliant != "" || evaluationInterval.NonCompliant != "" {
@@ -289,6 +300,7 @@ func handleExpanders(
 	manifests []map[string]interface{}, policyConf *types.PolicyConfig,
 ) []map[string]map[string]interface{} {
 	policyTemplates := []map[string]map[string]interface{}{}
+
 	for _, expander := range expanders.GetExpanders() {
 		for _, m := range manifests {
 			if expander.Enabled(policyConf) && expander.CanHandle(m) {
@@ -325,8 +337,10 @@ func unmarshalManifestFile(manifestPath string) (*[]map[string]interface{}, erro
 func unmarshalManifestBytes(manifestBytes []byte) (*[]map[string]interface{}, error) {
 	yamlDocs := []map[string]interface{}{}
 	d := yaml.NewDecoder(bytes.NewReader(manifestBytes))
+
 	for {
 		var obj interface{}
+
 		err := d.Decode(&obj)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
@@ -358,6 +372,7 @@ func verifyManifestPath(baseDirectory string, manifestPath string) error {
 	if err != nil {
 		return fmt.Errorf("could not resolve the manifest path %s to an absolute path", manifestPath)
 	}
+
 	absPath, err = filepath.EvalSymlinks(absPath)
 	if err != nil {
 		return fmt.Errorf("could not resolve symlinks to the manifest path %s", manifestPath)

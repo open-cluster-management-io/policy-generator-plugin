@@ -2,14 +2,14 @@
 # Copyright Contributors to the Open Cluster Management project
 
 PWD := $(shell pwd)
-BASE_DIR := $(shell basename $(PWD))
+LOCAL_BIN ?= $(PWD)/bin
 
 # Keep an existing GOPATH, make a private one if it is undefined
 GOPATH_DEFAULT := $(PWD)/.go
 export GOPATH ?= $(GOPATH_DEFAULT)
 GOBIN_DEFAULT := $(GOPATH)/bin
 export GOBIN ?= $(GOBIN_DEFAULT)
-export PATH := $(PATH):$(GOBIN)
+export PATH := $(LOCAL_BIN):$(GOBIN):$(PATH)
 TESTARGS_DEFAULT := "-v"
 export TESTARGS ?= $(TESTARGS_DEFAULT)
 export DEPENDENCY_OVERRIDE ?= false
@@ -21,6 +21,13 @@ API_PLUGIN_PATH ?= $(KUSTOMIZE_PLUGIN_HOME)/policy.open-cluster-management.io/v1
 
 # Kustomize arguments
 SOURCE_DIR ?= examples/
+
+# go-get-tool will 'go install' any package $1 and install it to LOCAL_BIN.
+define go-get-tool
+@set -e ;\
+echo "Checking installation of $(1)" ;\
+GOBIN=$(LOCAL_BIN) go install $(1)
+endef
 
 .PHONY: build build-binary build-release generate layout fmt lint lint-dependencies test
 
@@ -64,12 +71,9 @@ fmt:
 # lint section
 ############################################################
 
+.PHONY: lint-dependencies
 lint-dependencies:
-	@if [ ! -f $(GOBIN)/golangci-lint ] || [ "$(DEPENDENCY_OVERRIDE)" = "true" ]; then \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v1.41.1/install.sh | sh -s -- -b $(GOBIN) v1.41.1; \
-	else \
-		echo "Folder '$(GOBIN)/golangci-lint' already exists--skipping dependency install (export DEPENDENCY_OVERRIDE=true to override this and run install anyway)"; \
-	fi
+	$(call go-get-tool,github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2)
 
 lint: lint-dependencies lint-all
 

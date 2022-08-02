@@ -17,11 +17,13 @@ func main() {
 	// Parse command input
 	debugFlag := pflag.Bool("debug", false, "Print the stack trace with error messages")
 	pflag.Parse()
+
 	debug = *debugFlag
 
 	// Collect and parse PolicyGeneratorConfig file paths
 	generators := pflag.Args()
 	var outputBuffer bytes.Buffer
+
 	for _, gen := range generators {
 		outputBuffer.Write(processGeneratorConfig(gen))
 	}
@@ -42,6 +44,7 @@ func errorAndExit(msg string, formatArgs ...interface{}) {
 	if msg == "" || debug {
 		panic(fmt.Sprintf(msg, printArgs...))
 	}
+
 	fmt.Fprintf(os.Stderr, msg, printArgs...)
 	fmt.Fprint(os.Stderr, "\n")
 	os.Exit(1)
@@ -57,6 +60,7 @@ func processGeneratorConfig(filePath string) []byte {
 	}
 
 	p := internal.Plugin{}
+
 	fileData, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		errorAndExit("failed to read file '%s': %s", filePath, err)

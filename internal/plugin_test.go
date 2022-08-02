@@ -24,12 +24,15 @@ func TestGenerate(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
+
 	p := Plugin{}
 	var err error
+
 	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
 	p.PlacementBindingDefaults.Name = "my-placement-binding"
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	p.PolicyDefaults.Namespace = "my-policies"
@@ -65,6 +68,7 @@ func TestGenerate(t *testing.T) {
 	// unless explicitly set
 	assertEqual(t, p.Policies[0].ConsolidateManifests, true)
 	assertEqual(t, p.Policies[1].ConsolidateManifests, true)
+
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}
@@ -165,6 +169,7 @@ subjects:
       name: policy-app-config2
 `
 	expected = strings.TrimPrefix(expected, "\n")
+
 	output, err := p.Generate()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -177,12 +182,15 @@ func TestGeneratePolicyExisingPlacementRuleName(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
+
 	p := Plugin{}
 	var err error
+
 	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
 	p.PolicyDefaults.Placement.PlacementRuleName = "plrExistingName"
 	p.PolicyDefaults.Namespace = "my-policies"
 	p.PolicyDefaults.MetadataComplianceType = "musthave"
@@ -199,6 +207,7 @@ func TestGeneratePolicyExisingPlacementRuleName(t *testing.T) {
 	// Default all policy ConsolidateManifests flags are set to true
 	// unless explicitly set
 	assertEqual(t, p.Policies[0].ConsolidateManifests, true)
+
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}
@@ -251,6 +260,7 @@ subjects:
       name: policy-app-config
 `
 	expected = strings.TrimPrefix(expected, "\n")
+
 	output, err := p.Generate()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -263,12 +273,15 @@ func TestGeneratePolicyExisingPlacementName(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
+
 	p := Plugin{}
 	var err error
+
 	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
 	p.PolicyDefaults.Placement.PlacementName = "plExistingName"
 	p.PolicyDefaults.Namespace = "my-policies"
 	p.PolicyDefaults.MetadataComplianceType = "musthave"
@@ -285,6 +298,7 @@ func TestGeneratePolicyExisingPlacementName(t *testing.T) {
 	// Default all policy ConsolidateManifests flags are set to true
 	// unless explicitly set
 	assertEqual(t, p.Policies[0].ConsolidateManifests, true)
+
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}
@@ -337,6 +351,7 @@ subjects:
       name: policy-app-config
 `
 	expected = strings.TrimPrefix(expected, "\n")
+
 	output, err := p.Generate()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -349,12 +364,15 @@ func TestGenerateSeparateBindings(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
+
 	p := Plugin{}
 	var err error
+
 	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{
 		Name: "policy-app-config",
@@ -370,6 +388,7 @@ func TestGenerateSeparateBindings(t *testing.T) {
 	}
 	p.Policies = append(p.Policies, policyConf, policyConf2)
 	p.applyDefaults(map[string]interface{}{})
+
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}
@@ -489,6 +508,7 @@ subjects:
       name: policy-app-config2
 `
 	expected = strings.TrimPrefix(expected, "\n")
+
 	output, err := p.Generate()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -501,12 +521,15 @@ func TestGenerateMissingBindingName(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
+
 	p := Plugin{}
 	var err error
+
 	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
 	p.PlacementBindingDefaults.Name = ""
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	p.PolicyDefaults.Namespace = "my-policies"
@@ -524,6 +547,7 @@ func TestGenerateMissingBindingName(t *testing.T) {
 	}
 	p.Policies = append(p.Policies, policyConf, policyConf2)
 	p.applyDefaults(map[string]interface{}{})
+
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}
@@ -545,6 +569,7 @@ func TestCreatePolicy(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
+
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{
@@ -602,6 +627,7 @@ func TestCreatePolicyWithAnnotations(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
+
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	p.PolicyDefaults.PolicyAnnotations = map[string]string{"test-default-annotation": "default"}
@@ -661,6 +687,7 @@ spec:
 	p.outputBuffer.Reset()
 	p.Policies[0].PolicyAnnotations = map[string]string{}
 	p.applyDefaults(map[string]interface{}{})
+
 	err = p.createPolicy(&p.Policies[0])
 	if err != nil {
 		t.Fatal(err.Error())
@@ -706,6 +733,7 @@ spec:
 	p.outputBuffer.Reset()
 	p.Policies[0].PolicyAnnotations = map[string]string{"test-wave-annotation": "100"}
 	p.applyDefaults(map[string]interface{}{})
+
 	err = p.createPolicy(&p.Policies[0])
 	if err != nil {
 		t.Fatal(err.Error())
@@ -753,6 +781,7 @@ func TestCreatePolicyFromIamPolicyTypeManifest(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createIamPolicyManifest(t, tmpDir, "iamKindManifestPluginTest.yaml")
+
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "Iam-policies"
 	policyConf := types.PolicyConfig{
@@ -815,6 +844,7 @@ func TestCreatePolicyDir(t *testing.T) {
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
 	createConfigMap(t, tmpDir, "configmap2.yaml")
+
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{
@@ -882,10 +912,12 @@ func TestCreatePolicyInvalidYAML(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	manifestPath := path.Join(tmpDir, "configmap.yaml")
+
 	err := ioutil.WriteFile(manifestPath, []byte("$ not Yaml!"), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to create %s: %v", manifestPath, err)
 	}
+
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{
@@ -919,6 +951,7 @@ kind:
 metadata:
   name: policy-limitclusteradmin-example
 `
+
 	err := ioutil.WriteFile(manifestPath, []byte(yamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to create %s: %v", manifestPath, err)
@@ -946,6 +979,7 @@ metadata:
 
 func TestCreatePlacementDefault(t *testing.T) {
 	t.Parallel()
+
 	p := Plugin{}
 	p.allPlcs = map[string]bool{}
 	p.csToPlc = map[string]string{}
@@ -958,6 +992,7 @@ func TestCreatePlacementDefault(t *testing.T) {
 	}
 
 	assertEqual(t, name, "placement-policy-app-config")
+
 	output := p.outputBuffer.String()
 	expected := `
 ---
@@ -978,6 +1013,7 @@ spec:
 
 func TestCreatePlacementSinglePlr(t *testing.T) {
 	t.Parallel()
+
 	p := Plugin{}
 	p.allPlcs = map[string]bool{}
 	p.csToPlc = map[string]string{}
@@ -998,6 +1034,7 @@ func TestCreatePlacementSinglePlr(t *testing.T) {
 	// Verify that another placement rule is not created when the same cluster selectors are used
 	assertEqual(t, name, "my-placement-rule")
 	assertEqual(t, name2, "my-placement-rule")
+
 	output := p.outputBuffer.String()
 	expected := `
 ---
@@ -1018,6 +1055,7 @@ spec:
 
 func TestCreatePlacementClusterSelectors(t *testing.T) {
 	t.Parallel()
+
 	p := Plugin{}
 	p.usingPlR = true
 	p.allPlcs = map[string]bool{}
@@ -1036,6 +1074,7 @@ func TestCreatePlacementClusterSelectors(t *testing.T) {
 	}
 
 	assertEqual(t, name, "placement-policy-app-config")
+
 	output := p.outputBuffer.String()
 	expected := `
 ---
@@ -1067,6 +1106,7 @@ spec:
 
 func TestCreatePlacementLabelSelector(t *testing.T) {
 	t.Parallel()
+
 	p := Plugin{}
 	p.allPlcs = map[string]bool{}
 	p.csToPlc = map[string]string{}
@@ -1084,6 +1124,7 @@ func TestCreatePlacementLabelSelector(t *testing.T) {
 	}
 
 	assertEqual(t, name, "placement-policy-app-config")
+
 	output := p.outputBuffer.String()
 	expected := `
 ---
@@ -1114,6 +1155,7 @@ spec:
 
 func TestCreatePlacementDuplicateName(t *testing.T) {
 	t.Parallel()
+
 	p := Plugin{}
 	p.allPlcs = map[string]bool{}
 	p.csToPlc = map[string]string{}
@@ -1150,6 +1192,7 @@ func plPathHelper(t *testing.T, plrYAML string, usingPlR bool) (*Plugin, string)
 	tmpDir := t.TempDir()
 	plrPath := path.Join(tmpDir, "pl.yaml")
 	plrYAML = strings.TrimPrefix(plrYAML, "\n")
+
 	err := ioutil.WriteFile(plrPath, []byte(plrYAML), 0o666)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -1161,11 +1204,13 @@ func plPathHelper(t *testing.T, plrYAML string, usingPlR bool) (*Plugin, string)
 	p.processedPlcs = map[string]bool{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{Name: "policy-app-config"}
+
 	if usingPlR {
 		policyConf.Placement.PlacementRulePath = plrPath
 	} else {
 		policyConf.Placement.PlacementPath = plrPath
 	}
+
 	p.Policies = append(p.Policies, policyConf)
 
 	return &p, plrPath
@@ -1173,6 +1218,7 @@ func plPathHelper(t *testing.T, plrYAML string, usingPlR bool) (*Plugin, string)
 
 func TestCreatePlacementPlrPath(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 ---
 apiVersion: apps.open-cluster-management.io/v1
@@ -1200,12 +1246,15 @@ spec:
 	}
 
 	assertEqual(t, name, "my-plr")
+
 	output := p.outputBuffer.String()
+
 	assertEqual(t, output, plrYAML)
 }
 
 func TestCreatePlacementPlrPathSkip(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 ---
 apiVersion: apps.open-cluster-management.io/v1
@@ -1218,6 +1267,7 @@ metadata:
 	p, _ := plPathHelper(t, plrYAML, true)
 
 	p.processedPlcs = map[string]bool{"my-plr": true}
+
 	name, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -1229,6 +1279,7 @@ metadata:
 
 func TestCreatePlacementPlrPathNoName(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 ---
 apiVersion: apps.open-cluster-management.io/v1
@@ -1255,6 +1306,7 @@ spec:
 
 func TestCreatePlacementPlrPathNoNamespace(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 ---
 apiVersion: apps.open-cluster-management.io/v1
@@ -1281,6 +1333,7 @@ spec:
 
 func TestCreatePlacementPlrPathWrongNamespace(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 ---
 apiVersion: apps.open-cluster-management.io/v1
@@ -1312,6 +1365,7 @@ spec:
 
 func TestCreatePlacementPlrPathNoPlr(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 apiVersion: v1
 kind: ConfigMap
@@ -1335,6 +1389,7 @@ data:
 
 func TestCreatePlacementPlPath(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 ---
 apiVersion: cluster.open-cluster-management.io/v1beta1
@@ -1361,12 +1416,15 @@ spec:
 	}
 
 	assertEqual(t, name, "my-plr")
+
 	output := p.outputBuffer.String()
+
 	assertEqual(t, output, plrYAML)
 }
 
 func TestCreatePlacementPlPathSkip(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 ---
 apiVersion: cluster.open-cluster-management.io/v1beta1
@@ -1379,6 +1437,7 @@ metadata:
 	p, _ := plPathHelper(t, plrYAML, false)
 
 	p.processedPlcs = map[string]bool{"my-plr": true}
+
 	name, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -1390,6 +1449,7 @@ metadata:
 
 func TestCreatePlacementPlPathNoName(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 ---
 apiVersion: cluster.open-cluster-management.io/v1beta1
@@ -1415,6 +1475,7 @@ spec:
 
 func TestCreatePlacementPlPathNoNamespace(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 ---
 apiVersion: cluster.open-cluster-management.io/v1beta1
@@ -1440,6 +1501,7 @@ spec:
 
 func TestCreatePlacementPlPathWrongNamespace(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 ---
 apiVersion: cluster.open-cluster-management.io/v1beta1
@@ -1470,6 +1532,7 @@ spec:
 
 func TestCreatePlacementPlPathFoundPlR(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 ---
 apiVersion: apps.open-cluster-management.io/v1
@@ -1494,6 +1557,7 @@ metadata:
 
 func TestCreatePlacementPlrPathFoundPl(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 ---
 apiVersion: cluster.open-cluster-management.io/v1beta1
@@ -1518,6 +1582,7 @@ metadata:
 
 func TestCreatePlacementPlPathNoPl(t *testing.T) {
 	t.Parallel()
+
 	plrYAML := `
 apiVersion: v1
 kind: ConfigMap
@@ -1541,6 +1606,7 @@ data:
 
 func TestCreatePlacementBinding(t *testing.T) {
 	t.Parallel()
+
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{Name: "policy-app-config"}
@@ -1752,12 +1818,15 @@ func TestGeneratePolicySetsWithPlacement(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
+
 	p := Plugin{}
 	var err error
+
 	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
 	p.PlacementBindingDefaults.Name = "my-placement-binding"
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	p.PolicyDefaults.Namespace = "my-policies"
@@ -1848,6 +1917,7 @@ subjects:
       name: policyset
 `
 	expected = strings.TrimPrefix(expected, "\n")
+
 	output, err := p.Generate()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -1860,12 +1930,15 @@ func TestGeneratePolicySetsWithPolicyPlacement(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
+
 	p := Plugin{}
 	var err error
+
 	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
 	p.PlacementBindingDefaults.Name = "my-placement-binding"
 	p.PolicyDefaults.Placement.Name = "my-placement"
 	p.PolicyDefaults.Namespace = "my-policies"
@@ -1891,9 +1964,11 @@ func TestGeneratePolicySetsWithPolicyPlacement(t *testing.T) {
 	}
 
 	p.applyDefaults(map[string]interface{}{})
+
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}
+
 	p.Policies[0].GeneratePlacementWhenInSet = true
 
 	expected := `
@@ -1995,6 +2070,7 @@ subjects:
       name: my-policyset
 `
 	expected = strings.TrimPrefix(expected, "\n")
+
 	output, err := p.Generate()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -2007,12 +2083,15 @@ func TestCreatePolicySet(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
+
 	p := Plugin{}
 	var err error
+
 	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
 	p.PlacementBindingDefaults.Name = "my-placement-binding"
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	p.PolicyDefaults.Namespace = "my-policies"
@@ -2078,7 +2157,9 @@ spec:
 	assertEqual(t, output, expected)
 }
 
-func getYAMLEvaluationInterval(t *testing.T, policyTemplate interface{}, skipFinalValidation bool) map[string]interface{} {
+func getYAMLEvaluationInterval(
+	t *testing.T, policyTemplate interface{}, skipFinalValidation bool,
+) map[string]interface{} {
 	t.Helper()
 
 	plcTemplate, ok := policyTemplate.(map[string]interface{})
@@ -2103,9 +2184,10 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
-	p := Plugin{}
 
+	p := Plugin{}
 	var err error
+
 	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -2182,6 +2264,7 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 			},
 		},
 	)
+
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}
@@ -2271,6 +2354,7 @@ func TestCreatePolicyWithConfigPolicyAnnotations(t *testing.T) {
 					{Path: path.Join(tmpDir, "configmap.yaml")},
 				},
 			}
+
 			if test.annotations != nil {
 				policyConf.ConfigurationPolicyAnnotations = test.annotations
 			}
@@ -2289,7 +2373,8 @@ func TestCreatePolicyWithConfigPolicyAnnotations(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 			// nolint: forcetypeassert
-			policyTemplates := (*policyManifests)[0]["spec"].(map[string]interface{})["policy-templates"].([]interface{})
+			spec := (*policyManifests)[0]["spec"].(map[string]interface{})
+			policyTemplates := spec["policy-templates"].([]interface{})
 			// nolint: forcetypeassert
 			configPolicy := policyTemplates[0].(map[string]interface{})["objectDefinition"].(map[string]interface{})
 			// nolint: forcetypeassert

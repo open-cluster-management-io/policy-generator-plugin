@@ -16,6 +16,7 @@ import (
 
 func assertEqual(t *testing.T, a interface{}, b interface{}) {
 	t.Helper()
+
 	if a != b {
 		t.Fatalf("%s != %s", a, b)
 	}
@@ -23,6 +24,7 @@ func assertEqual(t *testing.T, a interface{}, b interface{}) {
 
 func assertReflectEqual(t *testing.T, a interface{}, b interface{}) {
 	t.Helper()
+
 	if !reflect.DeepEqual(a, b) {
 		t.Fatalf("%s != %s", a, b)
 	}
@@ -33,6 +35,7 @@ func TestGetPolicyTemplate(t *testing.T) {
 	tmpDir := t.TempDir()
 	manifestFiles := []types.Manifest{}
 	manifestFilesMustNotHave := []types.Manifest{}
+
 	for i, enemy := range []string{"goldfish", "potato"} {
 		manifestPath := path.Join(tmpDir, fmt.Sprintf("configmap%d.yaml", i))
 		manifestYAML := fmt.Sprintf(
@@ -46,6 +49,7 @@ data:
 `,
 			enemy,
 		)
+
 		err := ioutil.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
 		if err != nil {
 			t.Fatalf("Failed to write %s", manifestPath)
@@ -59,6 +63,7 @@ data:
 				Path:                   manifestPath,
 			},
 		)
+
 		manifestFilesMustNotHave = append(
 			manifestFilesMustNotHave,
 			types.Manifest{
@@ -72,6 +77,7 @@ data:
 	// Write a bogus file to ensure it is not picked up when creating the policy
 	// template
 	bogusFilePath := path.Join(tmpDir, "README.md")
+
 	err := ioutil.WriteFile(bogusFilePath, []byte("# My Manifests"), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", bogusFilePath)
@@ -117,43 +123,55 @@ data:
 		if err != nil {
 			t.Fatalf("Failed to get the policy templates: %v", err)
 		}
+
 		assertEqual(t, len(policyTemplates), 1)
 
 		policyTemplate := policyTemplates[0]
 		objdef := policyTemplate["objectDefinition"]
+
 		assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
+
 		spec, ok := objdef["spec"].(map[string]interface{})
 		if !ok {
 			t.Fatal("The spec field is an invalid format")
 		}
+
 		assertEqual(t, spec["remediationAction"], "inform")
 		assertEqual(t, spec["severity"], "low")
+
 		objTemplates, ok := spec["object-templates"].([]map[string]interface{})
 		if !ok {
 			t.Fatal("The object-templates field is an invalid format")
 		}
+
 		assertEqual(t, len(objTemplates), 2)
 		assertEqual(t, objTemplates[0]["complianceType"], test.ExpectedComplianceType)
+
 		if test.ExpectedMetadataComplianceType != "" {
 			assertEqual(t, objTemplates[0]["metadataComplianceType"], test.ExpectedMetadataComplianceType)
 		} else {
 			assertEqual(t, objTemplates[0]["metadataComplianceType"], nil)
 		}
+
 		kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
 		if !ok {
 			t.Fatal("The objectDefinition field is an invalid format")
 		}
+
 		assertEqual(t, kind1, "ConfigMap")
 		assertEqual(t, objTemplates[1]["complianceType"], test.ExpectedComplianceType)
+
 		if test.ExpectedMetadataComplianceType != "" {
 			assertEqual(t, objTemplates[0]["metadataComplianceType"], test.ExpectedMetadataComplianceType)
 		} else {
 			assertEqual(t, objTemplates[0]["metadataComplianceType"], nil)
 		}
+
 		kind2, ok := objTemplates[1]["objectDefinition"].(map[string]interface{})["kind"]
 		if !ok {
 			t.Fatal("The objectDefinition field is an invalid format")
 		}
+
 		assertEqual(t, kind2, "ConfigMap")
 	}
 }
@@ -162,6 +180,7 @@ func TestGetPolicyTemplateNoConsolidate(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	manifestFiles := []types.Manifest{}
+
 	for i, enemy := range []string{"goldfish", "potato"} {
 		manifestPath := path.Join(tmpDir, fmt.Sprintf("configmap%d.yaml", i))
 		manifestYAML := fmt.Sprintf(
@@ -183,6 +202,7 @@ data:
 			enemy,
 			enemy,
 		)
+
 		err := ioutil.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
 		if err != nil {
 			t.Fatalf("Failed to write %s", manifestPath)
@@ -201,6 +221,7 @@ data:
 	// Write a bogus file to ensure it is not picked up when creating the policy
 	// template
 	bogusFilePath := path.Join(tmpDir, "README.md")
+
 	err := ioutil.WriteFile(bogusFilePath, []byte("# My Manifests"), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", bogusFilePath)
@@ -239,33 +260,42 @@ data:
 		if err != nil {
 			t.Fatalf("Failed to get the policy templates: %v", err)
 		}
+
 		assertEqual(t, len(policyTemplates), 4)
 
 		for i := 0; i < len(policyTemplates); i++ {
 			policyTemplate := policyTemplates[i]
 			objdef := policyTemplate["objectDefinition"]
 			name := "policy-app-config"
+
 			if i > 0 {
 				name += fmt.Sprintf("%d", i+1)
 			}
+
 			assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), name)
+
 			spec, ok := objdef["spec"].(map[string]interface{})
 			if !ok {
 				t.Fatal("The spec field is an invalid format")
 			}
+
 			assertEqual(t, spec["remediationAction"], "inform")
 			assertEqual(t, spec["severity"], "low")
+
 			objTemplates, ok := spec["object-templates"].([]map[string]interface{})
 			if !ok {
 				t.Fatal("The object-templates field is an invalid format")
 			}
+
 			assertEqual(t, len(objTemplates), 1)
 			assertEqual(t, objTemplates[0]["complianceType"], "musthave")
 			assertEqual(t, objTemplates[0]["metadataComplianceType"], "mustonlyhave")
+
 			kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
 			if !ok {
 				t.Fatal("The objectDefinition field is an invalid format")
 			}
+
 			assertEqual(t, kind1, "ConfigMap")
 		}
 	}
@@ -339,6 +369,7 @@ func TestGetPolicyTemplateFromPolicyTypeManifest(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	manifestFiles := []types.Manifest{}
+
 	createIamPolicyManifest(t, tmpDir, "iamKindManifest.yaml")
 	// Test manifest is non-root IAM policy type.
 	IamManifestPath := path.Join(tmpDir, "iamKindManifest.yaml")
@@ -369,6 +400,7 @@ func TestGetPolicyTemplateFromPolicyTypeManifest(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to get the policy templates: %v", err)
 		}
+
 		assertEqual(t, len(policyTemplates), 1)
 
 		IamPolicyTemplate := policyTemplates[0]
@@ -377,19 +409,23 @@ func TestGetPolicyTemplateFromPolicyTypeManifest(t *testing.T) {
 		// kind will not be overridden by "ConfigurationPolicy".
 		assertEqual(t, IamObjdef["kind"], "IamPolicy")
 		assertEqual(t, IamObjdef["metadata"].(map[string]interface{})["name"], "policy-limitclusteradmin-example")
+
 		IamSpec, ok := IamObjdef["spec"].(map[string]interface{})
 		if !ok {
 			t.Fatal("The spec field is an invalid format")
 		}
+
 		// remediationAction will not be overridden by policyConf.
 		assertEqual(t, IamSpec["remediationAction"], "enforce")
 		// severity will not be overridden by policyConf.
 		assertEqual(t, IamSpec["severity"], "medium")
 		assertEqual(t, IamSpec["maxClusterRoleBindingUsers"], 5)
+
 		namespaceSelector, ok := IamSpec["namespaceSelector"].(map[string]interface{})
 		if !ok {
 			t.Fatal("The namespaceSelector field is an invalid format")
 		}
+
 		assertReflectEqual(t, namespaceSelector["include"], []interface{}{"*"})
 		assertReflectEqual(t, namespaceSelector["exclude"], []interface{}{"kube-*", "openshift-*"})
 	}
@@ -407,6 +443,7 @@ metadata:
 data:
   game.properties: enemies=potato
 `
+
 	err := ioutil.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestPath)
@@ -436,11 +473,13 @@ data:
 	if err != nil {
 		t.Fatalf("Failed to get the policy templates: %v", err)
 	}
+
 	assertEqual(t, len(policyTemplates), 1)
 
 	policyTemplate := policyTemplates[0]
 	objdef := policyTemplate["objectDefinition"]
 	assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
+
 	spec, ok := objdef["spec"].(map[string]interface{})
 	if !ok {
 		t.Fatal("The spec field is an invalid format")
@@ -450,6 +489,7 @@ data:
 	if !ok {
 		t.Fatal("The object-templates field is an invalid format")
 	}
+
 	assertEqual(t, len(objTemplates), 1)
 
 	objDef, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})
@@ -466,12 +506,14 @@ data:
 	if !ok {
 		t.Fatal("The labels field is an invalid format")
 	}
+
 	assertReflectEqual(t, labels, map[string]interface{}{"chandler": "bing"})
 
 	annotations, ok := metadata["annotations"].(map[string]interface{})
 	if !ok {
 		t.Fatal("The annotations field is an invalid format")
 	}
+
 	assertReflectEqual(t, annotations, map[string]interface{}{"monica": "geller"})
 }
 
@@ -489,6 +531,7 @@ metadata:
 data:
   image: "quay.io/potatos1"
 `
+
 	err := ioutil.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestPath)
@@ -518,11 +561,14 @@ data:
 	if err != nil {
 		t.Fatalf("Failed to get the policy templates: %v ", err)
 	}
+
 	assertEqual(t, len(policyTemplates), 1)
 
 	policyTemplate := policyTemplates[0]
 	objdef := policyTemplate["objectDefinition"]
+
 	assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
+
 	spec, ok := objdef["spec"].(map[string]interface{})
 	if !ok {
 		t.Fatal("The spec field is an invalid format")
@@ -532,6 +578,7 @@ data:
 	if !ok {
 		t.Fatal("The object-templates field is an invalid format")
 	}
+
 	assertEqual(t, len(objTemplates), 1)
 
 	objDef, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})
@@ -548,12 +595,14 @@ data:
 	if !ok {
 		t.Fatal("The metadata.name field is an invalid format")
 	}
+
 	assertEqual(t, name, "patch-configmap")
 
 	namespace, ok := metadata["namespace"].(string)
 	if !ok {
 		t.Fatal("The metadata.namespace field is an invalid format")
 	}
+
 	assertEqual(t, namespace, "patch-namespace")
 
 	data, ok := objDef["data"].(map[string]interface{})
@@ -565,6 +614,7 @@ data:
 	if !ok {
 		t.Fatal("The data.image field is an invalid format")
 	}
+
 	assertEqual(t, image, "quay.io/potatos2")
 }
 
@@ -590,6 +640,7 @@ metadata:
 data:
   image: "quay.io/potatos1"
 `
+
 	err := ioutil.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestPath)
@@ -647,35 +698,43 @@ metadata:
 	if err != nil {
 		t.Fatalf("Failed to get the policy templates: %v", err)
 	}
+
 	assertEqual(t, len(policyTemplates), 2)
 
 	// This is not an in-depth test since the Kyverno expansion is tested elsewhere. This is to
 	// to test that glue code is working as expected.
 	expandedPolicyTemplate := policyTemplates[1]
 	objdef := expandedPolicyTemplate["objectDefinition"]
+
 	spec, ok := objdef["spec"].(map[string]interface{})
 	if !ok {
 		t.Fatal("The spec field is an invalid format")
 	}
+
 	objTemplates, ok := spec["object-templates"].([]map[string]interface{})
 	if !ok {
 		t.Fatal("The object-templates field is an invalid format")
 	}
+
 	assertEqual(t, len(objTemplates), 2)
 	assertEqual(t, objTemplates[0]["complianceType"], "mustnothave")
 	assertEqual(t, objTemplates[0]["metadataComplianceType"], nil)
+
 	kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
 	if !ok {
 		t.Fatal("The objectDefinition field is an invalid format")
 	}
+
 	assertEqual(t, kind1, "ClusterPolicyReport")
 
 	assertEqual(t, objTemplates[1]["complianceType"], "mustnothave")
 	assertEqual(t, objTemplates[1]["metadataComplianceType"], nil)
+
 	kind2, ok := objTemplates[1]["objectDefinition"].(map[string]interface{})["kind"]
 	if !ok {
 		t.Fatal("The objectDefinition field is an invalid format")
 	}
+
 	assertEqual(t, kind2, "PolicyReport")
 }
 
@@ -771,6 +830,7 @@ data:
   game.properties: |
     enemies=potato
 `
+
 	err := ioutil.WriteFile(manifestsPath, []byte(yamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestsPath)
@@ -782,8 +842,10 @@ data:
 	}
 
 	assertEqual(t, len(*manifests), 2)
+
 	name1, _, _ := unstructured.NestedString((*manifests)[0], "metadata", "name")
 	assertEqual(t, name1, "my-configmap")
+
 	name2, _, _ := unstructured.NestedString((*manifests)[1], "metadata", "name")
 	assertEqual(t, name2, "my-configmap2")
 }
@@ -813,6 +875,7 @@ data:
 ---
 ---
 `
+
 	err := ioutil.WriteFile(manifestsPath, []byte(yamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestsPath)
@@ -824,8 +887,10 @@ data:
 	}
 
 	assertEqual(t, len(*manifests), 2)
+
 	name1, _, _ := unstructured.NestedString((*manifests)[0], "metadata", "name")
 	assertEqual(t, name1, "my-configmap")
+
 	name2, _, _ := unstructured.NestedString((*manifests)[1], "metadata", "name")
 	assertEqual(t, name2, "my-configmap2")
 }
@@ -834,6 +899,7 @@ func TestUnmarshalManifestFileUnreadable(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	manifestsPath := path.Join(tmpDir, "configmaps.yaml")
+
 	_, err := unmarshalManifestFile(manifestsPath)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
@@ -848,6 +914,7 @@ func TestUnmarshalManifestFileInvalidYAML(t *testing.T) {
 	tmpDir := t.TempDir()
 	manifestPath := path.Join(tmpDir, "configmaps.yaml")
 	yamlContent := `$I am not YAML`
+
 	err := ioutil.WriteFile(manifestPath, []byte(yamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestPath)
@@ -864,6 +931,7 @@ func TestUnmarshalManifestFileNotObject(t *testing.T) {
 	tmpDir := t.TempDir()
 	manifestPath := path.Join(tmpDir, "configmaps.yaml")
 	yamlContent := `- i am an array`
+
 	err := ioutil.WriteFile(manifestPath, []byte(yamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestPath)
@@ -887,6 +955,7 @@ func TestVerifyManifestPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to evaluate symlinks for the base directory: %v", err)
 	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Failed to get the current working directory: %v", err)
@@ -908,10 +977,12 @@ func TestVerifyManifestPath(t *testing.T) {
 	workingDir := path.Join(baseDirectory, "workingdir")
 	subDir := path.Join(workingDir, "subdir")
 	otherDir := path.Join(baseDirectory, "otherdir")
+
 	err = os.MkdirAll(subDir, 0o777)
 	if err != nil {
 		t.Fatalf("Failed to create the directory structure %s: %v", subDir, err)
 	}
+
 	err = os.Mkdir(otherDir, 0o777)
 	if err != nil {
 		t.Fatalf("Failed to create the directory structure %s: %v", otherDir, err)
@@ -920,11 +991,14 @@ func TestVerifyManifestPath(t *testing.T) {
 	// Create files in baseDirectory/workingdir and baseDirectory/otherdir
 	manifestPath := path.Join(workingDir, "configmap.yaml")
 	yamlContent := "---\nkind: ConfigMap"
+
 	err = ioutil.WriteFile(manifestPath, []byte(yamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestPath)
 	}
+
 	otherManifestPath := path.Join(otherDir, "configmap.yaml")
+
 	err = ioutil.WriteFile(otherManifestPath, []byte(yamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", otherManifestPath)
@@ -951,23 +1025,37 @@ func TestVerifyManifestPath(t *testing.T) {
 		},
 		{
 			grandParentDir,
-			fmt.Sprintf("the manifest path %s is not in the same directory tree as the kustomization.yaml file", grandParentDir),
+			fmt.Sprintf(
+				"the manifest path %s is not in the same directory tree as the kustomization.yaml file",
+				grandParentDir,
+			),
 		},
 		{
 			baseDirectory,
-			fmt.Sprintf("the manifest path %s is not in the same directory tree as the kustomization.yaml file", baseDirectory),
+			fmt.Sprintf(
+				"the manifest path %s is not in the same directory tree as the kustomization.yaml file",
+				baseDirectory,
+			),
 		},
 		{
 			otherManifestPath,
-			fmt.Sprintf("the manifest path %s is not in the same directory tree as the kustomization.yaml file", otherManifestPath),
+			fmt.Sprintf(
+				"the manifest path %s is not in the same directory tree as the kustomization.yaml file",
+				otherManifestPath,
+			),
 		},
 		{
 			relOtherManifestPath,
-			fmt.Sprintf("the manifest path %s is not in the same directory tree as the kustomization.yaml file", relOtherManifestPath),
+			fmt.Sprintf(
+				"the manifest path %s is not in the same directory tree as the kustomization.yaml file",
+				relOtherManifestPath,
+			),
 		},
 		{
 			otherDir,
-			fmt.Sprintf("the manifest path %s is not in the same directory tree as the kustomization.yaml file", otherDir),
+			fmt.Sprintf(
+				"the manifest path %s is not in the same directory tree as the kustomization.yaml file", otherDir,
+			),
 		},
 	}
 
