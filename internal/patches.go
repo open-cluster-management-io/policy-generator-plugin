@@ -63,6 +63,7 @@ func (m *manifestPatcher) Validate() error {
 	if len(m.manifests) > 1 {
 		const patchErrTemplate = `patches must have the "%s" field set to a non-empty string ` +
 			`when there is more than one manifest it can apply to`
+
 		for _, patch := range m.patches {
 			err := validateManifestInfo(patch, patchErrTemplate)
 			if err != nil {
@@ -167,6 +168,7 @@ func (m *manifestPatcher) ApplyPatches() (*[]map[string]interface{}, error) {
 
 	// Create the file system in memory with the Kustomize YAML files
 	fSys := filesys.MakeFsInMemory()
+
 	err := fSys.Mkdir(kustomizeDir)
 	if err != nil {
 		return nil, fmt.Errorf("an unexpected error occurred when configuring Kustomize: %w", err)
@@ -191,11 +193,13 @@ func (m *manifestPatcher) ApplyPatches() (*[]map[string]interface{}, error) {
 			objectYAML, err := yaml.Marshal(object)
 			const errTemplate = "an unexpected error occurred when converting the %s back to " +
 				"YAML: %w"
+
 			if err != nil {
 				return nil, fmt.Errorf(errTemplate, option.optionType, err)
 			}
 
 			manifestFileName := fmt.Sprintf("%s%d.yaml", option.optionType, i)
+
 			err = fSys.WriteFile(path.Join(kustomizeDir, manifestFileName), objectYAML)
 			if err != nil {
 				return nil, fmt.Errorf(errTemplate, option.optionType, err)
@@ -210,15 +214,18 @@ func (m *manifestPatcher) ApplyPatches() (*[]map[string]interface{}, error) {
 	var kustomizationYAML []byte
 	kustomizationYAML, err = yaml.Marshal(kustomizationYAMLFile)
 	const errTemplate = "an unexpected error occurred when creating the kustomization.yaml file: %w"
+
 	if err != nil {
 		return nil, fmt.Errorf(errTemplate, err)
 	}
+
 	err = fSys.WriteFile(path.Join(kustomizeDir, "kustomization.yaml"), kustomizationYAML)
 	if err != nil {
 		return nil, fmt.Errorf(errTemplate, err)
 	}
 
 	k := krusty.MakeKustomizer(krusty.MakeDefaultOptions())
+
 	resMap, err := k.Run(fSys, "kustomize")
 	if err != nil {
 		err = fmt.Errorf(

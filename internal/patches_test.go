@@ -26,6 +26,7 @@ func createExConfigMap(name string) *map[string]interface{} {
 
 func TestValidate(t *testing.T) {
 	t.Parallel()
+
 	manifests := []map[string]interface{}{}
 	manifests = append(
 		manifests, *createExConfigMap("configmap1"), *createExConfigMap("configmap2"),
@@ -52,6 +53,7 @@ func TestValidate(t *testing.T) {
 
 func TestValidateDefaults(t *testing.T) {
 	t.Parallel()
+
 	manifests := []map[string]interface{}{*createExConfigMap("configmap1")}
 	patches := []map[string]interface{}{
 		{
@@ -71,6 +73,7 @@ func TestValidateDefaults(t *testing.T) {
 
 func TestValidateNoManifests(t *testing.T) {
 	t.Parallel()
+
 	patcher := manifestPatcher{
 		manifests: []map[string]interface{}{}, patches: []map[string]interface{}{},
 	}
@@ -81,6 +84,7 @@ func TestValidateNoManifests(t *testing.T) {
 
 func TestValidateManifestMissingData(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct{ missingFields []string }{
 		{missingFields: []string{"apiVersion"}},
 		{missingFields: []string{"kind"}},
@@ -116,6 +120,7 @@ func TestValidateManifestMissingData(t *testing.T) {
 
 func TestValidatePatchMissingData(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct{ missingFields []string }{
 		{missingFields: []string{"apiVersion"}},
 		{missingFields: []string{"kind"}},
@@ -166,6 +171,7 @@ func TestValidatePatchMissingData(t *testing.T) {
 
 func TestValidatePatchInvalidSingleManifest(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct{ invalidFields []string }{
 		{invalidFields: []string{"apiVersion"}},
 	}
@@ -214,6 +220,7 @@ func TestValidatePatchInvalidSingleManifest(t *testing.T) {
 
 func TestApplyPatches(t *testing.T) {
 	t.Parallel()
+
 	manifests := []map[string]interface{}{}
 	manifests = append(
 		manifests, *createExConfigMap("configmap1"), *createExConfigMap("configmap2"),
@@ -236,19 +243,25 @@ func TestApplyPatches(t *testing.T) {
 	patchedManifests, err := patcher.ApplyPatches()
 
 	assertEqual(t, err, nil)
+
 	patchedManifest1 := (*patchedManifests)[0]
 	_, found, _ := unstructured.NestedStringMap(patchedManifest1, "metadata", "labels")
+
 	assertEqual(t, found, false)
 
 	patchedManifest2 := (*patchedManifests)[1]
 	labels, found, _ := unstructured.NestedStringMap(patchedManifest2, "metadata", "labels")
+
 	assertEqual(t, found, true)
+
 	expectedLabels := map[string]string{"chandler": "bing"}
+
 	assertReflectEqual(t, labels, expectedLabels)
 }
 
 func TestApplyPatchesInvalidPatch(t *testing.T) {
 	t.Parallel()
+
 	manifests := []map[string]interface{}{}
 	manifests = append(
 		manifests, *createExConfigMap("configmap1"), *createExConfigMap("configmap2"),

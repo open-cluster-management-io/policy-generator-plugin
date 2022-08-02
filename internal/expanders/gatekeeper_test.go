@@ -10,8 +10,8 @@ import (
 
 func TestGatekeeperCanHandle(t *testing.T) {
 	t.Parallel()
-	g := GatekeeperPolicyExpander{}
 
+	g := GatekeeperPolicyExpander{}
 	tests := []struct{ kind string }{
 		{"MyConstraint"},
 	}
@@ -37,8 +37,8 @@ func TestGatekeeperCanHandle(t *testing.T) {
 
 func TestGatekeeperCanHandleInvalid(t *testing.T) {
 	t.Parallel()
-	g := GatekeeperPolicyExpander{}
 
+	g := GatekeeperPolicyExpander{}
 	tests := []struct{ apiVersion, kind, name string }{
 		{"v1", "MyConstraint", "my-awesomer-policy"},
 		{gatekeeperConstraintAPIVersion, "MyConstraint", ""},
@@ -66,11 +66,13 @@ func TestGatekeeperCanHandleInvalid(t *testing.T) {
 
 func TestGatekeeperEnabled(t *testing.T) {
 	t.Parallel()
+
 	g := GatekeeperPolicyExpander{}
 	tests := []struct {
 		Enabled  bool
 		Expected bool
 	}{{true, true}, {false, false}}
+
 	for _, test := range tests {
 		policyConf := types.PolicyConfig{InformGatekeeperPolicies: test.Enabled}
 		assertEqual(t, g.Enabled(&policyConf), test.Expected)
@@ -79,6 +81,7 @@ func TestGatekeeperEnabled(t *testing.T) {
 
 func TestGatekeeperExpand(t *testing.T) {
 	t.Parallel()
+
 	g := GatekeeperPolicyExpander{}
 	manifest := map[string]interface{}{
 		"apiVersion": gatekeeperConstraintAPIVersion,

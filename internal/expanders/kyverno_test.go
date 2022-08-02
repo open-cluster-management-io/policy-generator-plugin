@@ -10,8 +10,8 @@ import (
 
 func TestKyvernoCanHandle(t *testing.T) {
 	t.Parallel()
-	k := KyvernoPolicyExpander{}
 
+	k := KyvernoPolicyExpander{}
 	tests := []struct{ kind string }{
 		{kyvernoClusterKind},
 		{kyvernoNamespacedKind},
@@ -38,8 +38,8 @@ func TestKyvernoCanHandle(t *testing.T) {
 
 func TestKyvernoCanHandleInvalid(t *testing.T) {
 	t.Parallel()
-	k := KyvernoPolicyExpander{}
 
+	k := KyvernoPolicyExpander{}
 	tests := []struct{ apiVersion, kind, name string }{
 		{"v1", kyvernoClusterKind, "my-awesome-policy"},
 		{"v1", kyvernoNamespacedKind, "my-awesome-policy"},
@@ -69,11 +69,13 @@ func TestKyvernoCanHandleInvalid(t *testing.T) {
 
 func TestKyvernoEnabled(t *testing.T) {
 	t.Parallel()
+
 	k := KyvernoPolicyExpander{}
 	tests := []struct {
 		Enabled  bool
 		Expected bool
 	}{{true, true}, {false, false}}
+
 	for _, test := range tests {
 		policyConf := types.PolicyConfig{InformKyvernoPolicies: test.Enabled}
 		assertEqual(t, k.Enabled(&policyConf), test.Expected)
@@ -82,6 +84,7 @@ func TestKyvernoEnabled(t *testing.T) {
 
 func TestKyvernoExpand(t *testing.T) {
 	t.Parallel()
+
 	k := KyvernoPolicyExpander{}
 	manifest := map[string]interface{}{
 		"apiVersion": kyvernoAPIVersion,
