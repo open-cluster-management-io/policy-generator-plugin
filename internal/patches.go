@@ -89,8 +89,8 @@ func (m *manifestPatcher) Validate() error {
 	namespace, _, _ := unstructured.NestedString(manifest, "metadata", "namespace")
 
 	// Apply defaults on the patches
-	for _, patch := range m.patches {
-		err := setPatchDefaults(apiVersion, kind, name, namespace, &patch)
+	for i := range m.patches {
+		err := setPatchDefaults(apiVersion, kind, name, namespace, &m.patches[i])
 		if err != nil {
 			return err
 		}
