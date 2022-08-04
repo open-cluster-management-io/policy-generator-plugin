@@ -57,6 +57,8 @@ func processGeneratorConfig(filePath string) []byte {
 	}
 
 	p := internal.Plugin{}
+
+	// #nosec G304
 	fileData, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		errorAndExit("failed to read file '%s': %s", filePath, err)
