@@ -302,6 +302,7 @@ func handleExpanders(
 // If the file cannot be decoded or each document is not a map, an error will
 // be returned.
 func unmarshalManifestFile(manifestPath string) (*[]map[string]interface{}, error) {
+	// #nosec G304
 	manifestBytes, err := ioutil.ReadFile(manifestPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read the manifest file %s", manifestPath)
