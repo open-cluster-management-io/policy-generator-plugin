@@ -145,9 +145,6 @@ metadata:
     name: my-placement-rule
     namespace: my-policies
 spec:
-    clusterConditions:
-        - status: "True"
-          type: ManagedClusterConditionAvailable
     clusterSelector:
         matchExpressions: []
 ---
@@ -461,9 +458,6 @@ metadata:
     name: placement-policy-app-config
     namespace: my-policies
 spec:
-    clusterConditions:
-        - status: "True"
-          type: ManagedClusterConditionAvailable
     clusterSelector:
         matchExpressions: []
 ---
@@ -473,9 +467,6 @@ metadata:
     name: placement-policy-app-config2
     namespace: my-policies
 spec:
-    clusterConditions:
-        - status: "True"
-          type: ManagedClusterConditionAvailable
     clusterSelector:
         matchExpressions: []
 ---
@@ -1084,9 +1075,6 @@ metadata:
     name: placement-policy-app-config
     namespace: my-policies
 spec:
-    clusterConditions:
-        - status: "True"
-          type: ManagedClusterConditionAvailable
     clusterSelector:
         matchExpressions:
             - key: cloud
@@ -1227,9 +1215,6 @@ metadata:
     name: my-plr
     namespace: my-policies
 spec:
-    clusterConditions:
-        - status: "True"
-          type: ManagedClusterConditionAvailable
     clusterSelector:
         matchExpressions:
             - key: game
@@ -1287,9 +1272,6 @@ kind: PlacementRule
 metadata:
     namespace: my-policies
 spec:
-    clusterConditions:
-        - status: "True"
-          type: ManagedClusterConditionAvailable
     clusterSelector:
         matchExpressions: []
 `
@@ -1314,9 +1296,6 @@ kind: PlacementRule
 metadata:
     name: my-plr
 spec:
-    clusterConditions:
-        - status: "True"
-          type: ManagedClusterConditionAvailable
     clusterSelector:
         matchExpressions: []
 `
@@ -1342,9 +1321,6 @@ metadata:
     name: my-plr
     namespace: wrong-namespace
 spec:
-    clusterConditions:
-        - status: "True"
-          type: ManagedClusterConditionAvailable
     clusterSelector:
         matchExpressions: []
 `
@@ -1896,9 +1872,6 @@ metadata:
     name: my-placement-rule
     namespace: my-policies
 spec:
-    clusterConditions:
-        - status: "True"
-          type: ManagedClusterConditionAvailable
     clusterSelector:
         matchExpressions: []
 ---
@@ -2019,9 +1992,6 @@ metadata:
     name: my-placement
     namespace: my-policies
 spec:
-    clusterConditions:
-        - status: "True"
-          type: ManagedClusterConditionAvailable
     clusterSelector:
         matchExpressions: []
 ---
@@ -2031,9 +2001,6 @@ metadata:
     name: policyset-placement
     namespace: my-policies
 spec:
-    clusterConditions:
-        - status: "True"
-          type: ManagedClusterConditionAvailable
     clusterSelector:
         matchExpressions:
             - key: my
