@@ -1255,9 +1255,6 @@ func (p *Plugin) createPlacement(placementConfig *types.PlacementConfig, nameDef
 					"namespace": p.PolicyDefaults.Namespace,
 				},
 				"spec": map[string]interface{}{
-					"clusterConditions": []map[string]string{
-						{"status": "True", "type": "ManagedClusterConditionAvailable"},
-					},
 					"clusterSelector": map[string]interface{}{
 						"matchExpressions": matchExpressions,
 					},
