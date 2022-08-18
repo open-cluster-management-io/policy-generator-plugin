@@ -235,9 +235,13 @@ func isPolicyTypeManifest(manifest map[string]interface{}) (bool, error) {
 
 // setNamespaceSelector sets the namespace selector, if set, on the input policy template.
 func setNamespaceSelector(policyConf *types.PolicyConfig, policyTemplate *map[string]map[string]interface{}) {
-	if policyConf.NamespaceSelector.Exclude != nil || policyConf.NamespaceSelector.Include != nil {
+	selector := policyConf.NamespaceSelector
+	if selector.Exclude != nil ||
+		selector.Include != nil ||
+		selector.MatchLabels != nil ||
+		selector.MatchExpressions != nil {
 		spec := (*policyTemplate)["objectDefinition"]["spec"].(map[string]interface{})
-		spec["namespaceSelector"] = policyConf.NamespaceSelector
+		spec["namespaceSelector"] = selector
 	}
 }
 

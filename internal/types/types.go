@@ -1,6 +1,12 @@
 // Copyright Contributors to the Open Cluster Management project
 package types
 
+import (
+	"fmt"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
 type Manifest struct {
 	ComplianceType         string                   `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
 	MetadataComplianceType string                   `json:"metadataComplianceType,omitempty" yaml:"metadataComplianceType,omitempty"`
@@ -10,8 +16,28 @@ type Manifest struct {
 }
 
 type NamespaceSelector struct {
-	Exclude []string `json:"exclude,omitempty" yaml:"exclude,omitempty"`
-	Include []string `json:"include,omitempty" yaml:"include,omitempty"`
+	Exclude          []string                           `json:"exclude,omitempty" yaml:"exclude,omitempty"`
+	Include          []string                           `json:"include,omitempty" yaml:"include,omitempty"`
+	MatchLabels      *map[string]string                 `json:"matchLabels,omitempty" yaml:"matchLabels,omitempty"`
+	MatchExpressions *[]metav1.LabelSelectorRequirement `json:"matchExpressions,omitempty" yaml:"matchExpressions,omitempty"`
+}
+
+// Define String() so that the LabelSelector is dereferenced in the logs
+func (t NamespaceSelector) String() string {
+	fmtSelectorStr := "{include:%s,exclude:%s,matchLabels:%+v,matchExpressions:%+v}"
+	if t.MatchLabels == nil && t.MatchExpressions == nil {
+		return fmt.Sprintf(fmtSelectorStr, t.Include, t.Exclude, nil, nil)
+	}
+
+	if t.MatchLabels == nil {
+		return fmt.Sprintf(fmtSelectorStr, t.Include, t.Exclude, nil, *t.MatchExpressions)
+	}
+
+	if t.MatchExpressions == nil {
+		return fmt.Sprintf(fmtSelectorStr, t.Include, t.Exclude, *t.MatchLabels, nil)
+	}
+
+	return fmt.Sprintf(fmtSelectorStr, t.Include, t.Exclude, *t.MatchLabels, *t.MatchExpressions)
 }
 
 type PlacementConfig struct {
