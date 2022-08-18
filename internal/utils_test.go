@@ -30,6 +30,83 @@ func assertReflectEqual(t *testing.T, a interface{}, b interface{}) {
 	}
 }
 
+func assertSelectorEqual(t *testing.T, a map[string]interface{}, b types.NamespaceSelector) {
+	t.Helper()
+
+	if !compareSelectors(a, b) {
+		t.Fatalf("%s != %s", a, b)
+	}
+}
+
+func compareStringArrays(a []interface{}, b []string) bool {
+	// Account for when b is []string(nil)
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
+
+	// Create a string array from []interface{}
+	aTyped := make([]string, len(a))
+	for i, val := range a {
+		aTyped[i] = val.(string)
+	}
+
+	return reflect.DeepEqual(aTyped, b)
+}
+
+func compareSelectors(a map[string]interface{}, b types.NamespaceSelector) bool {
+	if includeA, ok := a["include"].([]interface{}); ok {
+		if !compareStringArrays(includeA, b.Include) {
+			return false
+		}
+	} else if len(b.Include) != 0 {
+		return false
+	}
+
+	if excludeA, ok := a["exclude"].([]interface{}); ok {
+		if !compareStringArrays(excludeA, b.Exclude) {
+			return false
+		}
+	} else if len(b.Exclude) != 0 {
+		return false
+	}
+
+	if matchLabelsA, ok := a["matchLabels"].(map[string]string); ok {
+		if !reflect.DeepEqual(matchLabelsA, b.MatchLabels) {
+			return false
+		}
+	} else if matchLabelsA != nil && b.MatchLabels != nil {
+		return false
+	}
+
+	if matchExpressionsA, ok := a["matchExpressions"].([]interface{}); ok {
+		if a["matchExpressions"] != b.MatchExpressions {
+			if b.MatchExpressions == nil {
+				return false
+			}
+
+			if len(matchExpressionsA) != len(*b.MatchExpressions) {
+				return false
+			}
+
+			for i := range matchExpressionsA {
+				meA := matchExpressionsA[i]
+				valuesA := meA.(map[string]interface{})["values"].([]interface{})
+				meB := (*b.MatchExpressions)[i]
+
+				if meA.(map[string]interface{})["key"].(string) != meB.Key ||
+					meA.(map[string]interface{})["operator"].(string) != string(meB.Operator) ||
+					!compareStringArrays(valuesA, meB.Values) {
+					return false
+				}
+			}
+		}
+	} else if matchExpressionsA != nil && b.MatchExpressions != nil {
+		return false
+	}
+
+	return true
+}
+
 func TestGetPolicyTemplate(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()

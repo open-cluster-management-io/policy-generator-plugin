@@ -6,9 +6,11 @@ import (
 	"io/ioutil"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
 )
 
@@ -2361,6 +2363,106 @@ func TestCreatePolicyWithConfigPolicyAnnotations(t *testing.T) {
 				} else {
 					assertReflectEqual(t, annotations, test.annotations)
 				}
+			}
+		})
+	}
+}
+
+func TestCreatePolicyWithNamespaceSelector(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	tests := map[string]struct {
+		name              string
+		namespaceSelector types.NamespaceSelector
+	}{
+		"nil-selector": {namespaceSelector: types.NamespaceSelector{}},
+		"empty-selector-values": {
+			namespaceSelector: types.NamespaceSelector{
+				Include:          []string{},
+				Exclude:          []string{},
+				MatchLabels:      &map[string]string{},
+				MatchExpressions: &[]metav1.LabelSelectorRequirement{},
+			},
+		},
+		"completely-filled-values": {
+			namespaceSelector: types.NamespaceSelector{
+				Include: []string{"test-ns-1", "test-ns-2"},
+				Exclude: []string{"*-ns-[1]"},
+				MatchLabels: &map[string]string{
+					"testing": "is awesome",
+				},
+				MatchExpressions: &[]metav1.LabelSelectorRequirement{{
+					Key:      "door",
+					Operator: "Exists",
+				}},
+			},
+		},
+		"include-exclude-only": {
+			namespaceSelector: types.NamespaceSelector{
+				Include: []string{"test-ns-1", "test-ns-2"},
+				Exclude: []string{"*-ns-[1]"},
+			},
+		},
+		"label-selectors-only": {
+			namespaceSelector: types.NamespaceSelector{
+				MatchLabels: &map[string]string{
+					"testing": "is awesome",
+				},
+				MatchExpressions: &[]metav1.LabelSelectorRequirement{{
+					Key:      "door",
+					Operator: "Exists",
+				}},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		test := test
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			p := Plugin{}
+			p.PolicyDefaults.Namespace = "my-policies"
+			p.PolicyDefaults.NamespaceSelector = types.NamespaceSelector{
+				MatchLabels: &map[string]string{},
+			}
+			policyConf := types.PolicyConfig{
+				Name: "policy-app-config", Manifests: []types.Manifest{
+					{Path: path.Join(tmpDir, "configmap.yaml")},
+				},
+			}
+			policyConf.NamespaceSelector = test.namespaceSelector
+
+			p.Policies = append(p.Policies, policyConf)
+			p.applyDefaults(map[string]interface{}{})
+
+			err := p.createPolicy(&p.Policies[0])
+			if err != nil {
+				t.Fatal(err.Error())
+			}
+
+			output := p.outputBuffer.Bytes()
+			policyManifests, err := unmarshalManifestBytes(output)
+			if err != nil {
+				t.Fatal(err.Error())
+			}
+			// nolint: forcetypeassert
+			spec := (*policyManifests)[0]["spec"].(map[string]interface{})
+			policyTemplates := spec["policy-templates"].([]interface{})
+			// nolint: forcetypeassert
+			configPolicy := policyTemplates[0].(map[string]interface{})["objectDefinition"].(map[string]interface{})
+			// nolint: forcetypeassert
+			configPolicySpec := configPolicy["spec"].(map[string]interface{})
+			// nolint: forcetypeassert
+			configPolicySelector := configPolicySpec["namespaceSelector"].(map[string]interface{})
+
+			if reflect.DeepEqual(test.namespaceSelector, types.NamespaceSelector{}) {
+				assertSelectorEqual(t, configPolicySelector, p.PolicyDefaults.NamespaceSelector)
+			} else {
+				assertSelectorEqual(t, configPolicySelector, test.namespaceSelector)
 			}
 		})
 	}

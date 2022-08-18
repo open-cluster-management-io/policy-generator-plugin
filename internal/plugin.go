@@ -533,11 +533,12 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			}
 		}
 
-		// Only use defaults when when both include and exclude are not set on the policy
+		// Only use defaults when when the namespaceSelector is not set on the policy
 		nsSelector := policy.NamespaceSelector
 		defNsSelector := p.PolicyDefaults.NamespaceSelector
 
-		if nsSelector.Exclude == nil && nsSelector.Include == nil {
+		if nsSelector.Exclude == nil && nsSelector.Include == nil &&
+			nsSelector.MatchLabels == nil && nsSelector.MatchExpressions == nil {
 			policy.NamespaceSelector = defNsSelector
 		}
 
