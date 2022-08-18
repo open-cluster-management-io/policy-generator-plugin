@@ -17,6 +17,9 @@ policyDefaults:
   # annotation. This defaults to ["CM Configuration Management"].
   categories:
     - "CM Configuration Management"
+  # Optional. Determines the policy controller behavior when comparing the manifest to objects on
+  # the cluster ("musthave",  "mustonlyhave", or "mustnothave"). Defaults to "musthave".
+  complianceType: "musthave"
   # Optional. Key-value pairs of annotations to set on generated configuration policies. For
   # example, to disable policy templates, you can set this to:
   # {"policy.open-cluster-management.io/disable-templates": "true"}. This defaults to {}.
@@ -49,6 +52,14 @@ policyDefaults:
   metadataComplianceType: ""
   # Required. The namespace of all the policies.
   namespace: ""
+  # Optional. Determines the list of namespaces to check on the cluster for the given manifest. If
+  # a namespace is specified in the manifest, the selector is not necessary. This defaults to no
+  # selectors.
+  namespaceSelector:
+    include: []
+    exclude: []
+    matchLabels: {}
+    matchExpressions: []
   # Optional. The placement configuration for the policies. This defaults to a placement
   # configuration that matches all clusters.
   placement:
@@ -79,8 +90,6 @@ policyDefaults:
     # exists. Use of this setting will prevent a placement rule from being generated, but the
     # placement binding will still be created.
     placementRuleName: ""
-
-
   # Optional. The remediation action ("inform" or "enforce") for each configuration policy. This
   # defaults to "inform".
   remediationAction: "inform"
@@ -103,6 +112,7 @@ policyDefaults:
   # Optional. Annotations that the policy will include under its metadata.annotations. It will be applied for all
   # policies unless specified in the policy.
   policyAnnotations: {}
+
 # Required. The list of policies to create along with overrides to either the default values or, if
 # set, the values given in policyDefaults.
 policies:
@@ -121,7 +131,7 @@ policies:
         #   2) For everything else, ConfigurationPolicy objects are generated to wrap these manifests. 
         #      The resulting ConfigurationPolicy is added as a Policy's policy-templates entry.
       - path: ""
-        # Optional. (See policy[0].complianceType for description.)
+        # Optional. (See policyDefaults.complianceType for description.)
         complianceType: "musthave"
         # Optional. (See policyDefaults.metadataComplianceType for description.)
         metadataComplianceType: ""
@@ -150,8 +160,7 @@ policies:
     # Optional. (See policyDefaults.categories for description.)
     categories:
       - "CM Configuration Management"
-    # Optional. Determines the policy controller behavior when comparing the manifest to objects on
-    # the cluster ("musthave",  "mustonlyhave", or "mustnothave"). Defaults to "musthave".
+    # Optional. (See policyDefaults.complianceType for description.)
     complianceType: "musthave"
     # Optional. (See policyDefaults.configurationPolicyAnnotations for description.)
     configurationPolicyAnnotations: {}
@@ -168,12 +177,8 @@ policies:
     informKyvernoPolicies: true
     # Optional. (See policyDefaults.consolidateManifests for description.)
     consolidateManifests: true
-    # Optional. Determines the list of namespaces to check on the cluster for the given manifest. If
-    # a namespace is specified in the manifest, the selector is not necessary. This defaults to no
-    # selectors.
-    namespaceSelector:
-      include: []
-      exclude: []
+    # Optional.(See policyDefaults.namespaceSelector for description.)
+    namespaceSelector: {}
     # Optional. (See policyDefaults.placement for description.)
     placement: {}
     # Optional. (See policyDefaults.remediationAction for description.)
