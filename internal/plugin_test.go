@@ -190,7 +190,7 @@ func TestGeneratePolicyExisingPlacementRuleName(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	p.PolicyDefaults.Placement.PlacementRuleName = "plrExistingName"
+	p.PolicyDefaults.Placement.PlacementRuleName = "plrexistingname"
 	p.PolicyDefaults.Namespace = "my-policies"
 	p.PolicyDefaults.MetadataComplianceType = "musthave"
 	policyConf := types.PolicyConfig{
@@ -252,7 +252,7 @@ metadata:
 placementRef:
     apiGroup: apps.open-cluster-management.io
     kind: PlacementRule
-    name: plrExistingName
+    name: plrexistingname
 subjects:
     - apiGroup: policy.open-cluster-management.io
       kind: Policy
@@ -281,7 +281,7 @@ func TestGeneratePolicyExisingPlacementName(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	p.PolicyDefaults.Placement.PlacementName = "plExistingName"
+	p.PolicyDefaults.Placement.PlacementName = "plexistingname"
 	p.PolicyDefaults.Namespace = "my-policies"
 	p.PolicyDefaults.MetadataComplianceType = "musthave"
 	policyConf := types.PolicyConfig{
@@ -343,7 +343,7 @@ metadata:
 placementRef:
     apiGroup: cluster.open-cluster-management.io
     kind: Placement
-    name: plExistingName
+    name: plexistingname
 subjects:
     - apiGroup: policy.open-cluster-management.io
       kind: Policy
@@ -2464,6 +2464,202 @@ func TestCreatePolicyWithNamespaceSelector(t *testing.T) {
 			} else {
 				assertSelectorEqual(t, configPolicySelector, test.namespaceSelector)
 			}
+		})
+	}
+}
+
+func TestGenerateNonDNSPolicyName(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	tests := []struct {
+		name       string
+		policyName string
+	}{
+		{
+			name:       "capitalized",
+			policyName: "policy-APP-CONFIG",
+		},
+		{
+			name:       "invalid character",
+			policyName: "policy_app_config",
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			p := Plugin{}
+			var err error
+
+			p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+			if err != nil {
+				t.Fatal(err.Error())
+			}
+
+			p.PlacementBindingDefaults.Name = "my-placement-binding"
+			p.PolicyDefaults.Placement.Name = "my-placement-rule"
+			p.PolicyDefaults.Namespace = "my-policies"
+			policyConf := types.PolicyConfig{
+				Name: test.policyName,
+				Manifests: []types.Manifest{
+					{Path: path.Join(tmpDir, "configmap.yaml")},
+				},
+			}
+			basePolicies := p.Policies
+			p.Policies = append(basePolicies, policyConf)
+			p.applyDefaults(map[string]interface{}{})
+
+			err = p.assertValidConfig()
+			if err == nil {
+				t.Fatal("Expected an error but did not get one")
+			}
+
+			expected := fmt.Sprintf(
+				"policy name `%s` is not DNS compliant. See "+
+					"https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names",
+				test.policyName,
+			)
+			assertEqual(t, err.Error(), expected)
+		})
+	}
+}
+
+func TestGenerateNonDNSPlacementName(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	tests := []struct {
+		name          string
+		placementName string
+	}{
+		{
+			name:          "capitalized",
+			placementName: "my-placement-RULE",
+		},
+		{
+			name:          "invalid character",
+			placementName: "my-placement?rule",
+		},
+		{
+			name: "too many characters",
+			placementName: "placementplacementplacementplacementplacementplacementplacementplacementplacement" +
+				"placementplacementplacementplacementplacementplacementplacementplacementplacementplacement" +
+				"placementplacementplacementplacementplacementplacementplacementplacementplacementrule",
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			p := Plugin{}
+			var err error
+
+			p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+			if err != nil {
+				t.Fatal(err.Error())
+			}
+
+			p.PlacementBindingDefaults.Name = "my-placement-binding"
+			p.PolicyDefaults.Placement.Name = test.placementName
+			p.PolicyDefaults.Namespace = "my-policies"
+			policyConf := types.PolicyConfig{
+				Name: "policy-app-config",
+				Manifests: []types.Manifest{
+					{Path: path.Join(tmpDir, "configmap.yaml")},
+				},
+			}
+			p.Policies = append(p.Policies, policyConf)
+			p.applyDefaults(map[string]interface{}{})
+
+			err = p.assertValidConfig()
+			if err == nil {
+				t.Fatal("Expected an error but did not get one")
+			}
+
+			expected := fmt.Sprintf(
+				"PolicyDefaults.Placement.Name `%s` is not DNS compliant. See "+
+					"https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names",
+				test.placementName,
+			)
+			assertEqual(t, err.Error(), expected)
+		})
+	}
+}
+
+func TestGenerateNonDNSBindingName(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	tests := []struct {
+		name        string
+		bindingName string
+	}{
+		{
+			name:        "capitalized",
+			bindingName: "my-placement-BINDING",
+		},
+		{
+			name:        "invalid character",
+			bindingName: "my-placement?binding",
+		},
+		{
+			name: "too many characters",
+			bindingName: "placementplacementplacementplacementplacementplacementplacementplacementplacement" +
+				"placementplacementplacementplacementplacementplacementplacementplacementplacementplacement" +
+				"placementplacementplacementplacementplacementplacementplacementplacementplacementbinding",
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			p := Plugin{}
+			var err error
+
+			p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+			if err != nil {
+				t.Fatal(err.Error())
+			}
+
+			p.PlacementBindingDefaults.Name = test.bindingName
+			p.PolicyDefaults.Placement.Name = "my-placement-rule"
+			p.PolicyDefaults.Namespace = "my-policies"
+			policyConf := types.PolicyConfig{
+				Name: "policy-app-config",
+				Manifests: []types.Manifest{
+					{Path: path.Join(tmpDir, "configmap.yaml")},
+				},
+			}
+			policyConf2 := types.PolicyConfig{
+				Name: "policy-app-config2",
+				Manifests: []types.Manifest{
+					{Path: path.Join(tmpDir, "configmap.yaml")},
+				},
+			}
+			p.Policies = append(p.Policies, policyConf, policyConf2)
+			p.applyDefaults(map[string]interface{}{})
+
+			err = p.assertValidConfig()
+			if err == nil {
+				t.Fatal("Expected an error but did not get one")
+			}
+
+			expected := fmt.Sprintf(
+				"PlacementBindingDefaults.Name `%s` is not DNS compliant. See "+
+					"https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names",
+				test.bindingName,
+			)
+			assertEqual(t, err.Error(), expected)
 		})
 	}
 }
