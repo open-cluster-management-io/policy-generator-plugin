@@ -429,7 +429,7 @@ policies:
   placement:
     clusterSelectors:
       cloud: red hat
-    placementRuleName: plrExistingName
+    placementRuleName: plrexistingname
   manifests:
     - path: %s
 `,
@@ -497,7 +497,7 @@ policies:
   placement:
     labelSelector:
       cloud: red hat
-    placementRuleName: plrExistingName
+    placementRuleName: plrexistingname
   manifests:
     - path: %s
 `,
@@ -565,7 +565,7 @@ policies:
   placement:
     labelSelector:
       cloud: red hat
-    placementName: plExistingName
+    placementName: plexistingname
   manifests:
     - path: %s
 `,
@@ -766,7 +766,7 @@ metadata:
 policyDefaults:
   namespace: my-policies
   placement:
-    placementName: plExistingName
+    placementName: plexistingname
 policies:
 - name: policy-app-config
   placement:
@@ -1231,7 +1231,7 @@ func TestPolicySetConfig(t *testing.T) {
 					{
 						Name: "my-policyset",
 						Placement: types.PlacementConfig{
-							PlacementName:    "plExistingName",
+							PlacementName:    "plexistingname",
 							ClusterSelectors: map[string]string{"cloud": "red hat"},
 						},
 					},
@@ -1263,7 +1263,7 @@ func TestPolicySetConfig(t *testing.T) {
 					{
 						Name: "my-policyset",
 						Placement: types.PlacementConfig{
-							PlacementName: "plExistingName",
+							PlacementName: "plexistingname",
 							LabelSelector: map[string]string{"cloud": "red hat"},
 						},
 					},
@@ -1295,7 +1295,7 @@ func TestPolicySetConfig(t *testing.T) {
 					{
 						Name: "my-policyset",
 						Placement: types.PlacementConfig{
-							PlacementRuleName: "plrExisingName",
+							PlacementRuleName: "plrexisingname",
 							ClusterSelectors:  map[string]string{"cloud": "red hat"},
 						},
 					},
@@ -1327,7 +1327,7 @@ func TestPolicySetConfig(t *testing.T) {
 					{
 						Name: "my-policyset",
 						Placement: types.PlacementConfig{
-							PlacementRuleName: "plrExisingName",
+							PlacementRuleName: "plrexisingname",
 							LabelSelector:     map[string]string{"cloud": "red hat"},
 						},
 					},

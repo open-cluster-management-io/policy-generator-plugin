@@ -13,6 +13,7 @@ import (
 
 	yaml "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
 )
 
@@ -30,6 +31,8 @@ const (
 	placementAPIVersion        = "cluster.open-cluster-management.io/v1beta1"
 	placementKind              = "Placement"
 	maxObjectNameLength        = 63
+	dnsReference               = "https://kubernetes.io/docs/concepts/overview/working-with-objects/names/" +
+		"#dns-subdomain-names"
 )
 
 // Plugin is used to store the PolicyGenerator configuration and the methods to generate the
@@ -648,6 +651,41 @@ func (p *Plugin) assertValidConfig() error {
 		)
 	}
 
+	// validate placement and binding names are DNS compliant
+	defPlrName := p.PolicyDefaults.Placement.PlacementRuleName
+	if defPlrName != "" && len(validation.IsDNS1123Subdomain(defPlrName)) > 0 {
+		return fmt.Errorf(
+			"PolicyDefaults.Placement.PlacementRuleName placement name `%s` is not DNS compliant. See %s",
+			defPlrName,
+			dnsReference,
+		)
+	}
+
+	defPlcmtPlName := p.PolicyDefaults.Placement.PlacementName
+	if defPlcmtPlName != "" && len(validation.IsDNS1123Subdomain(defPlcmtPlName)) > 0 {
+		return fmt.Errorf(
+			"PolicyDefaults.Placement.PlacementName `%s` is not DNS compliant. See %s",
+			defPlcmtPlName,
+			dnsReference,
+		)
+	}
+
+	defPlName := p.PolicyDefaults.Placement.Name
+	if defPlName != "" && len(validation.IsDNS1123Subdomain(defPlName)) > 0 {
+		return fmt.Errorf(
+			"PolicyDefaults.Placement.Name `%s` is not DNS compliant. See %s", defPlName, dnsReference,
+		)
+	}
+
+	if p.PlacementBindingDefaults.Name != "" &&
+		len(validation.IsDNS1123Subdomain(p.PlacementBindingDefaults.Name)) > 0 {
+		return fmt.Errorf(
+			"PlacementBindingDefaults.Name `%s` is not DNS compliant. See %s",
+			p.PlacementBindingDefaults.Name,
+			dnsReference,
+		)
+	}
+
 	defaultPlacementOptions := 0
 	if len(p.PolicyDefaults.Placement.LabelSelector) != 0 || len(p.PolicyDefaults.Placement.ClusterSelectors) != 0 {
 		defaultPlacementOptions++
@@ -682,6 +720,12 @@ func (p *Plugin) assertValidConfig() error {
 		if policy.Name == "" {
 			return fmt.Errorf(
 				"each policy must have a name set, but did not find a name at policy array index %d", i,
+			)
+		}
+
+		if len(validation.IsDNS1123Subdomain(policy.Name)) > 0 {
+			return fmt.Errorf(
+				"policy name `%s` is not DNS compliant. See %s", policy.Name, dnsReference,
 			)
 		}
 
@@ -799,6 +843,34 @@ func (p *Plugin) assertValidConfig() error {
 			)
 		}
 
+		// validate placement names are DNS compliant
+		plcPlrName := policy.Placement.PlacementRuleName
+		if plcPlrName != "" && len(validation.IsDNS1123Subdomain(plcPlrName)) > 0 {
+			return fmt.Errorf(
+				"policy.Placement.PlacementRuleName `%s` is not DNS compliant. See %s",
+				plcPlrName,
+				dnsReference,
+			)
+		}
+
+		plcPlcmtPlName := policy.Placement.PlacementName
+		if plcPlcmtPlName != "" && len(validation.IsDNS1123Subdomain(plcPlcmtPlName)) > 0 {
+			return fmt.Errorf(
+				"policy.Placement.PlacementRuleName `%s` is not DNS compliant. See %s",
+				plcPlcmtPlName,
+				dnsReference,
+			)
+		}
+
+		plcPlName := policy.Placement.Name
+		if plcPlName != "" && len(validation.IsDNS1123Subdomain(plcPlName)) > 0 {
+			return fmt.Errorf(
+				"policy.Placement.PlacementRuleName `%s` is not DNS compliant. See %s",
+				plcPlName,
+				dnsReference,
+			)
+		}
+
 		policyPlacementOptions := 0
 		if len(policy.Placement.LabelSelector) != 0 || len(policy.Placement.ClusterSelectors) != 0 {
 			policyPlacementOptions++
@@ -872,6 +944,12 @@ func (p *Plugin) assertValidConfig() error {
 			)
 		}
 
+		if len(validation.IsDNS1123Subdomain(plcset.Name)) > 0 {
+			return fmt.Errorf(
+				"policy set name `%s` is not DNS compliant. See %s", plcset.Name, dnsReference,
+			)
+		}
+
 		if seenPlcset[plcset.Name] {
 			return fmt.Errorf(
 				"each policySet must have a unique name set, but found a duplicate name: %s", plcset.Name,
@@ -897,6 +975,28 @@ func (p *Plugin) assertValidConfig() error {
 			return fmt.Errorf(
 				"policySet %s must provide only one of placement.labelSelector or placement.clusterselectors",
 				plcset.Name,
+			)
+		}
+
+		// validate placement names are DNS compliant
+		plcSetPlrName := plcset.Placement.PlacementRuleName
+		if plcSetPlrName != "" && len(validation.IsDNS1123Subdomain(plcSetPlrName)) > 0 {
+			return fmt.Errorf(
+				"plcset.Placement.PlacementRuleName `%s` is not DNS compliant. See %s", plcSetPlrName, dnsReference,
+			)
+		}
+
+		plcSetPlcmtPlName := plcset.Placement.PlacementName
+		if plcSetPlcmtPlName != "" && len(validation.IsDNS1123Subdomain(plcSetPlcmtPlName)) > 0 {
+			return fmt.Errorf(
+				"plcset.Placement.PlacementName `%s` is not DNS compliant. See %s", plcSetPlcmtPlName, dnsReference,
+			)
+		}
+
+		plcSetPlName := plcset.Placement.Name
+		if plcSetPlName != "" && len(validation.IsDNS1123Subdomain(plcSetPlName)) > 0 {
+			return fmt.Errorf(
+				"plcset.Placement.Name `%s` is not DNS compliant. See %s", plcSetPlName, dnsReference,
 			)
 		}
 
