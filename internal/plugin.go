@@ -38,7 +38,9 @@ const (
 // Plugin is used to store the PolicyGenerator configuration and the methods to generate the
 // desired policies.
 type Plugin struct {
-	Metadata struct {
+	APIVersion string `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
+	Kind       string `json:"kind,omitempty" yaml:"kind,omitempty"`
+	Metadata   struct {
 		Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	PlacementBindingDefaults struct {
@@ -75,11 +77,14 @@ var defaults = types.PolicyDefaults{
 // Config validates the input PolicyGenerator configuration, applies any missing defaults, and
 // configures the Policy object.
 func (p *Plugin) Config(config []byte, baseDirectory string) error {
-	err := yaml.Unmarshal(config, p)
+	dec := yaml.NewDecoder(bytes.NewReader(config))
+	dec.KnownFields(true) // emit an error on unknown fields in the input
+
+	err := dec.Decode(p)
 	const errTemplate = "the PolicyGenerator configuration file is invalid: %w"
 
 	if err != nil {
-		return fmt.Errorf(errTemplate, err)
+		return fmt.Errorf(errTemplate, addFieldNotFoundHelp(err))
 	}
 
 	var unmarshaledConfig map[string]interface{}
