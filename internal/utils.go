@@ -16,6 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/expanders"
 	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
+	"sigs.k8s.io/kustomize/api/krusty"
+	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
 // getManifests will get all of the manifest files associated with the input policy configuration
@@ -23,6 +25,7 @@ import (
 // be read.
 func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, error) {
 	manifests := [][]map[string]interface{}{}
+	hasKustomize := map[string]bool{}
 
 	for _, manifest := range policyConf.Manifests {
 		manifestPaths := []string{}
@@ -33,6 +36,8 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 		if err != nil {
 			return nil, readErr
 		}
+
+		resolvedFiles := []string{}
 
 		if manifestPathInfo.IsDir() {
 			files, err := ioutil.ReadDir(manifest.Path)
@@ -45,14 +50,26 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 					continue
 				}
 
-				ext := path.Ext(f.Name())
+				filepath := f.Name()
+				ext := path.Ext(filepath)
+
 				if ext != ".yaml" && ext != ".yml" {
 					continue
 				}
+				// Handle when a Kustomization directory is specified
+				_, filename := path.Split(filepath)
+				if filename == "kustomization.yml" || filename == "kustomization.yaml" {
+					hasKustomize[manifest.Path] = true
+					resolvedFiles = []string{manifest.Path}
+
+					break
+				}
 
 				yamlPath := path.Join(manifest.Path, f.Name())
-				manifestPaths = append(manifestPaths, yamlPath)
+				resolvedFiles = append(resolvedFiles, yamlPath)
 			}
+
+			manifestPaths = append(manifestPaths, resolvedFiles...)
 		} else {
 			// Unmarshal the manifest in order to check for metadata patch replacement
 			manifestFile, err := unmarshalManifestFile(manifest.Path)
@@ -85,7 +102,15 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 		}
 
 		for _, manifestPath := range manifestPaths {
-			manifestFile, err := unmarshalManifestFile(manifestPath)
+			var manifestFile *[]map[string]interface{}
+			var err error
+
+			if hasKustomize[manifestPath] {
+				manifestFile, err = processKustomizeDir(manifestPath)
+			} else {
+				manifestFile, err = unmarshalManifestFile(manifestPath)
+			}
+
 			if err != nil {
 				return nil, err
 			}
@@ -243,6 +268,28 @@ func setNamespaceSelector(policyConf *types.PolicyConfig, policyTemplate *map[st
 		spec := (*policyTemplate)["objectDefinition"]["spec"].(map[string]interface{})
 		spec["namespaceSelector"] = selector
 	}
+}
+
+// processKustomizeDir runs a provided directory through Kustomize in order to generate the manifests within it.
+func processKustomizeDir(path string) (*[]map[string]interface{}, error) {
+	k := krusty.MakeKustomizer(krusty.MakeDefaultOptions())
+
+	resourceMap, err := k.Run(filesys.MakeFsOnDisk(), path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to process provided kustomize directory '%s': %w", path, err)
+	}
+
+	manifestsYAML, err := resourceMap.AsYaml()
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert the kustomize manifest(s) to YAML from directory '%s': %w", path, err)
+	}
+
+	manifests, err := unmarshalManifestBytes(manifestsYAML)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the kustomize manifest(s) from directory '%s': %w", path, err)
+	}
+
+	return manifests, nil
 }
 
 // buildPolicyTemplate generates single policy template by using objectTemplates with manifests.

@@ -122,8 +122,9 @@ policies:
     manifests:
         # Required. Path to a single file or a flat directory of files relative to the
         # kustomization.yaml file. This path cannot be in a directory outside of the directory with
-        # the kustomization.yaml file. Subdirectories within the directory with kustomization.yaml
-        # file are allowed.
+        # the kustomization.yaml file. Subdirectories within the directory of the kustomization.yaml
+        # file are allowed. Kustomization subdirectories are also supported and will not process any
+        # YAML files in the subdirectory if a kustomization.yaml file is found.
         # Supported manifests:
         #   1) Non-root policy type manifests such as IamPolicy, CertificatePolicy, and ConfigurationPolicy
         #      that have a "Policy" suffix. These are not modified except for patches and are directly added 
@@ -137,10 +138,10 @@ policies:
         metadataComplianceType: ""
          # Optional. (See policyDefaults.evaluationInterval for description.)
         evaluationInterval: {}
-        # Optional. A Kustomize patch to apply to the manifest(s) at the path. If there
-        # are multiple manifests, the patch requires the apiVersion, kind, metadata.name,
-        # and metadata.namespace (if applicable) fields to be set so Kustomize
-        # can identify the manifest the patch applies to.
+        # (Note: a path to a directory containing a Kustomize manifest is a supported alternative.) Optional. A
+        # Kustomize patch to apply to the manifest(s) at the path. If there are multiple manifests, the patch requires
+        # the apiVersion, kind, metadata.name, and metadata.namespace (if applicable) fields to be set so Kustomize can
+        # identify the manifest the patch applies to.
         patches:
             # Optional: Only required when there are multiple manifests in the path.
           - apiVersion: ""
