@@ -253,6 +253,156 @@ data:
 	}
 }
 
+func TestGetPolicyTemplateKustomize(t *testing.T) {
+	t.Parallel()
+	kustomizeDir := t.TempDir()
+	configStrings := []string{"tomato", "potato"}
+
+	manifestsDir := path.Join(kustomizeDir, "manifests")
+
+	err := os.Mkdir(manifestsDir, 0o777)
+	if err != nil {
+		t.Fatalf("Failed to create the directory structure %s: %v", manifestsDir, err)
+	}
+
+	for i, enemy := range configStrings {
+		manifestPath := path.Join(manifestsDir, fmt.Sprintf("configmap%d.yaml", i))
+		manifestYAML := fmt.Sprintf(
+			`
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-configmap-%d
+data:
+  game.properties: enemies=%s
+`,
+			i, enemy,
+		)
+
+		err := ioutil.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
+		if err != nil {
+			t.Fatalf("Failed to write %s", manifestPath)
+		}
+	}
+
+	kustomizeManifests := map[string]string{
+		path.Join(kustomizeDir, "kustomization.yml"): `
+resources:
+- manifests/
+
+labels:
+- pairs:
+    cool: "true"
+`,
+		path.Join(manifestsDir, "kustomization.yml"): fmt.Sprintf(`
+resources:
+- %s
+- %s
+`, "configmap0.yaml", "configmap1.yaml"),
+	}
+
+	for kustomizePath, kustomizeYAML := range kustomizeManifests {
+		err := ioutil.WriteFile(kustomizePath, []byte(kustomizeYAML), 0o666)
+		if err != nil {
+			t.Fatalf("Failed to write %s", kustomizePath)
+		}
+	}
+
+	// Write a bogus directory to verify it's not picked up
+	bogusDirectory := path.Join(kustomizeDir, "this-other-dir")
+
+	err = os.Mkdir(bogusDirectory, 0o777)
+	if err != nil {
+		t.Fatalf("Failed to create the directory structure %s: %v", bogusDirectory, err)
+	}
+
+	// Write a bogus file to verify it is not picked up when creating the policy template
+	bogusFilePath := path.Join(kustomizeDir, "this-other-file.yaml")
+
+	err = ioutil.WriteFile(bogusFilePath, []byte("# My Manifests"), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", bogusFilePath)
+	}
+
+	tests := []struct {
+		ExpectedComplianceType string
+		ManifestPath           string
+		ErrMsg                 string
+	}{
+		{
+			ExpectedComplianceType: "musthave",
+			ManifestPath:           kustomizeDir,
+		},
+		{
+			ExpectedComplianceType: "musthave",
+			ManifestPath:           "not-a-directory",
+			ErrMsg:                 "failed to read the manifest path not-a-directory",
+		},
+	}
+	for _, test := range tests {
+		policyConf := types.PolicyConfig{
+			ComplianceType:       "musthave",
+			ConsolidateManifests: true,
+			Manifests: []types.Manifest{{
+				ComplianceType: "musthave",
+				Path:           test.ManifestPath,
+			}},
+			Name:              "policy-kustomize",
+			RemediationAction: "inform",
+			Severity:          "low",
+		}
+
+		policyTemplates, err := getPolicyTemplates(&policyConf)
+		if err != nil {
+			if test.ErrMsg != "" {
+				assertEqual(t, err.Error(), test.ErrMsg)
+
+				continue
+			} else {
+				t.Fatalf("Failed to get the policy templates: %v", err)
+			}
+		}
+
+		assertEqual(t, len(policyTemplates), 1)
+
+		policyTemplate := policyTemplates[0]
+		objdef := policyTemplate["objectDefinition"]
+
+		assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-kustomize")
+
+		spec, ok := objdef["spec"].(map[string]interface{})
+		if !ok {
+			t.Fatal("The spec field is an invalid format")
+		}
+
+		assertEqual(t, spec["remediationAction"], "inform")
+		assertEqual(t, spec["severity"], "low")
+
+		objTemplates, ok := spec["object-templates"].([]map[string]interface{})
+		if !ok {
+			t.Fatal("The object-templates field is an invalid format")
+		}
+
+		assertEqual(t, len(objTemplates), 2)
+		assertEqual(t, objTemplates[0]["complianceType"], test.ExpectedComplianceType)
+
+		kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
+		if !ok {
+			t.Fatal("The objectDefinition field is an invalid format")
+		}
+
+		assertEqual(t, kind1, "ConfigMap")
+		assertEqual(t, objTemplates[1]["complianceType"], test.ExpectedComplianceType)
+
+		kind2, ok := objTemplates[1]["objectDefinition"].(map[string]interface{})["kind"]
+		if !ok {
+			t.Fatal("The objectDefinition field is an invalid format")
+		}
+
+		assertEqual(t, kind2, "ConfigMap")
+	}
+}
+
 func TestGetPolicyTemplateNoConsolidate(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -1150,5 +1300,65 @@ func TestVerifyManifestPath(t *testing.T) {
 				}
 			},
 		)
+	}
+}
+
+func TestProcessKustomizeDir(t *testing.T) {
+	baseDirectory, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatalf("Failed to evaluate symlinks for the base directory: %v", err)
+	}
+
+	// Set up directory structure, with 'workingdir' as target directory:
+	// baseDirectory (t.TempDir())
+	// └── kustomizedir
+	kustomizeDir := path.Join(baseDirectory, "kustomizedir")
+
+	err = os.Mkdir(kustomizeDir, 0o777)
+	if err != nil {
+		t.Fatalf("Failed to create the directory structure %s: %v", kustomizeDir, err)
+	}
+
+	// Create files in baseDirectory/kustomizedir
+	manifestPaths := map[string]string{
+		"kustomization.yaml": `
+resources:
+- configmap.yaml
+- https://github.com/dhaiducek/policy-generator-plugin/examples/input-kustomize/?ref=support-kustomize
+
+namespace: kustomize-test
+`,
+		"configmap.yaml": `
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-configmap
+data:
+  game.properties: |
+    enemies=goldfish
+`,
+	}
+
+	for filename, content := range manifestPaths {
+		manifestPath := path.Join(kustomizeDir, filename)
+
+		err = ioutil.WriteFile(manifestPath, []byte(content), 0o666)
+		if err != nil {
+			t.Fatalf("Failed to write %s", manifestPath)
+		}
+	}
+
+	manifests, err := processKustomizeDir(kustomizeDir)
+	if err != nil {
+		t.Fatalf(fmt.Sprintf("Unexpected error: %s", err))
+	}
+
+	assertEqual(t, len(*manifests), 3)
+
+	for _, manifest := range *manifests {
+		if metadata, ok := manifest["metadata"]; ok {
+			ns := metadata.(map[string]interface{})["namespace"]
+			assertEqual(t, ns, "kustomize-test")
+		}
 	}
 }
