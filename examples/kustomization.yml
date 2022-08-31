@@ -1,5 +1,6 @@
 generators:
 - ./policyGenerator.yaml
+- ./policyGenerator-kustomize.yaml
 patchesStrategicMerge:
 - input/patch.yaml
 commonLabels:
