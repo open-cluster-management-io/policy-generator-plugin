@@ -438,6 +438,13 @@ func verifyManifestPath(baseDirectory string, manifestPath string) error {
 		)
 	}
 
+	if relPath == "." {
+		return fmt.Errorf(
+			"the manifest path %s may not refer to the same directory as the kustomization.yaml file",
+			manifestPath,
+		)
+	}
+
 	parDir := ".." + string(filepath.Separator)
 	if strings.HasPrefix(relPath, parDir) || relPath == ".." {
 		return fmt.Errorf(

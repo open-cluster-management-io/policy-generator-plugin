@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 
 	"github.com/spf13/pflag"
 	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal"
@@ -67,7 +66,7 @@ func processGeneratorConfig(filePath string) []byte {
 		errorAndExit("failed to read file '%s': %s", filePath, err)
 	}
 
-	err = p.Config(fileData, path.Dir(cwd))
+	err = p.Config(fileData, cwd)
 	if err != nil {
 		errorAndExit("error processing the PolicyGenerator file '%s': %s", filePath, err)
 	}
