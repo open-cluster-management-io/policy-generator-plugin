@@ -1265,6 +1265,20 @@ func TestVerifyManifestPath(t *testing.T) {
 			),
 		},
 		{
+			workingDir,
+			fmt.Sprintf(
+				"the manifest path %s may not refer to the same directory as the kustomization.yaml file",
+				workingDir,
+			),
+		},
+		{
+			".",
+			fmt.Sprintf(
+				"the manifest path %s may not refer to the same directory as the kustomization.yaml file",
+				".",
+			),
+		},
+		{
 			otherManifestPath,
 			fmt.Sprintf(
 				"the manifest path %s is not in the same directory tree as the kustomization.yaml file",
