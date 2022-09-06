@@ -72,5 +72,6 @@ DIRECTORY TREE              PACKAGE                 DESCRIPTION
     │   └── types.go        types                   Generator structs
     ├── patches.go          internal                Code to patch input manifests
     ├── plugin.go           internal                Primary generator methods
+    ├── typohelper.go       internal                Helpers for identifying manifest typos
     ├── utils.go            internal                Helper/utility functions
 ```
