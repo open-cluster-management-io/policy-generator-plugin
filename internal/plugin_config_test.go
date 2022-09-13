@@ -1008,6 +1008,70 @@ policies:
 	}
 }
 
+func TestConfigInvalidManifestKey(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	tests := map[string]struct {
+		// Individual values can't be used for compliant/noncompliant since an empty string means
+		// to not inherit from the policy defaults.
+		keyName     string
+		defaultKey  string
+		policyKey   string
+		manifestKey string
+		expectedMsg string
+	}{
+		"pruneObjectBehavior specified in manifest": {
+			"pruneObjectBehavior",
+			"",
+			"",
+			"None",
+			`the policy policy-app has the pruneObjectBehavior value set` +
+				` on manifest[0] but consolidateManifests is true`,
+		},
+	}
+
+	for testName, test := range tests {
+		test := test
+
+		t.Run(
+			testName,
+			func(t *testing.T) {
+				t.Parallel()
+				config := fmt.Sprintf(`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: my-policies
+  %s: %s
+policies:
+- name: policy-app
+  %s: %s
+  manifests:
+    - path: %s
+      %s: %s
+`,
+					test.keyName, test.defaultKey,
+					test.keyName, test.policyKey,
+					path.Join(tmpDir, "configmap.yaml"),
+					test.keyName, test.manifestKey,
+				)
+
+				p := Plugin{}
+				err := p.Config([]byte(config), tmpDir)
+				if err == nil {
+					t.Fatal("Expected an error but did not get one")
+				}
+
+				assertEqual(t, err.Error(), test.expectedMsg)
+			},
+		)
+	}
+}
+
 func TestConfigNoManifests(t *testing.T) {
 	t.Parallel()
 	const config = `

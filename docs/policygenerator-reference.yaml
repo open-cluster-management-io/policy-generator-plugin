@@ -43,6 +43,10 @@ policyDefaults:
     # avoid evaluating the policy after it has become a particular compliance state.
     compliant: 30m
     noncompliant: 45s
+  # Optional. Determines whether objects created or monitored by the policy should be deleted when the policy is
+  # deleted. Pruning only takes place if the remediation action of the policy has been set to "enforce". Example values
+  # are "DeleteIfCreated", "DeleteAll", or "None". This defaults to unset, which is equivalent to "None".
+  pruneObjectBehavior: "None"
   # Optional. When the policy references a Kyverno policy manifest, this determines if an additional
   # configuration policy should be generated in order to receive policy violations in Open Cluster
   # Management when the Kyverno policy has been violated. This defaults to true.
@@ -138,6 +142,8 @@ policies:
         metadataComplianceType: ""
          # Optional. (See policyDefaults.evaluationInterval for description.)
         evaluationInterval: {}
+        # Optional. (See policyDefaults.pruneObjectBehavior for description.)
+        pruneObjectBehavior: ""
         # (Note: a path to a directory containing a Kustomize manifest is a supported alternative.) Optional. A
         # Kustomize patch to apply to the manifest(s) at the path. If there are multiple manifests, the patch requires
         # the apiVersion, kind, metadata.name, and metadata.namespace (if applicable) fields to be set so Kustomize can
@@ -174,6 +180,8 @@ policies:
     disabled: false
     # Optional. (See policyDefaults.evaluationInterval for description.)
     evaluationInterval: {}
+    # Optional. (See policyDefaults.pruneObjectBehavior for description.)
+    pruneObjectBehavior: ""
     # Optional. (See policyDefaults.informKyvernoPolicies for description.)
     informKyvernoPolicies: true
     # Optional. (See policyDefaults.consolidateManifests for description.)
