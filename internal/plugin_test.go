@@ -39,6 +39,7 @@ func TestGenerate(t *testing.T) {
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	p.PolicyDefaults.Namespace = "my-policies"
 	p.PolicyDefaults.MetadataComplianceType = "musthave"
+	p.PolicyDefaults.PruneObjectBehavior = "DeleteAll"
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
@@ -47,7 +48,8 @@ func TestGenerate(t *testing.T) {
 		},
 	}
 	policyConf := types.PolicyConfig{
-		Name: "policy-app-config",
+		Name:                "policy-app-config",
+		PruneObjectBehavior: "None",
 		Manifests: []types.Manifest{
 			{
 				Path:    path.Join(tmpDir, "configmap.yaml"),
@@ -107,6 +109,7 @@ spec:
                             labels:
                                 chandler: bing
                             name: my-configmap
+                pruneObjectBehavior: None
                 remediationAction: inform
                 severity: low
 ---
@@ -138,6 +141,7 @@ spec:
                         kind: ConfigMap
                         metadata:
                             name: my-configmap
+                pruneObjectBehavior: DeleteAll
                 remediationAction: inform
                 severity: low
 ---

@@ -11,6 +11,7 @@ type Manifest struct {
 	ComplianceType         string                   `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
 	MetadataComplianceType string                   `json:"metadataComplianceType,omitempty" yaml:"metadataComplianceType,omitempty"`
 	EvaluationInterval     EvaluationInterval       `json:"evaluationInterval,omitempty" yaml:"evaluationInterval,omitempty"`
+	PruneObjectBehavior    string                   `json:"pruneObjectBehavior,omitempty" yaml:"pruneObjectBehavior,omitempty"`
 	Patches                []map[string]interface{} `json:"patches,omitempty" yaml:"patches,omitempty"`
 	Path                   string                   `json:"path,omitempty" yaml:"path,omitempty"`
 }
@@ -80,6 +81,7 @@ type PolicyConfig struct {
 	EvaluationInterval             EvaluationInterval `json:"evaluationInterval,omitempty" yaml:"evaluationInterval,omitempty"`
 	PolicyAnnotations              map[string]string  `json:"policyAnnotations,omitempty" yaml:"policyAnnotations,omitempty"`
 	ConfigurationPolicyAnnotations map[string]string  `json:"configurationPolicyAnnotations,omitempty" yaml:"configurationPolicyAnnotations,omitempty"`
+	PruneObjectBehavior            string             `json:"pruneObjectBehavior,omitempty" yaml:"pruneObjectBehavior,omitempty"`
 }
 
 type PolicyDefaults struct {
@@ -103,6 +105,7 @@ type PolicyDefaults struct {
 	EvaluationInterval             EvaluationInterval `json:"evaluationInterval,omitempty" yaml:"evaluationInterval,omitempty"`
 	PolicyAnnotations              map[string]string  `json:"policyAnnotations,omitempty" yaml:"policyAnnotations,omitempty"`
 	ConfigurationPolicyAnnotations map[string]string  `json:"configurationPolicyAnnotations,omitempty" yaml:"configurationPolicyAnnotations,omitempty"`
+	PruneObjectBehavior            string             `json:"pruneObjectBehavior,omitempty" yaml:"pruneObjectBehavior,omitempty"`
 }
 
 type PolicySetConfig struct {
