@@ -458,6 +458,10 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			}
 		}
 
+		if policy.PruneObjectBehavior == "" {
+			policy.PruneObjectBehavior = p.PolicyDefaults.PruneObjectBehavior
+		}
+
 		if policy.PolicySets == nil {
 			policy.PolicySets = p.PolicyDefaults.PolicySets
 		}
@@ -583,6 +587,10 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 				if !set {
 					manifest.EvaluationInterval.NonCompliant = policy.EvaluationInterval.NonCompliant
 				}
+			}
+
+			if manifest.PruneObjectBehavior == "" && policy.PruneObjectBehavior != "" {
+				manifest.PruneObjectBehavior = policy.PruneObjectBehavior
 			}
 		}
 
@@ -786,6 +794,17 @@ func (p *Plugin) assertValidConfig() error {
 			err = verifyManifestPath(p.baseDirectory, manifest.Path)
 			if err != nil {
 				return err
+			}
+
+			// Verify that consolidated manifests don't specify fields
+			// that can't be overridden at the objectTemplate level
+			if policy.ConsolidateManifests && manifest.PruneObjectBehavior != "" {
+				return fmt.Errorf(
+					"the policy %s has the pruneObjectBehavior value set on manifest[%d] but "+
+						"consolidateManifests is true",
+					policy.Name,
+					j,
+				)
 			}
 
 			evalInterval := &manifest.EvaluationInterval

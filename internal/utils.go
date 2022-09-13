@@ -209,6 +209,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 					len(policyTemplates)+1,
 					&[]map[string]interface{}{objTemplate},
 					&policyConf.Manifests[i].EvaluationInterval,
+					policyConf.Manifests[i].PruneObjectBehavior,
 				)
 				setNamespaceSelector(policyConf, policyTemplate)
 				policyTemplates = append(policyTemplates, *policyTemplate)
@@ -225,7 +226,13 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 	// just build one policyTemplate by using the above non-empty consolidated objectTemplates
 	// ConsolidateManifests = true or there is non-policy-type manifest
 	if policyConf.ConsolidateManifests && len(objectTemplates) > 0 {
-		policyTemplate := buildPolicyTemplate(policyConf, 1, &objectTemplates, &policyConf.EvaluationInterval)
+		policyTemplate := buildPolicyTemplate(
+			policyConf,
+			1,
+			&objectTemplates,
+			&policyConf.EvaluationInterval,
+			policyConf.PruneObjectBehavior,
+		)
 		setNamespaceSelector(policyConf, policyTemplate)
 		policyTemplates = append(policyTemplates, *policyTemplate)
 	}
@@ -300,6 +307,7 @@ func buildPolicyTemplate(
 	policyNum int,
 	objectTemplates *[]map[string]interface{},
 	evaluationInterval *types.EvaluationInterval,
+	pruneObjectBehavior string,
 ) *map[string]map[string]interface{} {
 	var name string
 	if policyNum > 1 {
@@ -326,6 +334,11 @@ func buildPolicyTemplate(
 	if len(policyConf.ConfigurationPolicyAnnotations) > 0 {
 		metadata := policyTemplate["objectDefinition"]["metadata"].(map[string]interface{})
 		metadata["annotations"] = policyConf.ConfigurationPolicyAnnotations
+	}
+
+	if pruneObjectBehavior != "" {
+		configSpec := policyTemplate["objectDefinition"]["spec"].(map[string]interface{})
+		configSpec["pruneObjectBehavior"] = policyConf.PruneObjectBehavior
 	}
 
 	if evaluationInterval.Compliant != "" || evaluationInterval.NonCompliant != "" {
