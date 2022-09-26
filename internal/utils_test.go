@@ -1338,7 +1338,7 @@ func TestProcessKustomizeDir(t *testing.T) {
 		"kustomization.yaml": `
 resources:
 - configmap.yaml
-- https://github.com/dhaiducek/policy-generator-plugin/examples/input-kustomize/?ref=kustomize-dir
+- https://github.com/stolostron/policy-generator-plugin/examples/input-kustomize/?ref=main
 
 namespace: kustomize-test
 `,
