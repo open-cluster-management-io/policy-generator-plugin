@@ -22,3 +22,8 @@ vendor/
 # IDE
 .vscode
 .idea
+
+bin/
+
+gosec.json
+coverage.out
