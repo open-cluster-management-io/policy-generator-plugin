@@ -24,3 +24,6 @@ vendor/
 .idea
 
 bin/
+
+gosec.json
+coverage.out

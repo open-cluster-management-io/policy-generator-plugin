@@ -1,0 +1,14 @@
+name: Sonarcloud scan
+
+on:
+  workflow_run:
+    workflows:
+      - Unit Tests
+    types:
+      - completed
+
+jobs:
+  sonarcloud:
+    uses: stolostron/governance-policy-framework/.github/workflows/sonarcloud.yml@main
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

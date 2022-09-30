@@ -80,6 +80,19 @@ lint: lint-dependencies lint-all
 ############################################################
 # test section
 ############################################################
+GOSEC = $(LOCAL_BIN)/gosec
 
 test:
 	@go test $(TESTARGS) ./...
+
+.PHONY: test-coverage
+test-coverage: TESTARGS = -json -cover -covermode=atomic -coverprofile=coverage.out
+test-coverage: test
+
+.PHONY: gosec
+gosec:
+	$(call go-get-tool,github.com/securego/gosec/v2/cmd/gosec@v2.9.6)
+
+.PHONY: gosec-scan
+gosec-scan: gosec
+	$(GOSEC) -fmt sonarqube -out gosec.json -no-fail -exclude-dir=.go ./...
