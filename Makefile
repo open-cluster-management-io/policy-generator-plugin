@@ -2,7 +2,7 @@
 # Copyright Contributors to the Open Cluster Management project
 
 PWD := $(shell pwd)
-BASE_DIR := $(shell basename $(PWD))
+LOCAL_BIN ?= $(PWD)/bin
 
 # Keep an existing GOPATH, make a private one if it is undefined
 GOPATH_DEFAULT := $(PWD)/.go
@@ -21,6 +21,13 @@ API_PLUGIN_PATH ?= $(KUSTOMIZE_PLUGIN_HOME)/policy.open-cluster-management.io/v1
 
 # Kustomize arguments
 SOURCE_DIR ?= examples/
+
+# go-get-tool will 'go install' any package $1 and install it to LOCAL_BIN.
+define go-get-tool
+@set -e ;\
+echo "Checking installation of $(1)" ;\
+GOBIN=$(LOCAL_BIN) go install $(1)
+endef
 
 .PHONY: build build-binary build-release generate layout fmt lint lint-dependencies test
 
@@ -76,6 +83,19 @@ lint: lint-dependencies lint-all
 ############################################################
 # test section
 ############################################################
+GOSEC = $(LOCAL_BIN)/gosec
 
 test:
 	@go test $(TESTARGS) ./...
+
+.PHONY: test-coverage
+test-coverage: TESTARGS = -json -cover -covermode=atomic -coverprofile=coverage.out
+test-coverage: test
+
+.PHONY: gosec
+gosec:
+	$(call go-get-tool,github.com/securego/gosec/v2/cmd/gosec@v2.9.6)
+
+.PHONY: gosec-scan
+gosec-scan: gosec
+	$(GOSEC) -fmt sonarqube -out gosec.json -no-fail -exclude-dir=.go ./...
