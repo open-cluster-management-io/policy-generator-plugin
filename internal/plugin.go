@@ -22,7 +22,7 @@ const (
 	policyAPIGroup             = "policy.open-cluster-management.io"
 	policyAPIVersion           = policyAPIGroup + "/v1"
 	policyKind                 = "Policy"
-	poilcySetAPIVersion        = policyAPIGroup + "/v1beta1"
+	policySetAPIVersion        = policyAPIGroup + "/v1beta1"
 	policySetKind              = "PolicySet"
 	placementBindingAPIVersion = policyAPIGroup + "/v1"
 	placementBindingKind       = "PlacementBinding"
@@ -1180,7 +1180,7 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 // manifests specified in the configuration are invalid or can't be read.
 func (p *Plugin) createPolicySet(policySetConf *types.PolicySetConfig) error {
 	policyset := map[string]interface{}{
-		"apiVersion": poilcySetAPIVersion,
+		"apiVersion": policySetAPIVersion,
 		"kind":       policySetKind,
 		"metadata": map[string]interface{}{
 			"name":      policySetConf.Name,

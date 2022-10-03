@@ -289,7 +289,7 @@ policies:
 	}
 }
 
-func TestGeneratePolicyExisingPlacementRuleName(t *testing.T) {
+func TestGeneratePolicyExistingPlacementRuleName(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
@@ -380,7 +380,7 @@ subjects:
 	assertEqual(t, string(output), expected)
 }
 
-func TestGeneratePolicyExisingPlacementName(t *testing.T) {
+func TestGeneratePolicyExistingPlacementName(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
