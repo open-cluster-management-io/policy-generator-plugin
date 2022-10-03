@@ -1030,6 +1030,30 @@ func TestConfigInvalidManifestKey(t *testing.T) {
 			`the policy policy-app has the pruneObjectBehavior value set` +
 				` on manifest[0] but consolidateManifests is true`,
 		},
+		"namespaceSelector specified in manifest": {
+			"namespaceSelector",
+			"",
+			"",
+			`{"include": ["test"]}`,
+			`the policy policy-app has the namespaceSelector value set` +
+				` on manifest[0] but consolidateManifests is true`,
+		},
+		"remediationAction specified in manifest": {
+			"remediationAction",
+			"",
+			"",
+			"enforce",
+			`the policy policy-app has the remediationAction value set` +
+				` on manifest[0] but consolidateManifests is true`,
+		},
+		"severity specified in manifest": {
+			"severity",
+			"",
+			"",
+			"critical",
+			`the policy policy-app has the severity value set` +
+				` on manifest[0] but consolidateManifests is true`,
+		},
 	}
 
 	for testName, test := range tests {

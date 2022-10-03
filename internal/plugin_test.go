@@ -2,6 +2,7 @@
 package internal
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
 )
@@ -183,6 +185,108 @@ subjects:
 	}
 
 	assertEqual(t, string(output), expected)
+}
+
+func TestConfigManifestKeyOverride(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	tests := map[string]struct {
+		// Individual values can't be used for compliant/noncompliant since an empty string means
+		// to not inherit from the policy defaults.
+		keyName     string
+		defaultKey  string
+		policyKey   string
+		manifestKey string
+	}{
+		"pruneObjectBehavior specified in manifest": {
+			"pruneObjectBehavior",
+			"None",
+			"DeleteIfCreated",
+			`"DeleteAll"`,
+		},
+		"namespaceSelector specified in manifest": {
+			"namespaceSelector",
+			`{"matchLabels":{"name":"test"}}`,
+			`{"exclude":["test"]}`,
+			`{"include":["test"]}`,
+		},
+		"remediationAction specified in manifest": {
+			"remediationAction",
+			"inform",
+			"inform",
+			`"enforce"`,
+		},
+		"severity specified in manifest": {
+			"severity",
+			"low",
+			"medium",
+			`"critical"`,
+		},
+	}
+
+	for testName, test := range tests {
+		test := test
+
+		t.Run(
+			testName,
+			func(t *testing.T) {
+				t.Parallel()
+				config := fmt.Sprintf(`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: my-policies
+  consolidateManifests: false
+  %s: %s
+policies:
+- name: policy-app
+  %s: %s
+  manifests:
+    - path: %s
+      %s: %s
+`,
+					test.keyName, test.defaultKey,
+					test.keyName, test.policyKey,
+					path.Join(tmpDir, "configmap.yaml"),
+					test.keyName, test.manifestKey,
+				)
+
+				p := Plugin{}
+				err := p.Config([]byte(config), tmpDir)
+				if err != nil {
+					t.Fatal("Unexpected error", err)
+				}
+
+				assertEqual(t, p.Policies[0].ConsolidateManifests, false)
+
+				output, err := p.Generate()
+				if err != nil {
+					t.Fatal("Failed to generate policies from PolicyGenerator manifest", err)
+				}
+
+				var policyObj map[string]interface{}
+				err = yaml.Unmarshal(output, &policyObj)
+				if err != nil {
+					t.Fatal("Failed to unmarshal object", err)
+				}
+
+				policyTemplate := policyObj["spec"].(map[string]interface{})["policy-templates"].([]interface{})[0]
+				objectDef := policyTemplate.(map[string]interface{})["objectDefinition"].(map[string]interface{})
+				configSpec := objectDef["spec"].(map[string]interface{})
+
+				jsonConfig, err := json.Marshal(configSpec[test.keyName])
+				if err != nil {
+					t.Fatal("Failed to marshal policy to JSON", err)
+				}
+
+				assertEqual(t, string(jsonConfig), test.manifestKey)
+			},
+		)
+	}
 }
 
 func TestGeneratePolicyExisingPlacementRuleName(t *testing.T) {
