@@ -1383,7 +1383,7 @@ func TestPolicySetConfig(t *testing.T) {
 					{
 						Name: "my-policyset",
 						Placement: types.PlacementConfig{
-							PlacementRuleName: "plrexisingname",
+							PlacementRuleName: "plrexistingname",
 							ClusterSelectors:  map[string]string{"cloud": "red hat"},
 						},
 					},
@@ -1415,7 +1415,7 @@ func TestPolicySetConfig(t *testing.T) {
 					{
 						Name: "my-policyset",
 						Placement: types.PlacementConfig{
-							PlacementRuleName: "plrexisingname",
+							PlacementRuleName: "plrexistingname",
 							LabelSelector:     map[string]string{"cloud": "red hat"},
 						},
 					},
