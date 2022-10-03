@@ -48,8 +48,10 @@ func TestGenerate(t *testing.T) {
 		},
 	}
 	policyConf := types.PolicyConfig{
-		Name:                "policy-app-config",
-		PruneObjectBehavior: "None",
+		Name: "policy-app-config",
+		ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+			PruneObjectBehavior: "None",
+		},
 		Manifests: []types.Manifest{
 			{
 				Path:    path.Join(tmpDir, "configmap.yaml"),
@@ -61,8 +63,10 @@ func TestGenerate(t *testing.T) {
 		Name: "policy-app-config2",
 		Manifests: []types.Manifest{
 			{
-				MetadataComplianceType: "mustonlyhave",
-				Path:                   path.Join(tmpDir, "configmap.yaml"),
+				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+					MetadataComplianceType: "mustonlyhave",
+				},
+				Path: path.Join(tmpDir, "configmap.yaml"),
 			},
 		},
 	}
@@ -782,10 +786,12 @@ func TestCreatePolicyFromIamPolicyTypeManifest(t *testing.T) {
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "Iam-policies"
 	policyConf := types.PolicyConfig{
-		Categories: []string{"AC Access Control"},
-		Controls:   []string{"AC-3 Access Enforcement"},
-		Standards:  []string{"NIST SP 800-53"},
-		Name:       "policy-limitclusteradmin",
+		PolicyOptions: types.PolicyOptions{
+			Categories: []string{"AC Access Control"},
+			Controls:   []string{"AC-3 Access Enforcement"},
+			Standards:  []string{"NIST SP 800-53"},
+		},
+		Name: "policy-limitclusteradmin",
 		Manifests: []types.Manifest{
 			{Path: path.Join(tmpDir, "iamKindManifestPluginTest.yaml")},
 		},
@@ -845,9 +851,11 @@ func TestCreatePolicyDir(t *testing.T) {
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{
-		Name:              "policy-app-config",
-		Manifests:         []types.Manifest{{Path: tmpDir}},
-		NamespaceSelector: types.NamespaceSelector{Include: []string{"default"}},
+		Name:      "policy-app-config",
+		Manifests: []types.Manifest{{Path: tmpDir}},
+		ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+			NamespaceSelector: types.NamespaceSelector{Include: []string{"default"}},
+		},
 	}
 	p.Policies = append(p.Policies, policyConf)
 	p.applyDefaults(map[string]interface{}{})
@@ -1156,15 +1164,19 @@ func TestCreatePlacementDuplicateName(t *testing.T) {
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{
 		Name: "policy-app-config",
-		Placement: types.PlacementConfig{
-			Name: "my-placement",
+		PolicyOptions: types.PolicyOptions{
+			Placement: types.PlacementConfig{
+				Name: "my-placement",
+			},
 		},
 	}
 	policyConf2 := types.PolicyConfig{
 		Name: "policy-app-config2",
-		Placement: types.PlacementConfig{
-			ClusterSelectors: map[string]string{"my": "app"},
-			Name:             "my-placement",
+		PolicyOptions: types.PolicyOptions{
+			Placement: types.PlacementConfig{
+				ClusterSelectors: map[string]string{"my": "app"},
+				Name:             "my-placement",
+			},
 		},
 	}
 
@@ -1676,7 +1688,9 @@ func TestGeneratePolicySets(t *testing.T) {
 							Path: path.Join(tmpDir, "configmap.yaml"),
 						},
 					},
-					PolicySets: []string{"policyset0"},
+					PolicyOptions: types.PolicyOptions{
+						PolicySets: []string{"policyset0"},
+					},
 				}
 			},
 			expectedPolicySetConfigInPolicy: [][]string{
@@ -1710,7 +1724,9 @@ func TestGeneratePolicySets(t *testing.T) {
 							Path: path.Join(tmpDir, "configmap.yaml"),
 						},
 					},
-					PolicySets: []string{},
+					PolicyOptions: types.PolicyOptions{
+						PolicySets: []string{},
+					},
 				}
 			},
 			expectedPolicySetConfigInPolicy: [][]string{
@@ -1820,7 +1836,9 @@ func TestGeneratePolicySetsWithPlacement(t *testing.T) {
 				Path: path.Join(tmpDir, "configmap.yaml"),
 			},
 		},
-		PolicySets: []string{"policyset"},
+		PolicyOptions: types.PolicyOptions{
+			PolicySets: []string{"policyset"},
+		},
 	}
 	p.Policies = append(p.Policies, policyConf)
 
@@ -1929,7 +1947,9 @@ func TestGeneratePolicySetsWithPolicyPlacement(t *testing.T) {
 				Path: path.Join(tmpDir, "configmap.yaml"),
 			},
 		},
-		PolicySets: []string{"my-policyset"},
+		PolicyOptions: types.PolicyOptions{
+			PolicySets: []string{"my-policyset"},
+		},
 	}
 	p.Policies = append(p.Policies, policyConf)
 	p.PolicySets = []types.PolicySetConfig{
@@ -2141,10 +2161,10 @@ func getYAMLEvaluationInterval(
 	configPolicy, ok := plcTemplate["objectDefinition"].(map[string]interface{})
 	assertEqual(t, ok, true)
 
-	configPolicySpec, ok := configPolicy["spec"].(map[string]interface{})
+	configPolicyOptions, ok := configPolicy["spec"].(map[string]interface{})
 	assertEqual(t, ok, true)
 
-	evaluationInterval, ok := configPolicySpec["evaluationInterval"].(map[string]interface{})
+	evaluationInterval, ok := configPolicyOptions["evaluationInterval"].(map[string]interface{})
 
 	if !skipFinalValidation {
 		assertEqual(t, ok, true)
@@ -2174,18 +2194,24 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 
 	// Test that the policy evaluation interval gets inherited when not set on a manifest.
 	policyConf := types.PolicyConfig{
-		ConsolidateManifests: false,
-		EvaluationInterval: types.EvaluationInterval{
-			Compliant:    "30m",
-			NonCompliant: "30s",
+		PolicyOptions: types.PolicyOptions{
+			ConsolidateManifests: false,
+		},
+		ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+			EvaluationInterval: types.EvaluationInterval{
+				Compliant:    "30m",
+				NonCompliant: "30s",
+			},
 		},
 		Name: "policy-app-config",
 		Manifests: []types.Manifest{
 			{Path: path.Join(tmpDir, "configmap.yaml")},
 			{
-				EvaluationInterval: types.EvaluationInterval{
-					Compliant:    "25m",
-					NonCompliant: "5m",
+				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+					EvaluationInterval: types.EvaluationInterval{
+						Compliant:    "25m",
+						NonCompliant: "5m",
+					},
 				},
 				Path: path.Join(tmpDir, "configmap.yaml"),
 			},
@@ -2204,8 +2230,10 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 	}
 	// Test that explicitly setting evaluationInterval to an empty value overrides the policy default.
 	policyConf3 := types.PolicyConfig{
-		EvaluationInterval: types.EvaluationInterval{},
-		Name:               "policy-app-config3",
+		ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+			EvaluationInterval: types.EvaluationInterval{},
+		},
+		Name: "policy-app-config3",
 		Manifests: []types.Manifest{
 			{Path: path.Join(tmpDir, "configmap.yaml")},
 		},
@@ -2459,9 +2487,9 @@ func TestCreatePolicyWithNamespaceSelector(t *testing.T) {
 			// nolint: forcetypeassert
 			configPolicy := policyTemplates[0].(map[string]interface{})["objectDefinition"].(map[string]interface{})
 			// nolint: forcetypeassert
-			configPolicySpec := configPolicy["spec"].(map[string]interface{})
+			configPolicyOptions := configPolicy["spec"].(map[string]interface{})
 			// nolint: forcetypeassert
-			configPolicySelector := configPolicySpec["namespaceSelector"].(map[string]interface{})
+			configPolicySelector := configPolicyOptions["namespaceSelector"].(map[string]interface{})
 
 			if reflect.DeepEqual(test.namespaceSelector, types.NamespaceSelector{}) {
 				assertSelectorEqual(t, configPolicySelector, p.PolicyDefaults.NamespaceSelector)

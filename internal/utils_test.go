@@ -135,18 +135,22 @@ data:
 		// The applyDefaults method would normally fill in ComplianceType on each manifest entry.
 		manifestFiles = append(
 			manifestFiles, types.Manifest{
-				ComplianceType:         "musthave",
-				MetadataComplianceType: "mustonlyhave",
-				Path:                   manifestPath,
+				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+					ComplianceType:         "musthave",
+					MetadataComplianceType: "mustonlyhave",
+				},
+				Path: manifestPath,
 			},
 		)
 
 		manifestFilesMustNotHave = append(
 			manifestFilesMustNotHave,
 			types.Manifest{
-				ComplianceType:         "mustnothave",
-				MetadataComplianceType: "musthave",
-				Path:                   manifestPath,
+				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+					ComplianceType:         "mustnothave",
+					MetadataComplianceType: "musthave",
+				},
+				Path: manifestPath,
 			},
 		)
 	}
@@ -180,7 +184,10 @@ data:
 		{
 			ExpectedComplianceType:         "musthave",
 			ExpectedMetadataComplianceType: "",
-			Manifests:                      []types.Manifest{{ComplianceType: "musthave", Path: tmpDir}},
+			Manifests: []types.Manifest{{
+				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{ComplianceType: "musthave"},
+				Path:                       tmpDir,
+			}},
 		},
 	}
 	// test ConsolidateManifests = true (default case)
@@ -188,12 +195,16 @@ data:
 	// and two objTemplate under this policyTemplate
 	for _, test := range tests {
 		policyConf := types.PolicyConfig{
-			ComplianceType:       "musthave",
-			ConsolidateManifests: true,
-			Manifests:            test.Manifests,
-			Name:                 "policy-app-config",
-			RemediationAction:    "inform",
-			Severity:             "low",
+			PolicyOptions: types.PolicyOptions{
+				ConsolidateManifests: true,
+			},
+			ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+				ComplianceType:    "musthave",
+				RemediationAction: "inform",
+				Severity:          "low",
+			},
+			Manifests: test.Manifests,
+			Name:      "policy-app-config",
 		}
 
 		policyTemplates, err := getPolicyTemplates(&policyConf)
@@ -341,15 +352,21 @@ resources:
 	}
 	for _, test := range tests {
 		policyConf := types.PolicyConfig{
-			ComplianceType:       "musthave",
-			ConsolidateManifests: true,
+			ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+				ComplianceType:    "musthave",
+				RemediationAction: "inform",
+				Severity:          "low",
+			},
 			Manifests: []types.Manifest{{
-				ComplianceType: "musthave",
-				Path:           test.ManifestPath,
+				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+					ComplianceType: "musthave",
+				},
+				Path: test.ManifestPath,
 			}},
-			Name:              "policy-kustomize",
-			RemediationAction: "inform",
-			Severity:          "low",
+			PolicyOptions: types.PolicyOptions{
+				ConsolidateManifests: true,
+			},
+			Name: "policy-kustomize",
 		}
 
 		policyTemplates, err := getPolicyTemplates(&policyConf)
@@ -438,9 +455,11 @@ data:
 		// The applyDefaults method would normally fill in ComplianceType on each manifest entry.
 		manifestFiles = append(
 			manifestFiles, types.Manifest{
-				ComplianceType:         "musthave",
-				MetadataComplianceType: "mustonlyhave",
-				Path:                   manifestPath,
+				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+					ComplianceType:         "musthave",
+					MetadataComplianceType: "mustonlyhave",
+				},
+				Path: manifestPath,
 			},
 		)
 	}
@@ -462,9 +481,11 @@ data:
 		// The applyDefaults method would normally fill in ComplianceType on each manifest entry.
 		{
 			Manifests: []types.Manifest{{
-				ComplianceType:         "musthave",
-				MetadataComplianceType: "mustonlyhave",
-				Path:                   tmpDir,
+				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+					ComplianceType:         "musthave",
+					MetadataComplianceType: "mustonlyhave",
+				},
+				Path: tmpDir,
 			}},
 		},
 	}
@@ -474,13 +495,17 @@ data:
 	// and each policyTemplate has only one objTemplate
 	for _, test := range tests {
 		policyConf := types.PolicyConfig{
-			ComplianceType:         "musthave",
-			MetadataComplianceType: "musthave",
-			ConsolidateManifests:   false,
-			Manifests:              test.Manifests,
-			Name:                   "policy-app-config",
-			RemediationAction:      "inform",
-			Severity:               "low",
+			PolicyOptions: types.PolicyOptions{
+				ConsolidateManifests: false,
+			},
+			ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+				ComplianceType:         "musthave",
+				MetadataComplianceType: "musthave",
+				RemediationAction:      "inform",
+				Severity:               "low",
+			},
+			Manifests: test.Manifests,
+			Name:      "policy-app-config",
 		}
 
 		policyTemplates, err := getPolicyTemplates(&policyConf)
@@ -617,10 +642,12 @@ func TestGetPolicyTemplateFromPolicyTypeManifest(t *testing.T) {
 
 	for _, test := range tests {
 		policyConf := types.PolicyConfig{
-			Manifests:         test.Manifests,
-			Name:              "policy-limitclusteradmin",
-			RemediationAction: "inform",
-			Severity:          "low",
+			Manifests: test.Manifests,
+			Name:      "policy-limitclusteradmin",
+			ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+				RemediationAction: "inform",
+				Severity:          "low",
+			},
 		}
 
 		policyTemplates, err := getPolicyTemplates(&policyConf)
@@ -913,12 +940,16 @@ metadata:
 	}
 
 	policyConf := types.PolicyConfig{
-		ComplianceType:        "musthave",
-		InformKyvernoPolicies: true,
-		Manifests:             []types.Manifest{{Path: manifestPath}},
-		Name:                  "policy-kyverno-config",
-		RemediationAction:     "enforce",
-		Severity:              "low",
+		PolicyOptions: types.PolicyOptions{
+			InformKyvernoPolicies: true,
+		},
+		ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+			ComplianceType:    "musthave",
+			RemediationAction: "enforce",
+			Severity:          "low",
+		},
+		Manifests: []types.Manifest{{Path: manifestPath}},
+		Name:      "policy-kyverno-config",
 	}
 
 	policyTemplates, err := getPolicyTemplates(&policyConf)
@@ -969,11 +1000,13 @@ func TestGetPolicyTemplateNoManifests(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	policyConf := types.PolicyConfig{
-		ComplianceType:    "musthave",
-		Manifests:         []types.Manifest{{Path: tmpDir}},
-		Name:              "policy-app-config",
-		RemediationAction: "inform",
-		Severity:          "low",
+		ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+			ComplianceType:    "musthave",
+			RemediationAction: "inform",
+			Severity:          "low",
+		},
+		Manifests: []types.Manifest{{Path: tmpDir}},
+		Name:      "policy-app-config",
 	}
 
 	_, err := getPolicyTemplates(&policyConf)
@@ -990,11 +1023,18 @@ func TestGetPolicyTemplateInvalidPath(t *testing.T) {
 	tmpDir := t.TempDir()
 	manifestPath := path.Join(tmpDir, "does-not-exist.yaml")
 	policyConf := types.PolicyConfig{
-		ComplianceType:    "musthave",
-		Manifests:         []types.Manifest{{ComplianceType: "musthave", Path: manifestPath}},
-		Name:              "policy-app-config",
-		RemediationAction: "inform",
-		Severity:          "low",
+		ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+			ComplianceType:    "musthave",
+			RemediationAction: "inform",
+			Severity:          "low",
+		},
+		Manifests: []types.Manifest{{
+			ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+				ComplianceType: "musthave",
+			},
+			Path: manifestPath,
+		}},
+		Name: "policy-app-config",
 	}
 
 	_, err := getPolicyTemplates(&policyConf)
@@ -1017,11 +1057,13 @@ func TestGetPolicyTemplateInvalidManifest(t *testing.T) {
 	}
 
 	policyConf := types.PolicyConfig{
-		ComplianceType:    "musthave",
-		Manifests:         []types.Manifest{{Path: manifestPath}},
-		Name:              "policy-app-config",
-		RemediationAction: "inform",
-		Severity:          "low",
+		ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+			ComplianceType:    "musthave",
+			RemediationAction: "inform",
+			Severity:          "low",
+		},
+		Manifests: []types.Manifest{{Path: manifestPath}},
+		Name:      "policy-app-config",
 	}
 
 	_, err = getPolicyTemplates(&policyConf)

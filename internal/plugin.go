@@ -64,12 +64,16 @@ type Plugin struct {
 }
 
 var defaults = types.PolicyDefaults{
-	Categories:        []string{"CM Configuration Management"},
-	ComplianceType:    "musthave",
-	Controls:          []string{"CM-2 Baseline Configuration"},
-	RemediationAction: "inform",
-	Severity:          "low",
-	Standards:         []string{"NIST SP 800-53"},
+	PolicyOptions: types.PolicyOptions{
+		Categories: []string{"CM Configuration Management"},
+		Controls:   []string{"CM-2 Baseline Configuration"},
+		Standards:  []string{"NIST SP 800-53"},
+	},
+	ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+		ComplianceType:    "musthave",
+		RemediationAction: "inform",
+		Severity:          "low",
+	},
 }
 
 // Config validates the input PolicyGenerator configuration, applies any missing defaults, and

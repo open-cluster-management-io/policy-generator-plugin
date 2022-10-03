@@ -74,7 +74,8 @@ func TestGatekeeperEnabled(t *testing.T) {
 	}{{true, true}, {false, false}}
 
 	for _, test := range tests {
-		policyConf := types.PolicyConfig{InformGatekeeperPolicies: test.Enabled}
+		var policyConf types.PolicyConfig
+		policyConf.InformGatekeeperPolicies = test.Enabled
 		assertEqual(t, g.Enabled(&policyConf), test.Expected)
 	}
 }
