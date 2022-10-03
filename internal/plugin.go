@@ -573,12 +573,12 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			}
 
 			// If the manifests are consolidated to a single ConfigurationPolicy object, don't set
-			// the evaluation interval per manifest.
+			// ConfigurationPolicy options per manifest.
 			if policy.ConsolidateManifests {
 				continue
 			}
 
-			// Only use the policy's evaluationInterval value when it's not explicitly set in the manifest.
+			// Only use the policy's ConfigurationPolicyOptions values when they're not explicitly set in the manifest.
 			if manifest.EvaluationInterval.Compliant == "" {
 				set := isEvaluationIntervalSetManifest(unmarshaledConfig, i, j, "compliant")
 				if !set {
@@ -593,8 +593,22 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 				}
 			}
 
+			selector := manifest.NamespaceSelector
+			if selector.Exclude != nil || selector.Include != nil ||
+				selector.MatchLabels != nil || selector.MatchExpressions != nil {
+				manifest.NamespaceSelector = policy.NamespaceSelector
+			}
+
+			if manifest.RemediationAction == "" && policy.RemediationAction != "" {
+				manifest.RemediationAction = policy.RemediationAction
+			}
+
 			if manifest.PruneObjectBehavior == "" && policy.PruneObjectBehavior != "" {
 				manifest.PruneObjectBehavior = policy.PruneObjectBehavior
+			}
+
+			if manifest.Severity == "" && manifest.Severity != "" {
+				manifest.Severity = policy.Severity
 			}
 		}
 
@@ -800,25 +814,37 @@ func (p *Plugin) assertValidConfig() error {
 				return err
 			}
 
+			evalInterval := manifest.EvaluationInterval
+
 			// Verify that consolidated manifests don't specify fields
 			// that can't be overridden at the objectTemplate level
-			if policy.ConsolidateManifests && manifest.PruneObjectBehavior != "" {
-				return fmt.Errorf(
-					"the policy %s has the pruneObjectBehavior value set on manifest[%d] but "+
-						"consolidateManifests is true",
-					policy.Name,
-					j,
+			if policy.ConsolidateManifests {
+				errorMsgFmt := fmt.Sprintf(
+					"the policy %s has the %%s value set on manifest[%d] but consolidateManifests is true",
+					policy.Name, j,
 				)
-			}
 
-			evalInterval := &manifest.EvaluationInterval
-			if policy.ConsolidateManifests && (evalInterval.Compliant != "" || evalInterval.NonCompliant != "") {
-				return fmt.Errorf(
-					"the policy %s has the evaluationInterval value set on manifest[%d] but "+
-						"consolidateManifests is true",
-					policy.Name,
-					j,
-				)
+				if evalInterval.Compliant != "" || evalInterval.NonCompliant != "" {
+					return fmt.Errorf(errorMsgFmt, "evaluationInterval")
+				}
+
+				selector := manifest.NamespaceSelector
+				if selector.Exclude != nil || selector.Include != nil ||
+					selector.MatchLabels != nil || selector.MatchExpressions != nil {
+					return fmt.Errorf(errorMsgFmt, "namespaceSelector")
+				}
+
+				if manifest.PruneObjectBehavior != "" {
+					return fmt.Errorf(errorMsgFmt, "pruneObjectBehavior")
+				}
+
+				if manifest.RemediationAction != "" {
+					return fmt.Errorf(errorMsgFmt, "remediationAction")
+				}
+
+				if manifest.Severity != "" {
+					return fmt.Errorf(errorMsgFmt, "severity")
+				}
 			}
 
 			if evalInterval.Compliant != "" && evalInterval.Compliant != "never" {

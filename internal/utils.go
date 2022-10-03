@@ -208,10 +208,8 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 					policyConf,
 					len(policyTemplates)+1,
 					&[]map[string]interface{}{objTemplate},
-					&policyConf.Manifests[i].EvaluationInterval,
-					policyConf.Manifests[i].PruneObjectBehavior,
+					policyConf.Manifests[i].ConfigurationPolicyOptions,
 				)
-				setNamespaceSelector(policyConf, policyTemplate)
 				policyTemplates = append(policyTemplates, *policyTemplate)
 			}
 		}
@@ -230,10 +228,8 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 			policyConf,
 			1,
 			&objectTemplates,
-			&policyConf.EvaluationInterval,
-			policyConf.PruneObjectBehavior,
+			policyConf.ConfigurationPolicyOptions,
 		)
-		setNamespaceSelector(policyConf, policyTemplate)
 		policyTemplates = append(policyTemplates, *policyTemplate)
 	}
 
@@ -266,13 +262,16 @@ func isPolicyTypeManifest(manifest map[string]interface{}) (bool, error) {
 }
 
 // setNamespaceSelector sets the namespace selector, if set, on the input policy template.
-func setNamespaceSelector(policyConf *types.PolicyConfig, policyTemplate *map[string]map[string]interface{}) {
+func setNamespaceSelector(
+	policyConf types.ConfigurationPolicyOptions,
+	policyTemplate map[string]map[string]interface{},
+) {
 	selector := policyConf.NamespaceSelector
 	if selector.Exclude != nil ||
 		selector.Include != nil ||
 		selector.MatchLabels != nil ||
 		selector.MatchExpressions != nil {
-		spec := (*policyTemplate)["objectDefinition"]["spec"].(map[string]interface{})
+		spec := policyTemplate["objectDefinition"]["spec"].(map[string]interface{})
 		spec["namespaceSelector"] = selector
 	}
 }
@@ -306,8 +305,7 @@ func buildPolicyTemplate(
 	policyConf *types.PolicyConfig,
 	policyNum int,
 	objectTemplates *[]map[string]interface{},
-	evaluationInterval *types.EvaluationInterval,
-	pruneObjectBehavior string,
+	configPolicyOptionsOverrides types.ConfigurationPolicyOptions,
 ) *map[string]map[string]interface{} {
 	var name string
 	if policyNum > 1 {
@@ -331,16 +329,18 @@ func buildPolicyTemplate(
 		},
 	}
 
+	// Set NamespaceSelector with policy configuration
+	setNamespaceSelector(policyConf.ConfigurationPolicyOptions, policyTemplate)
+
 	if len(policyConf.ConfigurationPolicyAnnotations) > 0 {
 		metadata := policyTemplate["objectDefinition"]["metadata"].(map[string]interface{})
 		metadata["annotations"] = policyConf.ConfigurationPolicyAnnotations
 	}
 
-	if pruneObjectBehavior != "" {
-		configSpec := policyTemplate["objectDefinition"]["spec"].(map[string]interface{})
-		configSpec["pruneObjectBehavior"] = policyConf.PruneObjectBehavior
-	}
+	configSpec := policyTemplate["objectDefinition"]["spec"].(map[string]interface{})
 
+	// Set EvaluationInterval with manifest overrides
+	evaluationInterval := configPolicyOptionsOverrides.EvaluationInterval
 	if evaluationInterval.Compliant != "" || evaluationInterval.NonCompliant != "" {
 		evalInterval := map[string]interface{}{}
 
@@ -352,7 +352,25 @@ func buildPolicyTemplate(
 			evalInterval["noncompliant"] = evaluationInterval.NonCompliant
 		}
 
-		policyTemplate["objectDefinition"]["spec"].(map[string]interface{})["evaluationInterval"] = evalInterval
+		configSpec["evaluationInterval"] = evalInterval
+	}
+
+	// Set NamespaceSelector with manifest overrides
+	setNamespaceSelector(configPolicyOptionsOverrides, policyTemplate)
+
+	// Set PruneObjectBehavior with manifest overrides
+	if configPolicyOptionsOverrides.PruneObjectBehavior != "" {
+		configSpec["pruneObjectBehavior"] = configPolicyOptionsOverrides.PruneObjectBehavior
+	}
+
+	// Set RemediationAction with manifest overrides
+	if configPolicyOptionsOverrides.RemediationAction != "" {
+		configSpec["remediationAction"] = configPolicyOptionsOverrides.RemediationAction
+	}
+
+	// Set Severity with manifest overrides
+	if configPolicyOptionsOverrides.Severity != "" {
+		configSpec["severity"] = configPolicyOptionsOverrides.Severity
 	}
 
 	return &policyTemplate
