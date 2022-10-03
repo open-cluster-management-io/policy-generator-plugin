@@ -77,7 +77,8 @@ func TestKyvernoEnabled(t *testing.T) {
 	}{{true, true}, {false, false}}
 
 	for _, test := range tests {
-		policyConf := types.PolicyConfig{InformKyvernoPolicies: test.Enabled}
+		var policyConf types.PolicyConfig
+		policyConf.InformKyvernoPolicies = test.Enabled
 		assertEqual(t, k.Enabled(&policyConf), test.Expected)
 	}
 }
