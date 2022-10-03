@@ -144,10 +144,21 @@ policies:
         complianceType: "musthave"
         # Optional. (See policyDefaults.metadataComplianceType for description.)
         metadataComplianceType: ""
+        # Optional. (See policyDefaults.namespaceSelector for description.)
+        # Cannot be specified when policyDefaults.consolidateManifests is set to true.
+        namespaceSelector: {}
          # Optional. (See policyDefaults.evaluationInterval for description.)
+        # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         evaluationInterval: {}
         # Optional. (See policyDefaults.pruneObjectBehavior for description.)
+        # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         pruneObjectBehavior: ""
+        # Optional. (See policyDefaults.remediationAction for description.)
+        # Cannot be specified when policyDefaults.consolidateManifests is set to true.
+        remediationAction: ""
+        # Optional. (See policyDefaults.severity for description.)
+        # Cannot be specified when policyDefaults.consolidateManifests is set to true.
+        severity: "low"
         # (Note: a path to a directory containing a Kustomize manifest is a supported alternative.) Optional. A
         # Kustomize patch to apply to the manifest(s) at the path. If there are multiple manifests, the patch requires
         # the apiVersion, kind, metadata.name, and metadata.namespace (if applicable) fields to be set so Kustomize can
