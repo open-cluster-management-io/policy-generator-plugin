@@ -29,20 +29,32 @@ echo "Checking installation of $(1)" ;\
 GOBIN=$(LOCAL_BIN) go install $(1)
 endef
 
-.PHONY: build build-binary build-release generate layout fmt lint lint-dependencies test
-
 include build/common/Makefile.common.mk
+
+############################################################
+# clean section
+############################################################
+
+.PHONY: clean
+clean:
+	-rm $(LOCAL_BIN)/*
+	-rm $(API_PLUGIN_PATH)/PolicyGenerator
+	-rm build_output/*
+	-rm PolicyGenerator
 
 ############################################################
 # build section
 ############################################################
 
+.PHONY: build
 build: layout
 	go build -o $(API_PLUGIN_PATH)/PolicyGenerator cmd/main.go
 
+.PHONY: build-binary
 build-binary:
 	go build -o PolicyGenerator cmd/main.go
 
+.PHONY: build-release
 build-release:
 	@if [[ $(shell git status --porcelain | wc -l) -gt 0 ]]; \
 		then \
@@ -54,9 +66,11 @@ build-release:
 	GOOS=darwin CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/darwin-amd64-PolicyGenerator cmd/main.go
 	GOOS=windows CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/windows-amd64-PolicyGenerator.exe cmd/main.go
 
+.PHONY: generate
 generate:
 	@KUSTOMIZE_PLUGIN_HOME=$(KUSTOMIZE_PLUGIN_HOME) kustomize build --enable-alpha-plugins $(SOURCE_DIR)
 
+.PHONY: layout
 layout:
 	mkdir -p $(API_PLUGIN_PATH)
 
@@ -64,6 +78,7 @@ layout:
 # format section
 ############################################################
 
+.PHONY: fmt
 fmt:
 	go fmt ./...
 
@@ -75,6 +90,7 @@ fmt:
 lint-dependencies:
 	$(call go-get-tool,github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2)
 
+.PHONY: lint
 lint: lint-dependencies lint-all
 
 ############################################################
@@ -82,6 +98,7 @@ lint: lint-dependencies lint-all
 ############################################################
 GOSEC = $(LOCAL_BIN)/gosec
 
+.PHONY: test
 test:
 	@go test $(TESTARGS) ./...
 
