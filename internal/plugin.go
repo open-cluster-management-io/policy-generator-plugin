@@ -599,8 +599,8 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			}
 
 			selector := manifest.NamespaceSelector
-			if selector.Exclude != nil || selector.Include != nil ||
-				selector.MatchLabels != nil || selector.MatchExpressions != nil {
+			if selector.Exclude == nil && selector.Include == nil &&
+				selector.MatchLabels == nil && selector.MatchExpressions == nil {
 				manifest.NamespaceSelector = policy.NamespaceSelector
 			}
 
