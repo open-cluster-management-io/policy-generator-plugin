@@ -2384,9 +2384,9 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	assertEqual(t, len(*generatedManifests), 9)
+	assertEqual(t, len(generatedManifests), 9)
 
-	for _, manifest := range *generatedManifests {
+	for _, manifest := range generatedManifests {
 		kind, _ := manifest["kind"].(string)
 		if kind != "Policy" {
 			continue
@@ -2478,7 +2478,7 @@ func TestCreatePolicyWithConfigPolicyAnnotations(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 			// nolint: forcetypeassert
-			spec := (*policyManifests)[0]["spec"].(map[string]interface{})
+			spec := policyManifests[0]["spec"].(map[string]interface{})
 			policyTemplates := spec["policy-templates"].([]interface{})
 			// nolint: forcetypeassert
 			configPolicy := policyTemplates[0].(map[string]interface{})["objectDefinition"].(map[string]interface{})
@@ -2586,7 +2586,7 @@ func TestCreatePolicyWithNamespaceSelector(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 			// nolint: forcetypeassert
-			spec := (*policyManifests)[0]["spec"].(map[string]interface{})
+			spec := policyManifests[0]["spec"].(map[string]interface{})
 			policyTemplates := spec["policy-templates"].([]interface{})
 			// nolint: forcetypeassert
 			configPolicy := policyTemplates[0].(map[string]interface{})["objectDefinition"].(map[string]interface{})

@@ -77,14 +77,14 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 				return nil, err
 			}
 
-			if len(*manifestFile) == 0 {
+			if len(manifestFile) == 0 {
 				continue
 			}
 			// Allowing replace the original manifest metadata.name and/or metadata.namespace if it is a single
 			// yaml structure in the manifest path
-			if len(*manifestFile) == 1 && len(manifest.Patches) == 1 {
+			if len(manifestFile) == 1 && len(manifest.Patches) == 1 {
 				if patchMetadata, ok := manifest.Patches[0]["metadata"].(map[string]interface{}); ok {
-					if metadata, ok := (*manifestFile)[0]["metadata"].(map[string]interface{}); ok {
+					if metadata, ok := manifestFile[0]["metadata"].(map[string]interface{}); ok {
 						name, ok := patchMetadata["name"].(string)
 						if ok && name != "" {
 							metadata["name"] = name
@@ -93,16 +93,16 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 						if ok && namespace != "" {
 							metadata["namespace"] = namespace
 						}
-						(*manifestFile)[0]["metadata"] = metadata
+						manifestFile[0]["metadata"] = metadata
 					}
 				}
 			}
 
-			manifestFiles = append(manifestFiles, *manifestFile...)
+			manifestFiles = append(manifestFiles, manifestFile...)
 		}
 
 		for _, manifestPath := range manifestPaths {
-			var manifestFile *[]map[string]interface{}
+			var manifestFile []map[string]interface{}
 			var err error
 
 			if hasKustomize[manifestPath] {
@@ -115,11 +115,11 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 				return nil, err
 			}
 
-			if len(*manifestFile) == 0 {
+			if len(manifestFile) == 0 {
 				continue
 			}
 
-			manifestFiles = append(manifestFiles, *manifestFile...)
+			manifestFiles = append(manifestFiles, manifestFile...)
 		}
 
 		if len(manifest.Patches) > 0 {
@@ -136,7 +136,7 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 				return nil, fmt.Errorf(errTemplate, manifest.Path, err)
 			}
 
-			manifestFiles = *patchedFiles
+			manifestFiles = patchedFiles
 		}
 
 		manifests = append(manifests, manifestFiles)
@@ -207,10 +207,10 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 				policyTemplate := buildPolicyTemplate(
 					policyConf,
 					len(policyTemplates)+1,
-					&[]map[string]interface{}{objTemplate},
-					policyConf.Manifests[i].ConfigurationPolicyOptions,
+					[]map[string]interface{}{objTemplate},
+					&policyConf.Manifests[i].ConfigurationPolicyOptions,
 				)
-				policyTemplates = append(policyTemplates, *policyTemplate)
+				policyTemplates = append(policyTemplates, policyTemplate)
 			}
 		}
 	}
@@ -227,15 +227,15 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 		policyTemplate := buildPolicyTemplate(
 			policyConf,
 			1,
-			&objectTemplates,
-			policyConf.ConfigurationPolicyOptions,
+			objectTemplates,
+			&policyConf.ConfigurationPolicyOptions,
 		)
-		policyTemplates = append(policyTemplates, *policyTemplate)
+		policyTemplates = append(policyTemplates, policyTemplate)
 	}
 
 	// check the enabled expanders and add additional policy templates
 	for _, manifestGroup := range manifestGroups {
-		expandedPolicyTemplates := handleExpanders(manifestGroup, policyConf)
+		expandedPolicyTemplates := handleExpanders(manifestGroup, *policyConf)
 		policyTemplates = append(policyTemplates, expandedPolicyTemplates...)
 	}
 
@@ -263,7 +263,7 @@ func isPolicyTypeManifest(manifest map[string]interface{}) (bool, error) {
 
 // setNamespaceSelector sets the namespace selector, if set, on the input policy template.
 func setNamespaceSelector(
-	policyConf types.ConfigurationPolicyOptions,
+	policyConf *types.ConfigurationPolicyOptions,
 	policyTemplate map[string]map[string]interface{},
 ) {
 	selector := policyConf.NamespaceSelector
@@ -277,7 +277,7 @@ func setNamespaceSelector(
 }
 
 // processKustomizeDir runs a provided directory through Kustomize in order to generate the manifests within it.
-func processKustomizeDir(path string) (*[]map[string]interface{}, error) {
+func processKustomizeDir(path string) ([]map[string]interface{}, error) {
 	k := krusty.MakeKustomizer(krusty.MakeDefaultOptions())
 
 	resourceMap, err := k.Run(filesys.MakeFsOnDisk(), path)
@@ -304,9 +304,9 @@ func processKustomizeDir(path string) (*[]map[string]interface{}, error) {
 func buildPolicyTemplate(
 	policyConf *types.PolicyConfig,
 	policyNum int,
-	objectTemplates *[]map[string]interface{},
-	configPolicyOptionsOverrides types.ConfigurationPolicyOptions,
-) *map[string]map[string]interface{} {
+	objectTemplates []map[string]interface{},
+	configPolicyOptionsOverrides *types.ConfigurationPolicyOptions,
+) map[string]map[string]interface{} {
 	var name string
 	if policyNum > 1 {
 		name = fmt.Sprintf("%s%d", policyConf.Name, policyNum)
@@ -322,7 +322,7 @@ func buildPolicyTemplate(
 				"name": name,
 			},
 			"spec": map[string]interface{}{
-				"object-templates":  *objectTemplates,
+				"object-templates":  objectTemplates,
 				"remediationAction": policyConf.RemediationAction,
 				"severity":          policyConf.Severity,
 			},
@@ -330,7 +330,7 @@ func buildPolicyTemplate(
 	}
 
 	// Set NamespaceSelector with policy configuration
-	setNamespaceSelector(policyConf.ConfigurationPolicyOptions, policyTemplate)
+	setNamespaceSelector(&policyConf.ConfigurationPolicyOptions, policyTemplate)
 
 	if len(policyConf.ConfigurationPolicyAnnotations) > 0 {
 		metadata := policyTemplate["objectDefinition"]["metadata"].(map[string]interface{})
@@ -373,19 +373,19 @@ func buildPolicyTemplate(
 		configSpec["severity"] = configPolicyOptionsOverrides.Severity
 	}
 
-	return &policyTemplate
+	return policyTemplate
 }
 
 // handleExpanders will go through all the enabled expanders and generate additional
 // policy templates to include in the policy.
 func handleExpanders(
-	manifests []map[string]interface{}, policyConf *types.PolicyConfig,
+	manifests []map[string]interface{}, policyConf types.PolicyConfig,
 ) []map[string]map[string]interface{} {
 	policyTemplates := []map[string]map[string]interface{}{}
 
 	for _, expander := range expanders.GetExpanders() {
 		for _, m := range manifests {
-			if expander.Enabled(policyConf) && expander.CanHandle(m) {
+			if expander.Enabled(&policyConf) && expander.CanHandle(m) {
 				expandedPolicyTemplates := expander.Expand(m, policyConf.Severity)
 				policyTemplates = append(policyTemplates, expandedPolicyTemplates...)
 			}
@@ -399,7 +399,7 @@ func handleExpanders(
 // a slice in order to account for multiple YAML documents in the same file.
 // If the file cannot be decoded or each document is not a map, an error will
 // be returned.
-func unmarshalManifestFile(manifestPath string) (*[]map[string]interface{}, error) {
+func unmarshalManifestFile(manifestPath string) ([]map[string]interface{}, error) {
 	// #nosec G304
 	manifestBytes, err := ioutil.ReadFile(manifestPath)
 	if err != nil {
@@ -417,7 +417,7 @@ func unmarshalManifestFile(manifestPath string) (*[]map[string]interface{}, erro
 // unmarshalManifestBytes unmarshals the input bytes slice of an object manifest/definition file
 // into a slice of maps in order to account for multiple YAML documents in the bytes slice. If each
 // document is not a map, an error will be returned.
-func unmarshalManifestBytes(manifestBytes []byte) (*[]map[string]interface{}, error) {
+func unmarshalManifestBytes(manifestBytes []byte) ([]map[string]interface{}, error) {
 	yamlDocs := []map[string]interface{}{}
 	d := yaml.NewDecoder(bytes.NewReader(manifestBytes))
 
@@ -445,7 +445,7 @@ func unmarshalManifestBytes(manifestBytes []byte) (*[]map[string]interface{}, er
 		}
 	}
 
-	return &yamlDocs, nil
+	return yamlDocs, nil
 }
 
 // verifyManifestPath verifies that the manifest path is in the directory tree under baseDirectory.

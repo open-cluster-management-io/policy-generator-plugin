@@ -1217,7 +1217,7 @@ func (p *Plugin) getPlcFromPath(plcPath string) (string, map[string]interface{},
 	var name string
 	var placement map[string]interface{}
 
-	for _, manifest := range *manifests {
+	for _, manifest := range manifests {
 		kind, _, _ := unstructured.NestedString(manifest, "kind")
 		if kind != placementRuleKind && kind != placementKind {
 			continue
