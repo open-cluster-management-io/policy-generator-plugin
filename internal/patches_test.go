@@ -244,12 +244,12 @@ func TestApplyPatches(t *testing.T) {
 
 	assertEqual(t, err, nil)
 
-	patchedManifest1 := (*patchedManifests)[0]
+	patchedManifest1 := patchedManifests[0]
 	_, found, _ := unstructured.NestedStringMap(patchedManifest1, "metadata", "labels")
 
 	assertEqual(t, found, false)
 
-	patchedManifest2 := (*patchedManifests)[1]
+	patchedManifest2 := patchedManifests[1]
 	labels, found, _ := unstructured.NestedStringMap(patchedManifest2, "metadata", "labels")
 
 	assertEqual(t, found, true)

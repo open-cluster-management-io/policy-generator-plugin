@@ -1110,12 +1110,12 @@ data:
 		t.Fatalf("Failed to unmarshal the YAML content, got: %v", err)
 	}
 
-	assertEqual(t, len(*manifests), 2)
+	assertEqual(t, len(manifests), 2)
 
-	name1, _, _ := unstructured.NestedString((*manifests)[0], "metadata", "name")
+	name1, _, _ := unstructured.NestedString((manifests)[0], "metadata", "name")
 	assertEqual(t, name1, "my-configmap")
 
-	name2, _, _ := unstructured.NestedString((*manifests)[1], "metadata", "name")
+	name2, _, _ := unstructured.NestedString((manifests)[1], "metadata", "name")
 	assertEqual(t, name2, "my-configmap2")
 }
 
@@ -1155,12 +1155,12 @@ data:
 		t.Fatalf("Failed to unmarshal the YAML content, got: %v", err)
 	}
 
-	assertEqual(t, len(*manifests), 2)
+	assertEqual(t, len(manifests), 2)
 
-	name1, _, _ := unstructured.NestedString((*manifests)[0], "metadata", "name")
+	name1, _, _ := unstructured.NestedString((manifests)[0], "metadata", "name")
 	assertEqual(t, name1, "my-configmap")
 
-	name2, _, _ := unstructured.NestedString((*manifests)[1], "metadata", "name")
+	name2, _, _ := unstructured.NestedString((manifests)[1], "metadata", "name")
 	assertEqual(t, name2, "my-configmap2")
 }
 
@@ -1409,9 +1409,9 @@ data:
 		t.Fatalf(fmt.Sprintf("Unexpected error: %s", err))
 	}
 
-	assertEqual(t, len(*manifests), 3)
+	assertEqual(t, len(manifests), 3)
 
-	for _, manifest := range *manifests {
+	for _, manifest := range manifests {
 		if metadata, ok := manifest["metadata"]; ok {
 			ns := metadata.(map[string]interface{})["namespace"]
 			assertEqual(t, ns, "kustomize-test")
