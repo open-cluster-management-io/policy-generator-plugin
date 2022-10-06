@@ -90,7 +90,7 @@ func (m *manifestPatcher) Validate() error {
 
 	// Apply defaults on the patches
 	for i := range m.patches {
-		err := setPatchDefaults(apiVersion, kind, name, namespace, &m.patches[i])
+		err := setPatchDefaults(apiVersion, kind, name, namespace, m.patches[i])
 		if err != nil {
 			return err
 		}
@@ -102,56 +102,56 @@ func (m *manifestPatcher) Validate() error {
 // setPatchDefaults is a helper function for Validate that sets any missing values on the patches
 // that can be derived. An error is returned if a patch is in an invalid format.
 func setPatchDefaults(
-	apiVersion, kind, name, namespace string, patch *map[string]interface{},
+	apiVersion, kind, name, namespace string, patch map[string]interface{},
 ) error {
 	errTemplate := `failed to retrieve the "%s" field from the manifest of name "` + name +
 		`"` + ` and kind "` + kind + `": %v`
 	setErrTemplate := `failed to set the "%s" field on the patch from the manifest of name "` +
 		name + `"` + ` and kind "` + kind + `": %v`
 
-	patchAPIVersion, _, err := unstructured.NestedString(*patch, "apiVersion")
+	patchAPIVersion, _, err := unstructured.NestedString(patch, "apiVersion")
 	if err != nil {
 		return fmt.Errorf(errTemplate, "apiVersion", err)
 	}
 
 	if patchAPIVersion == "" {
-		err = unstructured.SetNestedField(*patch, apiVersion, "apiVersion")
+		err = unstructured.SetNestedField(patch, apiVersion, "apiVersion")
 		if err != nil {
 			return fmt.Errorf(setErrTemplate, "apiVersion", err)
 		}
 	}
 
-	patchKind, _, err := unstructured.NestedString(*patch, "kind")
+	patchKind, _, err := unstructured.NestedString(patch, "kind")
 	if err != nil {
 		return fmt.Errorf(errTemplate, "kind", err)
 	}
 
 	if patchKind == "" {
-		err = unstructured.SetNestedField(*patch, kind, "kind")
+		err = unstructured.SetNestedField(patch, kind, "kind")
 		if err != nil {
 			return fmt.Errorf(setErrTemplate, "kind", err)
 		}
 	}
 
-	patchName, _, err := unstructured.NestedString(*patch, "metadata", "name")
+	patchName, _, err := unstructured.NestedString(patch, "metadata", "name")
 	if err != nil {
 		return fmt.Errorf(errTemplate, "metadata.name", err)
 	}
 
 	if patchName == "" {
-		err = unstructured.SetNestedField(*patch, name, "metadata", "name")
+		err = unstructured.SetNestedField(patch, name, "metadata", "name")
 		if err != nil {
 			return fmt.Errorf(setErrTemplate, "metadata.name", err)
 		}
 	}
 
-	patchNamespace, _, err := unstructured.NestedString(*patch, "metadata", "namespace")
+	patchNamespace, _, err := unstructured.NestedString(patch, "metadata", "namespace")
 	if err != nil {
 		return fmt.Errorf(errTemplate, "metadata.namespace", err)
 	}
 
 	if patchNamespace == "" {
-		err = unstructured.SetNestedField(*patch, namespace, "metadata", "namespace")
+		err = unstructured.SetNestedField(patch, namespace, "metadata", "namespace")
 		if err != nil {
 			return fmt.Errorf(setErrTemplate, "metadata.namespace", err)
 		}
@@ -163,7 +163,7 @@ func setPatchDefaults(
 // ApplyPatches applies the Kustomize patches on the input manifests using Kustomize and returns
 // the patched manifests. An error is returned if the patches can't be applied. This should be
 // run after the Validate method.
-func (m *manifestPatcher) ApplyPatches() (*[]map[string]interface{}, error) {
+func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
 	kustomizeDir := "kustomize"
 
 	// Create the file system in memory with the Kustomize YAML files
