@@ -47,12 +47,10 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 				_, filename := path.Split(f.Name())
 				if filename == "kustomization.yml" || filename == "kustomization.yaml" {
 					hasKustomize = true
-					manifestDocs, err := processKustomizeDir(manifest.Path)
+					manifestFiles, err = processKustomizeDir(manifest.Path)
 					if err != nil {
 						return nil, err
 					}
-
-					manifestFiles = manifestDocs
 
 					break
 				}
@@ -81,19 +79,16 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 			}
 		} else {
 			// Unmarshal the manifest in order to check for metadata patch replacement
-			manifestFile, err := unmarshalManifestFile(manifest.Path)
+			manifestFiles, err = unmarshalManifestFile(manifest.Path)
 			if err != nil {
 				return nil, err
 			}
 
-			if len(manifestFile) == 0 {
-				continue
-			}
 			// Allowing replace the original manifest metadata.name and/or metadata.namespace if it is a single
 			// yaml structure in the manifest path
-			if len(manifestFile) == 1 && len(manifest.Patches) == 1 {
+			if len(manifestFiles) == 1 && len(manifest.Patches) == 1 {
 				if patchMetadata, ok := manifest.Patches[0]["metadata"].(map[string]interface{}); ok {
-					if metadata, ok := manifestFile[0]["metadata"].(map[string]interface{}); ok {
+					if metadata, ok := manifestFiles[0]["metadata"].(map[string]interface{}); ok {
 						name, ok := patchMetadata["name"].(string)
 						if ok && name != "" {
 							metadata["name"] = name
@@ -102,12 +97,10 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 						if ok && namespace != "" {
 							metadata["namespace"] = namespace
 						}
-						manifestFile[0]["metadata"] = metadata
+						manifestFiles[0]["metadata"] = metadata
 					}
 				}
 			}
-
-			manifestFiles = append(manifestFiles, manifestFile...)
 		}
 
 		if len(manifest.Patches) > 0 {
