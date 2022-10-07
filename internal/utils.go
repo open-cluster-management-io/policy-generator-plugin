@@ -27,7 +27,6 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 	manifests := [][]map[string]interface{}{}
 
 	for _, manifest := range policyConf.Manifests {
-		manifestPaths := []string{}
 		manifestFiles := []map[string]interface{}{}
 		readErr := fmt.Errorf("failed to read the manifest path %s", manifest.Path)
 
@@ -48,7 +47,12 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 				_, filename := path.Split(f.Name())
 				if filename == "kustomization.yml" || filename == "kustomization.yaml" {
 					hasKustomize = true
-					manifestPaths = []string{manifest.Path}
+					manifestDocs, err := processKustomizeDir(manifest.Path)
+					if err != nil {
+						return nil, err
+					}
+
+					manifestFiles = manifestDocs
 
 					break
 				}
@@ -67,30 +71,13 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 						continue
 					}
 
-					yamlPath := path.Join(manifest.Path, f.Name())
-					manifestPaths = append(manifestPaths, yamlPath)
+					manifestDocs, err := unmarshalManifestFile(path.Join(manifest.Path, f.Name()))
+					if err != nil {
+						return nil, err
+					}
+
+					manifestFiles = append(manifestFiles, manifestDocs...)
 				}
-			}
-
-			for _, manifestPath := range manifestPaths {
-				var manifestFile []map[string]interface{}
-				var err error
-
-				if hasKustomize {
-					manifestFile, err = processKustomizeDir(manifestPath)
-				} else {
-					manifestFile, err = unmarshalManifestFile(manifestPath)
-				}
-
-				if err != nil {
-					return nil, err
-				}
-
-				if len(manifestFile) == 0 {
-					continue
-				}
-
-				manifestFiles = append(manifestFiles, manifestFile...)
 			}
 		} else {
 			// Unmarshal the manifest in order to check for metadata patch replacement
