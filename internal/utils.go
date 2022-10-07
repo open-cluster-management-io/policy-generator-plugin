@@ -45,6 +45,17 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 				return nil, readErr
 			}
 
+			// Handle when a Kustomization directory is specified
+			for _, f := range files {
+				_, filename := path.Split(f.Name())
+				if filename == "kustomization.yml" || filename == "kustomization.yaml" {
+					hasKustomize[manifest.Path] = true
+					resolvedFiles = []string{manifest.Path}
+
+					goto resolutioncomplete // TODO: remove goto after refactoring
+				}
+			}
+
 			for _, f := range files {
 				if f.IsDir() {
 					continue
@@ -56,20 +67,34 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 				if ext != ".yaml" && ext != ".yml" {
 					continue
 				}
-				// Handle when a Kustomization directory is specified
-				_, filename := path.Split(filepath)
-				if filename == "kustomization.yml" || filename == "kustomization.yaml" {
-					hasKustomize[manifest.Path] = true
-					resolvedFiles = []string{manifest.Path}
-
-					break
-				}
 
 				yamlPath := path.Join(manifest.Path, f.Name())
 				resolvedFiles = append(resolvedFiles, yamlPath)
 			}
 
+		resolutioncomplete:
 			manifestPaths = append(manifestPaths, resolvedFiles...)
+
+			for _, manifestPath := range manifestPaths {
+				var manifestFile []map[string]interface{}
+				var err error
+
+				if hasKustomize[manifestPath] {
+					manifestFile, err = processKustomizeDir(manifestPath)
+				} else {
+					manifestFile, err = unmarshalManifestFile(manifestPath)
+				}
+
+				if err != nil {
+					return nil, err
+				}
+
+				if len(manifestFile) == 0 {
+					continue
+				}
+
+				manifestFiles = append(manifestFiles, manifestFile...)
+			}
 		} else {
 			// Unmarshal the manifest in order to check for metadata patch replacement
 			manifestFile, err := unmarshalManifestFile(manifest.Path)
@@ -96,27 +121,6 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 						manifestFile[0]["metadata"] = metadata
 					}
 				}
-			}
-
-			manifestFiles = append(manifestFiles, manifestFile...)
-		}
-
-		for _, manifestPath := range manifestPaths {
-			var manifestFile []map[string]interface{}
-			var err error
-
-			if hasKustomize[manifestPath] {
-				manifestFile, err = processKustomizeDir(manifestPath)
-			} else {
-				manifestFile, err = unmarshalManifestFile(manifestPath)
-			}
-
-			if err != nil {
-				return nil, err
-			}
-
-			if len(manifestFile) == 0 {
-				continue
 			}
 
 			manifestFiles = append(manifestFiles, manifestFile...)
