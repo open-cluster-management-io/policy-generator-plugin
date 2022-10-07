@@ -55,7 +55,7 @@ For more about Open Cluster Management and its Policy Framework:
    **NOTE:** This will default to placing the binary in `${HOME}/.config/kustomize/plugin/`. You can
    change this by exporting `KUSTOMIZE_PLUGIN_HOME` to a different path.
 
-#### Configuration
+#### Configuration and use as a Generator
 
 1. Create a `kustomization.yaml` file that points to `PolicyGenerator` manifest(s), with any
    additional desired patches or customizations (see
@@ -79,6 +79,14 @@ For more about Open Cluster Management and its Policy Framework:
      ```bash
      kustomize build --enable-alpha-plugins
      ```
+
+#### Configuration and use as a Transformer
+
+The plugin can also be used as a transformer, to wrap all incoming `resources` from a 
+`kustomization.yaml` file into one Policy. This feature is somewhat experimental.
+
+An example configuration as a transformer (and its output) can be found in the
+[`examples/generator/`](./examples/generator/) folder.
 
 ### As a standalone binary
 

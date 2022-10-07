@@ -807,16 +807,18 @@ func (p *Plugin) assertValidConfig() error {
 				)
 			}
 
-			_, err := os.Stat(manifest.Path)
-			if err != nil {
-				return fmt.Errorf(
-					"could not read the manifest path %s in policy %s", manifest.Path, policy.Name,
-				)
-			}
+			if manifest.Path != "stdin" {
+				_, err := os.Stat(manifest.Path)
+				if err != nil {
+					return fmt.Errorf(
+						"could not read the manifest path %s in policy %s", manifest.Path, policy.Name,
+					)
+				}
 
-			err = verifyManifestPath(p.baseDirectory, manifest.Path)
-			if err != nil {
-				return err
+				err = verifyManifestPath(p.baseDirectory, manifest.Path)
+				if err != nil {
+					return err
+				}
 			}
 
 			evalInterval := manifest.EvaluationInterval

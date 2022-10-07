@@ -55,11 +55,13 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 
 			// Handle when a Kustomization directory is specified
 			hasKustomize := false
+
 			for _, f := range files {
 				_, filename := path.Split(f.Name())
 				if filename == "kustomization.yml" || filename == "kustomization.yaml" {
 					hasKustomize = true
 					manifestFiles, err = processKustomizeDir(manifest.Path)
+
 					if err != nil {
 						return nil, err
 					}
@@ -186,6 +188,27 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 
 				continue
 			}
+
+			// Annotations with these prefixes might be added to resources by kustomize,
+			// and should be removed when the resource is wrapped in a policy.
+			prefixesToDelete := []string{
+				"config.kubernetes.io/path",
+				"config.kubernetes.io/index",
+				"config.k8s.io/id",
+				"kustomize.config.k8s.io/id",
+				"internal.config.kubernetes.io",
+			}
+			annotations, _, _ := unstructured.NestedStringMap(manifest, "metadata", "annotations")
+
+			for key := range annotations {
+				for _, prefix := range prefixesToDelete {
+					if strings.HasPrefix(key, prefix) {
+						delete(annotations, key)
+					}
+				}
+			}
+
+			_ = unstructured.SetNestedStringMap(manifest, annotations, "metadata", "annotations")
 
 			objTemplate := map[string]interface{}{
 				"complianceType":   complianceType,
