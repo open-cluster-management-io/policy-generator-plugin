@@ -30,7 +30,19 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 		manifestFiles := []map[string]interface{}{}
 		readErr := fmt.Errorf("failed to read the manifest path %s", manifest.Path)
 
-		manifestPathInfo, err := os.Stat(manifest.Path)
+		var manifestFD *os.File
+		var err error
+
+		if manifest.Path == "stdin" {
+			manifestFD = os.Stdin
+		} else {
+			manifestFD, err = os.Open(manifest.Path)
+			if err != nil {
+				return nil, readErr
+			}
+		}
+
+		manifestPathInfo, err := manifestFD.Stat()
 		if err != nil {
 			return nil, readErr
 		}
@@ -79,7 +91,12 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 			}
 		} else {
 			// Unmarshal the manifest in order to check for metadata patch replacement
-			manifestFiles, err = unmarshalManifestFile(manifest.Path)
+			manifestBytes, err := io.ReadAll(manifestFD)
+			if err != nil {
+				return nil, err
+			}
+
+			manifestFiles, err = unmarshalManifestBytes(manifestBytes)
 			if err != nil {
 				return nil, err
 			}
