@@ -25,7 +25,6 @@ import (
 // be read.
 func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, error) {
 	manifests := [][]map[string]interface{}{}
-	hasKustomize := map[string]bool{}
 
 	for _, manifest := range policyConf.Manifests {
 		manifestPaths := []string{}
@@ -37,8 +36,6 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 			return nil, readErr
 		}
 
-		resolvedFiles := []string{}
-
 		if manifestPathInfo.IsDir() {
 			files, err := ioutil.ReadDir(manifest.Path)
 			if err != nil {
@@ -46,40 +43,40 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 			}
 
 			// Handle when a Kustomization directory is specified
+			hasKustomize := false
 			for _, f := range files {
 				_, filename := path.Split(f.Name())
 				if filename == "kustomization.yml" || filename == "kustomization.yaml" {
-					hasKustomize[manifest.Path] = true
-					resolvedFiles = []string{manifest.Path}
+					hasKustomize = true
+					manifestPaths = []string{manifest.Path}
 
-					goto resolutioncomplete // TODO: remove goto after refactoring
+					break
 				}
 			}
 
-			for _, f := range files {
-				if f.IsDir() {
-					continue
+			if !hasKustomize {
+				for _, f := range files {
+					if f.IsDir() {
+						continue
+					}
+
+					filepath := f.Name()
+					ext := path.Ext(filepath)
+
+					if ext != ".yaml" && ext != ".yml" {
+						continue
+					}
+
+					yamlPath := path.Join(manifest.Path, f.Name())
+					manifestPaths = append(manifestPaths, yamlPath)
 				}
-
-				filepath := f.Name()
-				ext := path.Ext(filepath)
-
-				if ext != ".yaml" && ext != ".yml" {
-					continue
-				}
-
-				yamlPath := path.Join(manifest.Path, f.Name())
-				resolvedFiles = append(resolvedFiles, yamlPath)
 			}
-
-		resolutioncomplete:
-			manifestPaths = append(manifestPaths, resolvedFiles...)
 
 			for _, manifestPath := range manifestPaths {
 				var manifestFile []map[string]interface{}
 				var err error
 
-				if hasKustomize[manifestPath] {
+				if hasKustomize {
 					manifestFile, err = processKustomizeDir(manifestPath)
 				} else {
 					manifestFile, err = unmarshalManifestFile(manifestPath)
