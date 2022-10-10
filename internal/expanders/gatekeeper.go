@@ -105,13 +105,11 @@ func (g GatekeeperPolicyExpander) Expand(
 						"objectDefinition": map[string]interface{}{
 							"apiVersion": "v1",
 							"kind":       "Event",
-							"annotations": []map[string]interface{}{
-								{
-									"constraint_action": "deny",
-									"constraint_kind":   constraintKind,
-									"constraint_name":   constraintName,
-									"event_type":        "violation",
-								},
+							"annotations": map[string]interface{}{
+								"constraint_action": "deny",
+								"constraint_kind":   constraintKind,
+								"constraint_name":   constraintName,
+								"event_type":        "violation",
 							},
 						},
 					},
