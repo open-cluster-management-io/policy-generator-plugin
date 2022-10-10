@@ -141,13 +141,11 @@ func TestGatekeeperExpand(t *testing.T) {
 							"objectDefinition": map[string]interface{}{
 								"apiVersion": "v1",
 								"kind":       "Event",
-								"annotations": []map[string]interface{}{
-									{
-										"constraint_action": "deny",
-										"constraint_kind":   "MyConstraint",
-										"constraint_name":   "my-awesome-constraint",
-										"event_type":        "violation",
-									},
+								"annotations": map[string]interface{}{
+									"constraint_action": "deny",
+									"constraint_kind":   "MyConstraint",
+									"constraint_name":   "my-awesome-constraint",
+									"event_type":        "violation",
 								},
 							},
 						},
