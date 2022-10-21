@@ -118,6 +118,7 @@ spec:
                 pruneObjectBehavior: None
                 remediationAction: inform
                 severity: low
+    remediationAction: inform
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
@@ -150,6 +151,7 @@ spec:
                 pruneObjectBehavior: DeleteAll
                 remediationAction: inform
                 severity: low
+    remediationAction: inform
 ---
 apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule
@@ -355,6 +357,7 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
+    remediationAction: inform
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
@@ -446,6 +449,7 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
+    remediationAction: inform
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
@@ -535,6 +539,7 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
+    remediationAction: inform
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
@@ -565,6 +570,7 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
+    remediationAction: inform
 ---
 apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule
@@ -723,6 +729,7 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
+    remediationAction: inform
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
@@ -784,6 +791,7 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
+    remediationAction: inform
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
@@ -830,6 +838,7 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
+    remediationAction: inform
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
@@ -877,6 +886,7 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
+    remediationAction: inform
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
@@ -940,6 +950,99 @@ spec:
                     include:
                         - '*'
                 remediationAction: enforce
+                severity: medium
+    remediationAction: enforce
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+}
+
+func TestCreatePolicyWithDifferentRemediationAction(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createIamPolicyManifest(t, tmpDir, "iamKindManifestPluginTest.yaml")
+	createIamPolicyManifest(t, tmpDir, "iamKindManifestPluginTest2.yaml")
+
+	p := Plugin{}
+	p.PolicyDefaults.Namespace = "Iam-policies"
+
+	patches := []map[string]interface{}{
+		{
+			"spec": map[string]interface{}{
+				"remediationAction": "inform",
+			},
+		},
+	}
+	policyConf := types.PolicyConfig{
+		PolicyOptions: types.PolicyOptions{
+			Categories: []string{"AC Access Control"},
+			Controls:   []string{"AC-3 Access Enforcement"},
+			Standards:  []string{"NIST SP 800-53"},
+		},
+		Name: "policy-limitclusteradmin",
+		Manifests: []types.Manifest{
+			{Path: path.Join(tmpDir, "iamKindManifestPluginTest.yaml")},
+			{
+				Path:    path.Join(tmpDir, "iamKindManifestPluginTest2.yaml"),
+				Patches: patches,
+			},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf)
+	p.applyDefaults(map[string]interface{}{})
+
+	err := p.createPolicy(&p.Policies[0])
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output := p.outputBuffer.String()
+	// expected Iam policy generated from
+	// non-root IAM policy type manifest
+	// in createIamPolicyTypeConfigMap()
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: AC Access Control
+        policy.open-cluster-management.io/controls: AC-3 Access Enforcement
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-limitclusteradmin
+    namespace: Iam-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: IamPolicy
+            metadata:
+                name: policy-limitclusteradmin-example
+            spec:
+                maxClusterRoleBindingUsers: 5
+                namespaceSelector:
+                    exclude:
+                        - kube-*
+                        - openshift-*
+                    include:
+                        - '*'
+                remediationAction: enforce
+                severity: medium
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: IamPolicy
+            metadata:
+                name: policy-limitclusteradmin-example
+            spec:
+                maxClusterRoleBindingUsers: 5
+                namespaceSelector:
+                    exclude:
+                        - kube-*
+                        - openshift-*
+                    include:
+                        - '*'
+                remediationAction: inform
                 severity: medium
 `
 	expected = strings.TrimPrefix(expected, "\n")
@@ -1012,6 +1115,7 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
+    remediationAction: inform
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
@@ -1983,6 +2087,7 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
+    remediationAction: inform
 ---
 apiVersion: policy.open-cluster-management.io/v1beta1
 kind: PolicySet
@@ -2105,6 +2210,7 @@ spec:
                             name: my-configmap
                 remediationAction: inform
                 severity: low
+    remediationAction: inform
 ---
 apiVersion: policy.open-cluster-management.io/v1beta1
 kind: PolicySet
