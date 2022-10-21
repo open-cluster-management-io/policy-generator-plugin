@@ -25,19 +25,27 @@ import (
 // be read.
 func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, error) {
 	manifests := [][]map[string]interface{}{}
-	hasKustomize := map[string]bool{}
 
 	for _, manifest := range policyConf.Manifests {
-		manifestPaths := []string{}
 		manifestFiles := []map[string]interface{}{}
 		readErr := fmt.Errorf("failed to read the manifest path %s", manifest.Path)
 
-		manifestPathInfo, err := os.Stat(manifest.Path)
+		var manifestFD *os.File
+		var err error
+
+		if manifest.Path == "stdin" {
+			manifestFD = os.Stdin
+		} else {
+			manifestFD, err = os.Open(manifest.Path)
+			if err != nil {
+				return nil, readErr
+			}
+		}
+
+		manifestPathInfo, err := manifestFD.Stat()
 		if err != nil {
 			return nil, readErr
 		}
-
-		resolvedFiles := []string{}
 
 		if manifestPathInfo.IsDir() {
 			files, err := ioutil.ReadDir(manifest.Path)
@@ -45,46 +53,61 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 				return nil, readErr
 			}
 
+			// Handle when a Kustomization directory is specified
+			hasKustomize := false
+
 			for _, f := range files {
-				if f.IsDir() {
-					continue
-				}
-
-				filepath := f.Name()
-				ext := path.Ext(filepath)
-
-				if ext != ".yaml" && ext != ".yml" {
-					continue
-				}
-				// Handle when a Kustomization directory is specified
-				_, filename := path.Split(filepath)
+				_, filename := path.Split(f.Name())
 				if filename == "kustomization.yml" || filename == "kustomization.yaml" {
-					hasKustomize[manifest.Path] = true
-					resolvedFiles = []string{manifest.Path}
+					hasKustomize = true
+					manifestFiles, err = processKustomizeDir(manifest.Path)
+
+					if err != nil {
+						return nil, err
+					}
 
 					break
 				}
-
-				yamlPath := path.Join(manifest.Path, f.Name())
-				resolvedFiles = append(resolvedFiles, yamlPath)
 			}
 
-			manifestPaths = append(manifestPaths, resolvedFiles...)
+			if !hasKustomize {
+				for _, f := range files {
+					if f.IsDir() {
+						continue
+					}
+
+					filepath := f.Name()
+					ext := path.Ext(filepath)
+
+					if ext != ".yaml" && ext != ".yml" {
+						continue
+					}
+
+					manifestDocs, err := unmarshalManifestFile(path.Join(manifest.Path, f.Name()))
+					if err != nil {
+						return nil, err
+					}
+
+					manifestFiles = append(manifestFiles, manifestDocs...)
+				}
+			}
 		} else {
 			// Unmarshal the manifest in order to check for metadata patch replacement
-			manifestFile, err := unmarshalManifestFile(manifest.Path)
+			manifestBytes, err := io.ReadAll(manifestFD)
 			if err != nil {
 				return nil, err
 			}
 
-			if len(manifestFile) == 0 {
-				continue
+			manifestFiles, err = unmarshalManifestBytes(manifestBytes)
+			if err != nil {
+				return nil, err
 			}
+
 			// Allowing replace the original manifest metadata.name and/or metadata.namespace if it is a single
 			// yaml structure in the manifest path
-			if len(manifestFile) == 1 && len(manifest.Patches) == 1 {
+			if len(manifestFiles) == 1 && len(manifest.Patches) == 1 {
 				if patchMetadata, ok := manifest.Patches[0]["metadata"].(map[string]interface{}); ok {
-					if metadata, ok := manifestFile[0]["metadata"].(map[string]interface{}); ok {
+					if metadata, ok := manifestFiles[0]["metadata"].(map[string]interface{}); ok {
 						name, ok := patchMetadata["name"].(string)
 						if ok && name != "" {
 							metadata["name"] = name
@@ -93,33 +116,10 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 						if ok && namespace != "" {
 							metadata["namespace"] = namespace
 						}
-						manifestFile[0]["metadata"] = metadata
+						manifestFiles[0]["metadata"] = metadata
 					}
 				}
 			}
-
-			manifestFiles = append(manifestFiles, manifestFile...)
-		}
-
-		for _, manifestPath := range manifestPaths {
-			var manifestFile []map[string]interface{}
-			var err error
-
-			if hasKustomize[manifestPath] {
-				manifestFile, err = processKustomizeDir(manifestPath)
-			} else {
-				manifestFile, err = unmarshalManifestFile(manifestPath)
-			}
-
-			if err != nil {
-				return nil, err
-			}
-
-			if len(manifestFile) == 0 {
-				continue
-			}
-
-			manifestFiles = append(manifestFiles, manifestFile...)
 		}
 
 		if len(manifest.Patches) > 0 {
@@ -188,6 +188,27 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 
 				continue
 			}
+
+			// Annotations with these prefixes might be added to resources by kustomize,
+			// and should be removed when the resource is wrapped in a policy.
+			prefixesToDelete := []string{
+				"config.kubernetes.io/path",
+				"config.kubernetes.io/index",
+				"config.k8s.io/id",
+				"kustomize.config.k8s.io/id",
+				"internal.config.kubernetes.io",
+			}
+			annotations, _, _ := unstructured.NestedStringMap(manifest, "metadata", "annotations")
+
+			for key := range annotations {
+				for _, prefix := range prefixesToDelete {
+					if strings.HasPrefix(key, prefix) {
+						delete(annotations, key)
+					}
+				}
+			}
+
+			_ = unstructured.SetNestedStringMap(manifest, annotations, "metadata", "annotations")
 
 			objTemplate := map[string]interface{}{
 				"complianceType":   complianceType,

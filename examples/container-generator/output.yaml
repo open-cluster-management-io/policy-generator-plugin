@@ -1,0 +1,59 @@
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  name: placement-made-in-container
+  namespace: default
+spec:
+  clusterSelector:
+    matchExpressions: []
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: binding-made-in-container
+  namespace: default
+placementRef:
+  apiGroup: apps.open-cluster-management.io
+  kind: PlacementRule
+  name: placement-made-in-container
+subjects:
+- apiGroup: policy.open-cluster-management.io
+  kind: Policy
+  name: made-in-container
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  annotations:
+    policy.open-cluster-management.io/categories: CM Configuration Management
+    policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+    policy.open-cluster-management.io/standards: NIST SP 800-53
+  name: made-in-container
+  namespace: default
+spec:
+  disabled: false
+  policy-templates:
+  - objectDefinition:
+      apiVersion: policy.open-cluster-management.io/v1
+      kind: ConfigurationPolicy
+      metadata:
+        name: made-in-container
+      spec:
+        evaluationInterval:
+          compliant: 30m
+          noncompliant: 45s
+        object-templates:
+        - complianceType: musthave
+          objectDefinition:
+            apiVersion: v1
+            data:
+              game.properties: "enemies=goldfish  \n"
+              ui.properties: |
+                color.good=neon-green
+            kind: ConfigMap
+            metadata:
+              annotations: {}
+              name: kustomized-game-config-fish
+              namespace: default
+        remediationAction: inform
+        severity: low

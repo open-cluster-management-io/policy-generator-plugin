@@ -1,0 +1,16 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-transformer
+
+policyDefaults:
+  namespace: default
+  consolidateManifests: false
+  evaluationInterval:
+    compliant: 30m
+    noncompliant: 45s
+
+policies:
+- name: transformed-policy
+  manifests:
+  - path: stdin

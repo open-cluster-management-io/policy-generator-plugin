@@ -1,0 +1,25 @@
+# run this example with `kustomize build . --enable-alpha-plugins > output.yaml`
+# Note: the container image must be available
+
+resources:
+- github.com/redhat-cop/gitops-catalog/advanced-cluster-management/operator/overlays/release-2.5?ref=main
+transformers:
+- |-
+  apiVersion: policy.open-cluster-management.io/v1
+  kind: PolicyGenerator
+  metadata:
+    name: policy-transformer
+    annotations:
+      config.kubernetes.io/function: |
+        container:
+          image: policy-generator-plugin:latest
+  policyDefaults:
+    namespace: default
+    consolidateManifests: false
+    evaluationInterval:
+      compliant: 30m
+      noncompliant: 45s
+  policies:
+  - name: transformed-policy
+    manifests:
+    - path: stdin

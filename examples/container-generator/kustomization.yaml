@@ -1,0 +1,23 @@
+# run this example with `kustomize build . --enable-alpha-plugins --mount type=bind,source=$(pwd),target=/tmp/,readonly > output.yaml`
+# Note: the manifests can not use kustomization.yaml files referencing non-local resources (eg github)
+
+generators:
+- |-
+  apiVersion: policy.open-cluster-management.io/v1
+  kind: PolicyGenerator
+  metadata:
+    name: policy-generator
+    annotations:
+      config.kubernetes.io/function: |
+        container:
+          image: policy-generator-plugin:latest
+  policyDefaults:
+    namespace: default
+    consolidateManifests: false
+    evaluationInterval:
+      compliant: 30m
+      noncompliant: 45s
+  policies:
+  - name: made-in-container
+    manifests:
+    - path: resources/

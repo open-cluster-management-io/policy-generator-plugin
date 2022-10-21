@@ -41,7 +41,8 @@ type Plugin struct {
 	APIVersion string `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
 	Kind       string `json:"kind,omitempty" yaml:"kind,omitempty"`
 	Metadata   struct {
-		Name string `json:"name,omitempty" yaml:"name,omitempty"`
+		Name        string            `json:"name,omitempty" yaml:"name,omitempty"`
+		Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	PlacementBindingDefaults struct {
 		Name string `json:"name,omitempty" yaml:"name,omitempty"`
@@ -807,16 +808,18 @@ func (p *Plugin) assertValidConfig() error {
 				)
 			}
 
-			_, err := os.Stat(manifest.Path)
-			if err != nil {
-				return fmt.Errorf(
-					"could not read the manifest path %s in policy %s", manifest.Path, policy.Name,
-				)
-			}
+			if manifest.Path != "stdin" {
+				_, err := os.Stat(manifest.Path)
+				if err != nil {
+					return fmt.Errorf(
+						"could not read the manifest path %s in policy %s", manifest.Path, policy.Name,
+					)
+				}
 
-			err = verifyManifestPath(p.baseDirectory, manifest.Path)
-			if err != nil {
-				return err
+				err = verifyManifestPath(p.baseDirectory, manifest.Path)
+				if err != nil {
+					return err
+				}
 			}
 
 			evalInterval := manifest.EvaluationInterval
