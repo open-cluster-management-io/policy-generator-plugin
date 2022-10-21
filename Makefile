@@ -22,6 +22,9 @@ API_PLUGIN_PATH ?= $(KUSTOMIZE_PLUGIN_HOME)/policy.open-cluster-management.io/v1
 # Kustomize arguments
 SOURCE_DIR ?= examples/
 
+# Image settings
+IMAGE_TAG ?= policy-generator-plugin:latest
+
 # go-get-tool will 'go install' any package $1 and install it to LOCAL_BIN.
 define go-get-tool
 @set -e ;\
@@ -53,6 +56,10 @@ build: layout
 .PHONY: build-binary
 build-binary:
 	go build -o PolicyGenerator cmd/main.go
+
+.PHONY: build-image
+build-image:
+	docker build -f ./build/Dockerfile -t $(IMAGE_TAG) .
 
 .PHONY: build-release
 build-release:

@@ -1,3 +1,6 @@
+# run this example with `kustomize build . --enable-alpha-plugins > output.yaml`
+# Note: you must have the plugin installed to your kustomize plugin directory.
+
 resources:
 - github.com/redhat-cop/gitops-catalog/advanced-cluster-management/operator/overlays/release-2.5?ref=main
 transformers:

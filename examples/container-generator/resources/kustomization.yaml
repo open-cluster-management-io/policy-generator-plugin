@@ -1,0 +1,3 @@
+namePrefix: kustomized-
+resources:
+- ./configmap-fish.yaml
