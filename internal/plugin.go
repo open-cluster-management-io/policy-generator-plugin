@@ -1167,6 +1167,11 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 		},
 	}
 
+	// set the root policy remediation action if all the remediation actions match
+	if rootRemediationAction := getRootRemediationAction(policyTemplates); rootRemediationAction != "" {
+		policy["spec"].(map[string]interface{})["remediationAction"] = rootRemediationAction
+	}
+
 	policyYAML, err := yaml.Marshal(policy)
 	if err != nil {
 		return fmt.Errorf(

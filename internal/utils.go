@@ -486,3 +486,22 @@ func verifyManifestPath(baseDirectory string, manifestPath string) error {
 
 	return nil
 }
+
+// Check policy-templates to see if all the remediation actions match, if so return the root policy remediation action
+func getRootRemediationAction(policyTemplates []map[string]map[string]interface{}) string {
+	var action string
+
+	for _, value := range policyTemplates {
+		if spec, ok := value["objectDefinition"]["spec"].(map[string]interface{}); ok {
+			if _, ok = spec["remediationAction"].(string); ok {
+				if action == "" {
+					action = spec["remediationAction"].(string)
+				} else if spec["remediationAction"].(string) != action {
+					return ""
+				}
+			}
+		}
+	}
+
+	return action
+}
