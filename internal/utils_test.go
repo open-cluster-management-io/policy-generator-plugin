@@ -1418,3 +1418,28 @@ data:
 		}
 	}
 }
+
+func TestGetRootRemediationAction(t *testing.T) {
+	t.Parallel()
+
+	policyTemplates := []map[string]map[string]interface{}{
+		{"objectDefinition": {
+			"apiVersion": policyAPIVersion,
+			"kind":       configPolicyKind,
+			"metadata": map[string]interface{}{
+				"name": "my-template",
+			},
+			"spec": map[string]interface{}{
+				"remediationAction": "inform",
+				"severity":          "low",
+			},
+		}},
+	}
+
+	expected := getRootRemediationAction(policyTemplates)
+	assertEqual(t, "inform", expected)
+
+	policyTemplates[0]["objectDefinition"]["spec"].(map[string]interface{})["remediationAction"] = "enforce"
+	expected = getRootRemediationAction(policyTemplates)
+	assertEqual(t, "enforce", expected)
+}
