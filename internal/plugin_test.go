@@ -2799,3 +2799,205 @@ func TestGenerateNonDNSBindingName(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateWithOrderingOptions(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	p := Plugin{}
+	var err error
+
+	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	p.PolicyDefaults.Namespace = "my-policies"
+	p.OrderViaDependencies = true
+	p.PolicyDefaults.Dependencies = []types.PolicyDependency{{
+		Name: "foobar",
+	}}
+	policyConf := types.PolicyConfig{
+		Name: "policy-app-config",
+		Manifests: []types.Manifest{{
+			Path: path.Join(tmpDir, "configmap.yaml"),
+		}},
+	}
+	policyConf2 := types.PolicyConfig{
+		PolicyOptions: types.PolicyOptions{
+			Dependencies: []types.PolicyDependency{{
+				Name:       "fizzbuzz",
+				Namespace:  "testing",
+				Compliance: "NonCompliant",
+				APIVersion: "tests.test.io/v3",
+				Kind:       "Tester",
+			}},
+			IgnorePending: true,
+		},
+		Name: "policy-app-config2",
+		Manifests: []types.Manifest{{
+			Path: path.Join(tmpDir, "configmap.yaml"),
+		}},
+	}
+	p.Policies = append(p.Policies, policyConf, policyConf2)
+
+	// Need a slim fake config so that the lookup (which checks between unset and false)
+	// can get the right answer.
+	fakeConfig := map[string]interface{}{}
+
+	err = json.Unmarshal([]byte(`{"policies": [{}, {"ignorePending": true}]}`), &fakeConfig)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	p.applyDefaults(fakeConfig)
+	// Default all policy ConsolidateManifests flags are set to true
+	// unless explicitly set
+	assertEqual(t, p.Policies[0].ConsolidateManifests, true)
+	assertEqual(t, p.Policies[1].ConsolidateManifests, true)
+
+	if err := p.assertValidConfig(); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    dependencies:
+        - apiVersion: policy.open-cluster-management.io/v1
+          compliance: Compliant
+          kind: Policy
+          name: foobar
+          namespace: my-policies
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config2
+    namespace: my-policies
+spec:
+    dependencies:
+        - apiVersion: tests.test.io/v3
+          compliance: NonCompliant
+          kind: Tester
+          name: fizzbuzz
+          namespace: testing
+        - apiVersion: policy.open-cluster-management.io/v1
+          compliance: Compliant
+          kind: Policy
+          name: foobar
+          namespace: my-policies
+        - apiVersion: policy.open-cluster-management.io/v1
+          compliance: Compliant
+          kind: Policy
+          name: policy-app-config
+          namespace: my-policies
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config2
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      ignorePending: true
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+    name: placement-policy-app-config
+    namespace: my-policies
+spec:
+    clusterSelector:
+        matchExpressions: []
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+    name: placement-policy-app-config2
+    namespace: my-policies
+spec:
+    clusterSelector:
+        matchExpressions: []
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+    name: binding-policy-app-config
+    namespace: my-policies
+placementRef:
+    apiGroup: apps.open-cluster-management.io
+    kind: PlacementRule
+    name: placement-policy-app-config
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+    name: binding-policy-app-config2
+    namespace: my-policies
+placementRef:
+    apiGroup: apps.open-cluster-management.io
+    kind: PlacementRule
+    name: placement-policy-app-config2
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config2
+`
+	expected = strings.TrimPrefix(expected, "\n")
+
+	output, err := p.Generate()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, string(output), expected)
+}
