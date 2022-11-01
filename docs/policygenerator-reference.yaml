@@ -10,6 +10,11 @@ placementBindingDefaults:
   # Set an explicit placement binding name to use rather than rely on the default.
   name: ""
 
+# Optional. Determines whether to define dependencies on the policies so they are applied in the
+# order they are defined in the manifests list. This defaults to false, and all the policies
+# can be applied at the same time.
+orderViaDependencies: false
+
 # Required. Any default value listed here can be overridden under an entry in the policies array
 # except for "namespace".
 policyDefaults:
@@ -32,6 +37,21 @@ policyDefaults:
   # manifests being wrapped in the policy. If set to false, a configuration policy per manifest will
   # be generated. This defaults to true.
   consolidateManifests: true
+  # Optional. A list of objects that should be in specific compliance states before this policy is
+  # applied.
+  dependencies:
+      # Required. The name of the object being depended on.
+    - name: ""
+      # Optional. The namespace of the object being depended on. Will default to the namespace of
+      # policies from this generator.
+      namespace: ""
+      # Optional. The compliance state the object should be in. Defaults to "Compliant"
+      compliance: "Compliant"
+      # Optional. The kind of the object. Defaults to "Policy", but can also be things like
+      # ConfigurationPolicy.
+      kind: "Policy"
+      # Optional. The APIVersion of the object. Defaults to "policy.open-cluster-management.io/v1"
+      apiVersion: "policy.open-cluster-management.io/v1"
   # Optional. Determines whether the policy is enabled or disabled. A disabled policy will not be
   # propagated to any managed clusters and will show no status as a result.
   disabled: false
@@ -47,6 +67,9 @@ policyDefaults:
   # deleted. Pruning only takes place if the remediation action of the policy has been set to "enforce". Example values
   # are "DeleteIfCreated", "DeleteAll", or "None". This defaults to unset, which is equivalent to "None".
   pruneObjectBehavior: "None"
+  # Optional. Determines whether to treat the policy as compliant when it is waiting for its
+  # dependencies to reach their desired states. Defaults to false.
+  ignorePending: false
   # Optional. When the policy references a Gatekeeper policy manifest, this determines if an additional
   # configuration policy should be generated in order to receive policy violations in Open Cluster
   # Management when the Gatekeeper policy has been violated. This defaults to true.
@@ -191,12 +214,27 @@ policies:
     # Optional. (See policyDefaults.controls for description.)
     controls:
       - "CM-2 Baseline Configuration"
+    # Optional. (See policyDefaults.dependencies for description.) Note: the list defined here will
+    # be merged with the default list.
+    dependencies:
+        # Required. (See policyDefaults.dependencies.name for description.)
+      - name: ""
+        # Optional. (See policyDefaults.dependencies.namespace for description.)
+        namespace: ""
+        # Optional. (See policyDefaults.dependencies.compliance for description.)
+        compliance: "Compliant"
+        # Optional. (See policyDefaults.dependencies.kind for description.)
+        kind: "Policy"
+        # Optional. (See policyDefaults.dependencies.apiVersion for description.)
+        apiVersion: "policy.open-cluster-management.io/v1"
     # Optional. (See policyDefaults.disabled for description.)
     disabled: false
     # Optional. (See policyDefaults.evaluationInterval for description.)
     evaluationInterval: {}
     # Optional. (See policyDefaults.pruneObjectBehavior for description.)
     pruneObjectBehavior: ""
+    # Optional. (See policyDefaults.ignorePending for description.)
+    ignorePending: false
     # Optional. (See policyDefaults.informGatekeeperPolicies for description.)
     informGatekeeperPolicies: true
     # Optional. (See policyDefaults.informKyvernoPolicies for description.)

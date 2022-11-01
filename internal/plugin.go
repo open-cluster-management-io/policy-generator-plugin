@@ -46,6 +46,8 @@ type Plugin struct {
 	PlacementBindingDefaults struct {
 		Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	} `json:"placementBindingDefaults,omitempty" yaml:"placementBindingDefaults,omitempty"`
+	OrderViaDependencies bool `json:"orderViaDependencies,omitempty" yaml:"orderViaDependencies,omitempty"`
+
 	PolicyDefaults types.PolicyDefaults    `json:"policyDefaults,omitempty" yaml:"policyDefaults,omitempty"`
 	Policies       []types.PolicyConfig    `json:"policies" yaml:"policies"`
 	PolicySets     []types.PolicySetConfig `json:"policySets" yaml:"policySets"`
@@ -411,6 +413,27 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		}
 	}
 
+	for i, dep := range p.PolicyDefaults.Dependencies {
+		if dep.Namespace == "" {
+			p.PolicyDefaults.Dependencies[i].Namespace = p.PolicyDefaults.Namespace
+		}
+
+		if dep.Compliance == "" {
+			p.PolicyDefaults.Dependencies[i].Compliance = "Compliant"
+		}
+
+		if dep.Kind == "" {
+			p.PolicyDefaults.Dependencies[i].Kind = policyKind
+		}
+
+		if dep.APIVersion == "" {
+			p.PolicyDefaults.Dependencies[i].APIVersion = policyAPIVersion
+		}
+	}
+
+	// Used when p.OrderViaDependencies is set
+	prevPolicyName := ""
+
 	for i := range p.Policies {
 		policy := &p.Policies[i]
 
@@ -511,6 +534,43 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.Disabled = disabledValue
 		} else {
 			policy.Disabled = p.PolicyDefaults.Disabled
+		}
+
+		ignorePending, ignorePendingIsSet := getPolicyBool(unmarshaledConfig, i, "ignorePending")
+		if ignorePendingIsSet {
+			policy.IgnorePending = ignorePending
+		} else {
+			policy.IgnorePending = p.PolicyDefaults.IgnorePending
+		}
+
+		for i, dep := range policy.Dependencies {
+			if dep.Namespace == "" {
+				policy.Dependencies[i].Namespace = p.PolicyDefaults.Namespace
+			}
+
+			if dep.Compliance == "" {
+				policy.Dependencies[i].Compliance = "Compliant"
+			}
+
+			if dep.Kind == "" {
+				policy.Dependencies[i].Kind = policyKind
+			}
+
+			if dep.APIVersion == "" {
+				policy.Dependencies[i].APIVersion = policyAPIVersion
+			}
+		}
+
+		policy.Dependencies = append(policy.Dependencies, p.PolicyDefaults.Dependencies...)
+
+		if p.OrderViaDependencies && prevPolicyName != "" {
+			policy.Dependencies = append(policy.Dependencies, types.PolicyDependency{
+				Name:       prevPolicyName,
+				Namespace:  p.PolicyDefaults.Namespace,
+				Compliance: "Compliant",
+				Kind:       policyKind,
+				APIVersion: policyAPIVersion,
+			})
 		}
 
 		// Determine whether defaults are set for placement
@@ -640,6 +700,8 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		for plcset := range plcToPlcset[policy.Name] {
 			policy.PolicySets = append(policy.PolicySets, plcset)
 		}
+
+		prevPolicyName = policy.Name
 	}
 
 	// Sync up the declared policy sets in p.Policies[*]
@@ -738,6 +800,12 @@ func (p *Plugin) assertValidConfig() error {
 
 	if len(p.Policies) == 0 {
 		return errors.New("policies is empty but it must be set")
+	}
+
+	for i, dep := range p.PolicyDefaults.Dependencies {
+		if dep.Name == "" {
+			return fmt.Errorf("dependency name must be set in policyDefaults dependency %v", i)
+		}
 	}
 
 	seenPlc := map[string]bool{}
@@ -985,6 +1053,12 @@ func (p *Plugin) assertValidConfig() error {
 				)
 			}
 		}
+
+		for i, dep := range policy.Dependencies {
+			if dep.Name == "" {
+				return fmt.Errorf("dependency name must be set in policy %v dependency %v", policy.Name, i)
+			}
+		}
 	}
 
 	seenPlcset := map[string]bool{}
@@ -1153,6 +1227,15 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 		policyConf.Standards, ",",
 	)
 
+	spec := map[string]interface{}{
+		"disabled":         policyConf.Disabled,
+		"policy-templates": policyTemplates,
+	}
+
+	if len(policyConf.Dependencies) != 0 {
+		spec["dependencies"] = policyConf.Dependencies
+	}
+
 	policy := map[string]interface{}{
 		"apiVersion": policyAPIVersion,
 		"kind":       policyKind,
@@ -1161,10 +1244,7 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 			"name":        policyConf.Name,
 			"namespace":   p.PolicyDefaults.Namespace,
 		},
-		"spec": map[string]interface{}{
-			"disabled":         policyConf.Disabled,
-			"policy-templates": policyTemplates,
-		},
+		"spec": spec,
 	}
 
 	// set the root policy remediation action if all the remediation actions match

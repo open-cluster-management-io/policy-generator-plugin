@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
 )
@@ -18,7 +19,7 @@ func assertEqual(t *testing.T, a interface{}, b interface{}) {
 	t.Helper()
 
 	if a != b {
-		t.Fatalf("%s != %s", a, b)
+		t.Fatalf(cmp.Diff(a, b))
 	}
 }
 

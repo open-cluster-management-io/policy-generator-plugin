@@ -194,6 +194,10 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 				"objectDefinition": manifest,
 			}
 
+			if policyConf.IgnorePending {
+				objTemplate["ignorePending"] = policyConf.IgnorePending
+			}
+
 			if metadataComplianceType != "" {
 				objTemplate["metadataComplianceType"] = metadataComplianceType
 			}
