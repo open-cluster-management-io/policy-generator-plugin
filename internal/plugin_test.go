@@ -4,7 +4,7 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"reflect"
@@ -1022,7 +1022,7 @@ func TestCreatePolicyInvalidYAML(t *testing.T) {
 	tmpDir := t.TempDir()
 	manifestPath := path.Join(tmpDir, "configmap.yaml")
 
-	err := ioutil.WriteFile(manifestPath, []byte("$ not Yaml!"), 0o666)
+	err := os.WriteFile(manifestPath, []byte("$ not Yaml!"), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to create %s: %v", manifestPath, err)
 	}
@@ -1061,7 +1061,7 @@ metadata:
   name: policy-limitclusteradmin-example
 `
 
-	err := ioutil.WriteFile(manifestPath, []byte(yamlContent), 0o666)
+	err := os.WriteFile(manifestPath, []byte(yamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to create %s: %v", manifestPath, err)
 	}
@@ -1303,7 +1303,7 @@ func plPathHelper(t *testing.T, plrYAML string, usingPlR bool) (*Plugin, string)
 	plrPath := path.Join(tmpDir, "pl.yaml")
 	plrYAML = strings.TrimPrefix(plrYAML, "\n")
 
-	err := ioutil.WriteFile(plrPath, []byte(plrYAML), 0o666)
+	err := os.WriteFile(plrPath, []byte(plrYAML), 0o666)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
