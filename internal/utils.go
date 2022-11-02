@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -40,7 +39,7 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 		resolvedFiles := []string{}
 
 		if manifestPathInfo.IsDir() {
-			files, err := ioutil.ReadDir(manifest.Path)
+			files, err := os.ReadDir(manifest.Path)
 			if err != nil {
 				return nil, readErr
 			}
@@ -405,7 +404,7 @@ func handleExpanders(
 // be returned.
 func unmarshalManifestFile(manifestPath string) ([]map[string]interface{}, error) {
 	// #nosec G304
-	manifestBytes, err := ioutil.ReadFile(manifestPath)
+	manifestBytes, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read the manifest file %s", manifestPath)
 	}

@@ -3,7 +3,7 @@ package internal
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"testing"
@@ -24,7 +24,7 @@ data:
   game.properties: enemies=potato
 `
 
-	err := ioutil.WriteFile(manifestsPath, []byte(yamlContent), 0o666)
+	err := os.WriteFile(manifestsPath, []byte(yamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestsPath)
 	}
@@ -48,7 +48,7 @@ spec:
   maxClusterRoleBindingUsers: 5
 `
 
-	err := ioutil.WriteFile(manifestsPath, []byte(yamlContent), 0o666)
+	err := os.WriteFile(manifestsPath, []byte(yamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestsPath)
 	}
