@@ -2,7 +2,10 @@
 package internal
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -10,6 +13,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
 )
@@ -17,8 +22,39 @@ import (
 func assertEqual(t *testing.T, a interface{}, b interface{}) {
 	t.Helper()
 
-	if a != b {
-		t.Fatalf(cmp.Diff(a, b))
+	diff := cmp.Diff(a, b, cmpopts.EquateErrors())
+
+	if diff != "" {
+		t.Fatalf(diff)
+	}
+}
+
+func assertEqualYaml(t *testing.T, a, b []byte) {
+	t.Helper()
+
+	aDec := yaml.NewDecoder(bytes.NewReader(a))
+	bDec := yaml.NewDecoder(bytes.NewReader(b))
+
+	for {
+		aOut := map[string]interface{}{}
+		aErr := aDec.Decode(aOut)
+
+		bOut := map[string]interface{}{}
+		bErr := bDec.Decode(bOut)
+
+		aDone := errors.Is(aErr, io.EOF)
+		bDone := errors.Is(bErr, io.EOF)
+
+		if aDone && bDone {
+			return // both inputs had the same number of documents
+		} else if aDone && !bDone {
+			t.Fatalf("extra yaml doc in second input")
+		} else if !aDone && bDone {
+			t.Fatalf("missing yaml doc in second input")
+		}
+
+		assertEqual(t, aErr, bErr)
+		assertEqual(t, aOut, bOut)
 	}
 }
 
