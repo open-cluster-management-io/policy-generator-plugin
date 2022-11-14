@@ -249,19 +249,27 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 // by checking apiVersion and kind fields.
 // Return error when apiVersion and kind fields aren't string.
 func isPolicyTypeManifest(manifest map[string]interface{}) (bool, error) {
-	apiVersion, _, isAPIStr := unstructured.NestedString(manifest, "apiVersion")
-	kind, _, isKindStr := unstructured.NestedString(manifest, "kind")
-
-	if isAPIStr != nil {
-		return false, fmt.Errorf("invalid non-string apiVersion format")
-	} else if isKindStr != nil {
-		return false, fmt.Errorf("invalid non-string kind format")
-	} else if strings.HasPrefix(apiVersion, "policy.open-cluster-management.io") &&
-		kind != "Policy" && strings.HasSuffix(kind, "Policy") {
-		return true, nil // non-root policy-type manifest contains policy api
+	apiVersion, found, err := unstructured.NestedString(manifest, "apiVersion")
+	if !found || err != nil {
+		return false, errors.New("invalid or not found apiVersion")
 	}
 
-	return false, nil
+	kind, found, err := unstructured.NestedString(manifest, "kind")
+	if !found || err != nil {
+		return false, errors.New("invalid or not found kind")
+	}
+
+	// Name is required in manifests, of all types.
+	_, found, err = unstructured.NestedString(manifest, "metadata", "name")
+	if !found || err != nil {
+		return false, errors.New("invalid or not found metadata.name")
+	}
+
+	isPolicy := strings.HasPrefix(apiVersion, "policy.open-cluster-management.io") &&
+		kind != "Policy" &&
+		strings.HasSuffix(kind, "Policy")
+
+	return isPolicy, nil
 }
 
 // setNamespaceSelector sets the namespace selector, if set, on the input policy template.
