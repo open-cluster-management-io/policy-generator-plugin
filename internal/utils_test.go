@@ -215,7 +215,7 @@ data:
 		assertEqual(t, len(policyTemplates), 1)
 
 		policyTemplate := policyTemplates[0]
-		objdef := policyTemplate["objectDefinition"]
+		objdef := policyTemplate["objectDefinition"].(map[string]interface{})
 
 		assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
 
@@ -383,7 +383,7 @@ resources:
 		assertEqual(t, len(policyTemplates), 1)
 
 		policyTemplate := policyTemplates[0]
-		objdef := policyTemplate["objectDefinition"]
+		objdef := policyTemplate["objectDefinition"].(map[string]interface{})
 
 		assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-kustomize")
 
@@ -517,7 +517,7 @@ data:
 
 		for i := 0; i < len(policyTemplates); i++ {
 			policyTemplate := policyTemplates[i]
-			objdef := policyTemplate["objectDefinition"]
+			objdef := policyTemplate["objectDefinition"].(map[string]interface{})
 			name := "policy-app-config"
 
 			if i > 0 {
@@ -705,7 +705,7 @@ func TestGetPolicyTemplateFromPolicyTypeManifest(t *testing.T) {
 		assertEqual(t, len(policyTemplates), 1)
 
 		IamPolicyTemplate := policyTemplates[0]
-		IamObjdef := IamPolicyTemplate["objectDefinition"]
+		IamObjdef := IamPolicyTemplate["objectDefinition"].(map[string]interface{})
 		assertEqual(t, IamObjdef["apiVersion"], "policy.open-cluster-management.io/v1")
 		// kind will not be overridden by "ConfigurationPolicy".
 		assertEqual(t, IamObjdef["kind"], "IamPolicy")
@@ -778,7 +778,7 @@ data:
 	assertEqual(t, len(policyTemplates), 1)
 
 	policyTemplate := policyTemplates[0]
-	objdef := policyTemplate["objectDefinition"]
+	objdef := policyTemplate["objectDefinition"].(map[string]interface{})
 	assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
 
 	spec, ok := objdef["spec"].(map[string]interface{})
@@ -866,7 +866,7 @@ data:
 	assertEqual(t, len(policyTemplates), 1)
 
 	policyTemplate := policyTemplates[0]
-	objdef := policyTemplate["objectDefinition"]
+	objdef := policyTemplate["objectDefinition"].(map[string]interface{})
 
 	assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
 
@@ -1009,7 +1009,7 @@ metadata:
 	// This is not an in-depth test since the Kyverno expansion is tested elsewhere. This is to
 	// to test that glue code is working as expected.
 	expandedPolicyTemplate := policyTemplates[1]
-	objdef := expandedPolicyTemplate["objectDefinition"]
+	objdef := expandedPolicyTemplate["objectDefinition"].(map[string]interface{})
 
 	spec, ok := objdef["spec"].(map[string]interface{})
 	if !ok {
@@ -1469,8 +1469,8 @@ data:
 func TestGetRootRemediationAction(t *testing.T) {
 	t.Parallel()
 
-	policyTemplates := []map[string]map[string]interface{}{
-		{"objectDefinition": {
+	policyTemplates := []map[string]interface{}{{
+		"objectDefinition": map[string]interface{}{
 			"apiVersion": policyAPIVersion,
 			"kind":       configPolicyKind,
 			"metadata": map[string]interface{}{
@@ -1480,13 +1480,14 @@ func TestGetRootRemediationAction(t *testing.T) {
 				"remediationAction": "inform",
 				"severity":          "low",
 			},
-		}},
-	}
+		},
+	}}
 
 	expected := getRootRemediationAction(policyTemplates)
 	assertEqual(t, "inform", expected)
 
-	policyTemplates[0]["objectDefinition"]["spec"].(map[string]interface{})["remediationAction"] = "enforce"
+	objDef := policyTemplates[0]["objectDefinition"].(map[string]interface{})
+	objDef["spec"].(map[string]interface{})["remediationAction"] = "enforce"
 	expected = getRootRemediationAction(policyTemplates)
 	assertEqual(t, "enforce", expected)
 }

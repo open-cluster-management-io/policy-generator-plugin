@@ -47,15 +47,15 @@ func (g GatekeeperPolicyExpander) Enabled(policyConf *types.PolicyConfig) bool {
 // method.
 func (g GatekeeperPolicyExpander) Expand(
 	manifest map[string]interface{}, severity string,
-) []map[string]map[string]interface{} {
-	templates := []map[string]map[string]interface{}{}
+) []map[string]interface{} {
+	templates := []map[string]interface{}{}
 	// These were previously validated in the CanHandle method.
 	constraintName, _, _ := unstructured.NestedString(manifest, "metadata", "name")
 	constraintKind, _, _ := unstructured.NestedString(manifest, "kind")
 
 	auditConfigPolicyName := fmt.Sprintf("inform-gatekeeper-audit-%s", constraintName)
-	auditConfigurationPolicy := map[string]map[string]interface{}{
-		"objectDefinition": {
+	auditConfigurationPolicy := map[string]interface{}{
+		"objectDefinition": map[string]interface{}{
 			"apiVersion": configPolicyAPIVersion,
 			"kind":       configPolicyKind,
 			"metadata":   map[string]interface{}{"name": auditConfigPolicyName},
@@ -87,8 +87,8 @@ func (g GatekeeperPolicyExpander) Expand(
 	// Further improvements here could be made by having the user specify the Gatekeeper namespace and
 	// targeting the events for the constraint kind to just that namespace.
 	admissionConfigPolicyName := fmt.Sprintf("inform-gatekeeper-admission-%s", constraintName)
-	admissionConfigurationPolicy := map[string]map[string]interface{}{
-		"objectDefinition": {
+	admissionConfigurationPolicy := map[string]interface{}{
+		"objectDefinition": map[string]interface{}{
 			"apiVersion": configPolicyAPIVersion,
 			"kind":       configPolicyKind,
 			"metadata":   map[string]interface{}{"name": admissionConfigPolicyName},
