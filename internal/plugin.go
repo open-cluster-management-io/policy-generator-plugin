@@ -46,8 +46,6 @@ type Plugin struct {
 	PlacementBindingDefaults struct {
 		Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	} `json:"placementBindingDefaults,omitempty" yaml:"placementBindingDefaults,omitempty"`
-	OrderViaDependencies bool `json:"orderViaDependencies,omitempty" yaml:"orderViaDependencies,omitempty"`
-
 	PolicyDefaults types.PolicyDefaults    `json:"policyDefaults,omitempty" yaml:"policyDefaults,omitempty"`
 	Policies       []types.PolicyConfig    `json:"policies" yaml:"policies"`
 	PolicySets     []types.PolicySetConfig `json:"policySets" yaml:"policySets"`
@@ -65,6 +63,8 @@ type Plugin struct {
 	// A set of processed placements from external placements (either Placement.PlacementRulePath or
 	// Placement.PlacementPath)
 	processedPlcs map[string]bool
+	// Track previous policy name for use if policies are being ordered
+	previousPolicyName string
 }
 
 var defaults = types.PolicyDefaults{
@@ -301,8 +301,8 @@ func isEvaluationIntervalSet(config map[string]interface{}, policyIndex int, com
 	return set
 }
 
-// isEvaluationIntervalSetManifest will return the evaluation interval of the specified manifest of the specified policy
-// in the Policy Generator configuration YAML.
+// isEvaluationIntervalSetManifest will return whether the evaluation interval of the specified manifest
+// of the specified policy is set in the Policy Generator configuration YAML.
 func isEvaluationIntervalSetManifest(
 	config map[string]interface{}, policyIndex int, manifestIndex int, complianceType string,
 ) bool {
@@ -331,6 +331,42 @@ func isEvaluationIntervalSetManifest(
 	}
 
 	_, set := evaluationInterval[complianceType].(string)
+
+	return set
+}
+
+func isPolicyFieldSet(config map[string]interface{}, policyIndex int, field string) bool {
+	policy := getPolicy(config, policyIndex)
+	if policy == nil {
+		return false
+	}
+
+	_, set := policy[field]
+
+	return set
+}
+
+func isManifestFieldSet(config map[string]interface{}, policyIdx, manifestIdx int, field string) bool {
+	policy := getPolicy(config, policyIdx)
+	if policy == nil {
+		return false
+	}
+
+	manifests, ok := policy["manifests"].([]interface{})
+	if !ok {
+		return false
+	}
+
+	if len(manifests)-1 < manifestIdx {
+		return false
+	}
+
+	manifest, ok := manifests[manifestIdx].(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	_, set := manifest[field]
 
 	return set
 }
@@ -413,26 +449,8 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		}
 	}
 
-	for i, dep := range p.PolicyDefaults.Dependencies {
-		if dep.Namespace == "" {
-			p.PolicyDefaults.Dependencies[i].Namespace = p.PolicyDefaults.Namespace
-		}
-
-		if dep.Compliance == "" {
-			p.PolicyDefaults.Dependencies[i].Compliance = "Compliant"
-		}
-
-		if dep.Kind == "" {
-			p.PolicyDefaults.Dependencies[i].Kind = policyKind
-		}
-
-		if dep.APIVersion == "" {
-			p.PolicyDefaults.Dependencies[i].APIVersion = policyAPIVersion
-		}
-	}
-
-	// Used when p.OrderViaDependencies is set
-	prevPolicyName := ""
+	applyDefaultDependencyFields(p.PolicyDefaults.Dependencies, p.PolicyDefaults.Namespace)
+	applyDefaultDependencyFields(p.PolicyDefaults.ExtraDependencies, p.PolicyDefaults.Namespace)
 
 	for i := range p.Policies {
 		policy := &p.Policies[i]
@@ -543,34 +561,20 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.IgnorePending = p.PolicyDefaults.IgnorePending
 		}
 
-		for i, dep := range policy.Dependencies {
-			if dep.Namespace == "" {
-				policy.Dependencies[i].Namespace = p.PolicyDefaults.Namespace
-			}
-
-			if dep.Compliance == "" {
-				policy.Dependencies[i].Compliance = "Compliant"
-			}
-
-			if dep.Kind == "" {
-				policy.Dependencies[i].Kind = policyKind
-			}
-
-			if dep.APIVersion == "" {
-				policy.Dependencies[i].APIVersion = policyAPIVersion
-			}
+		if isPolicyFieldSet(unmarshaledConfig, i, "dependencies") {
+			applyDefaultDependencyFields(policy.Dependencies, p.PolicyDefaults.Namespace)
+		} else {
+			policy.Dependencies = p.PolicyDefaults.Dependencies
 		}
 
-		policy.Dependencies = append(policy.Dependencies, p.PolicyDefaults.Dependencies...)
+		if isPolicyFieldSet(unmarshaledConfig, i, "extraDependencies") {
+			applyDefaultDependencyFields(policy.ExtraDependencies, p.PolicyDefaults.Namespace)
+		} else {
+			policy.ExtraDependencies = p.PolicyDefaults.ExtraDependencies
+		}
 
-		if p.OrderViaDependencies && prevPolicyName != "" {
-			policy.Dependencies = append(policy.Dependencies, types.PolicyDependency{
-				Name:       prevPolicyName,
-				Namespace:  p.PolicyDefaults.Namespace,
-				Compliance: "Compliant",
-				Kind:       policyKind,
-				APIVersion: policyAPIVersion,
-			})
+		if !isPolicyFieldSet(unmarshaledConfig, i, "orderManifests") {
+			policy.OrderManifests = p.PolicyDefaults.OrderManifests
 		}
 
 		// Determine whether defaults are set for placement
@@ -675,6 +679,16 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			if manifest.Severity == "" && manifest.Severity != "" {
 				manifest.Severity = policy.Severity
 			}
+
+			if isManifestFieldSet(unmarshaledConfig, i, j, "extraDependencies") {
+				applyDefaultDependencyFields(manifest.ExtraDependencies, p.PolicyDefaults.Namespace)
+			} else {
+				manifest.ExtraDependencies = policy.ExtraDependencies
+			}
+
+			if !isManifestFieldSet(unmarshaledConfig, i, j, "ignorePending") {
+				manifest.IgnorePending = policy.IgnorePending
+			}
 		}
 
 		for _, plcsetInPlc := range policy.PolicySets {
@@ -700,8 +714,6 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		for plcset := range plcToPlcset[policy.Name] {
 			policy.PolicySets = append(policy.PolicySets, plcset)
 		}
-
-		prevPolicyName = policy.Name
 	}
 
 	// Sync up the declared policy sets in p.Policies[*]
@@ -715,6 +727,26 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 		// Sort alphabetically to make it deterministic
 		sort.Strings(plcset.Policies)
+	}
+}
+
+func applyDefaultDependencyFields(deps []types.PolicyDependency, namespace string) {
+	for i, dep := range deps {
+		if dep.Namespace == "" {
+			deps[i].Namespace = namespace
+		}
+
+		if dep.Compliance == "" {
+			deps[i].Compliance = "Compliant"
+		}
+
+		if dep.Kind == "" {
+			deps[i].Kind = policyKind
+		}
+
+		if dep.APIVersion == "" {
+			deps[i].APIVersion = policyAPIVersion
+		}
 	}
 }
 
@@ -802,9 +834,27 @@ func (p *Plugin) assertValidConfig() error {
 		return errors.New("policies is empty but it must be set")
 	}
 
+	if p.PolicyDefaults.OrderPolicies && len(p.PolicyDefaults.Dependencies) != 0 {
+		return errors.New("policyDefaults must specify only one of dependencies or orderPolicies")
+	}
+
 	for i, dep := range p.PolicyDefaults.Dependencies {
 		if dep.Name == "" {
 			return fmt.Errorf("dependency name must be set in policyDefaults dependency %v", i)
+		}
+	}
+
+	if p.PolicyDefaults.OrderManifests && p.PolicyDefaults.ConsolidateManifests {
+		return errors.New("policyDefaults may not specify both consolidateManifests and orderManifests")
+	}
+
+	if len(p.PolicyDefaults.ExtraDependencies) > 0 && p.PolicyDefaults.OrderManifests {
+		return errors.New("policyDefaults may not specify both extraDependencies and orderManifests")
+	}
+
+	for i, dep := range p.PolicyDefaults.ExtraDependencies {
+		if dep.Name == "" {
+			return fmt.Errorf("extraDependency name must be set in policyDefaults extraDependency %v", i)
 		}
 	}
 
@@ -865,6 +915,32 @@ func (p *Plugin) assertValidConfig() error {
 			)
 		}
 
+		if len(policy.Dependencies) > 0 && p.PolicyDefaults.OrderPolicies {
+			return fmt.Errorf(
+				"dependencies may not be set in policy %v when policyDefaults.orderPolicies is true", policy.Name,
+			)
+		}
+
+		for x, dep := range policy.Dependencies {
+			if dep.Name == "" {
+				return fmt.Errorf("dependency name must be set in policy %v dependency %v", policy.Name, x)
+			}
+		}
+
+		if policy.ConsolidateManifests && policy.OrderManifests {
+			return fmt.Errorf("policy %v may not set orderManifests when consolidateManifests is true", policy.Name)
+		}
+
+		if len(policy.ExtraDependencies) > 0 && policy.OrderManifests {
+			return fmt.Errorf("extraDependencies may not be set in policy %v when orderManifests is true", policy.Name)
+		}
+
+		for x, dep := range policy.ExtraDependencies {
+			if dep.Name == "" {
+				return fmt.Errorf("extraDependency name must be set in policy %v extraDependency %v", policy.Name, x)
+			}
+		}
+
 		for j := range policy.Manifests {
 			manifest := &policy.Manifests[j]
 
@@ -918,6 +994,14 @@ func (p *Plugin) assertValidConfig() error {
 				if manifest.Severity != "" {
 					return fmt.Errorf(errorMsgFmt, "severity")
 				}
+
+				if len(manifest.ExtraDependencies) != 0 {
+					return fmt.Errorf(errorMsgFmt, "extraDependencies")
+				}
+
+				if manifest.IgnorePending {
+					return fmt.Errorf(errorMsgFmt, "ignorePending")
+				}
 			}
 
 			if evalInterval.Compliant != "" && evalInterval.Compliant != "never" {
@@ -941,6 +1025,22 @@ func (p *Plugin) assertValidConfig() error {
 						j,
 						err,
 					)
+				}
+			}
+
+			if len(manifest.ExtraDependencies) > 0 && policy.OrderManifests {
+				return fmt.Errorf(
+					"extraDependencies may not be set in policy %v manifest[%d] because orderManifests is set",
+					policy.Name,
+					j,
+				)
+			}
+
+			for x, dep := range manifest.ExtraDependencies {
+				if dep.Name == "" {
+					return fmt.Errorf(
+						"extraDependency name must be set in policy %v manifest[%d] extraDependency %v",
+						policy.Name, j, x)
 				}
 			}
 		}
@@ -1051,12 +1151,6 @@ func (p *Plugin) assertValidConfig() error {
 				return fmt.Errorf(
 					"policy %s may not use both Placement and PlacementRule kinds", policy.Name,
 				)
-			}
-		}
-
-		for i, dep := range policy.Dependencies {
-			if dep.Name == "" {
-				return fmt.Errorf("dependency name must be set in policy %v dependency %v", policy.Name, i)
 			}
 		}
 	}
@@ -1208,7 +1302,7 @@ func (p *Plugin) assertValidConfig() error {
 // The generated policy is written to the plugin's output buffer. An error is returned if the
 // manifests specified in the configuration are invalid or can't be read.
 func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
-	policyTemplates, err := getPolicyTemplates(policyConf)
+	policyTemplates, err := getPolicyTemplates(policyConf, p.PolicyDefaults.Namespace)
 	if err != nil {
 		return err
 	}
@@ -1231,6 +1325,18 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 		"disabled":         policyConf.Disabled,
 		"policy-templates": policyTemplates,
 	}
+
+	if p.PolicyDefaults.OrderPolicies && p.previousPolicyName != "" {
+		policyConf.Dependencies = []types.PolicyDependency{{
+			Name:       p.previousPolicyName,
+			Namespace:  p.PolicyDefaults.Namespace,
+			Compliance: "Compliant",
+			Kind:       policyKind,
+			APIVersion: policyAPIVersion,
+		}}
+	}
+
+	p.previousPolicyName = policyConf.Name
 
 	if len(policyConf.Dependencies) != 0 {
 		spec["dependencies"] = policyConf.Dependencies

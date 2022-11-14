@@ -11,9 +11,11 @@ type PolicyOptions struct {
 	Categories                     []string           `json:"categories,omitempty" yaml:"categories,omitempty"`
 	Controls                       []string           `json:"controls,omitempty" yaml:"controls,omitempty"`
 	Dependencies                   []PolicyDependency `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	ExtraDependencies              []PolicyDependency `json:"extraDependencies,omitempty" yaml:"extraDependencies,omitempty"`
 	Placement                      PlacementConfig    `json:"placement,omitempty" yaml:"placement,omitempty"`
 	Standards                      []string           `json:"standards,omitempty" yaml:"standards,omitempty"`
 	ConsolidateManifests           bool               `json:"consolidateManifests,omitempty" yaml:"consolidateManifests,omitempty"`
+	OrderManifests                 bool               `json:"orderManifests" yaml:"orderManifests"`
 	Disabled                       bool               `json:"disabled,omitempty" yaml:"disabled,omitempty"`
 	IgnorePending                  bool               `json:"ignorePending,omitempty" yaml:"ignorePending,omitempty"`
 	InformGatekeeperPolicies       bool               `json:"informGatekeeperPolicies,omitempty" yaml:"informGatekeeperPolicies,omitempty"`
@@ -38,6 +40,8 @@ type Manifest struct {
 	ConfigurationPolicyOptions `json:",inline" yaml:",inline"`
 	Patches                    []map[string]interface{} `json:"patches,omitempty" yaml:"patches,omitempty"`
 	Path                       string                   `json:"path,omitempty" yaml:"path,omitempty"`
+	ExtraDependencies          []PolicyDependency       `json:"extraDependencies,omitempty" yaml:"extraDependencies,omitempty"`
+	IgnorePending              bool                     `json:"ignorePending,omitempty" yaml:"ignorePending,omitempty"`
 }
 
 type NamespaceSelector struct {
@@ -94,6 +98,7 @@ type PolicyDefaults struct {
 	PolicyOptions              `json:",inline" yaml:",inline"`
 	ConfigurationPolicyOptions `json:",inline" yaml:",inline"`
 	Namespace                  string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	OrderPolicies              bool   `json:"orderPolicies,omitempty" yaml:"orderPolicies,omitempty"`
 }
 
 type PolicySetConfig struct {
