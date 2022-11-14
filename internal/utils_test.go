@@ -556,64 +556,111 @@ data:
 func TestIsPolicyTypeManifest(t *testing.T) {
 	t.Parallel()
 
-	invalidAPI := []string{
-		"policy.open-cluster-management.io/v1",
-		"apps.open-cluster-management.io/v1",
-	}
-
-	invalidKind := []string{
-		"CertificatePolicy",
-		"IamPolicy",
-	}
-
-	tests := []struct {
-		apiVersion     string
-		kind           string
-		invalidAPI     []string
-		invalidKind    []string
-		expectedFlag   bool
-		expectedErrMsg string
+	tests := map[string]struct {
+		manifest map[string]interface{}
+		wantVal  bool
+		wantErr  string
 	}{
-		{"policy.open-cluster-management.io/v1", "IamPolicy", nil, nil, true, ""},
-		{"policy.open-cluster-management.io/v1", "CertificatePolicy", nil, nil, true, ""},
-		{"policy.open-cluster-management.io/v1", "ConfigurationPolicy", nil, nil, true, ""},
-		{"policy.open-cluster-management.io/v1", "Policy", nil, nil, false, ""},
-		{"apps.open-cluster-management.io/v1", "PlacementRule", nil, nil, false, ""},
-		{"", "", nil, nil, false, ""},
-		{"", "IamPolicy", invalidAPI, nil, false, "invalid non-string apiVersion format"},
-		{"policy.open-cluster-management.io/v1", "", nil, invalidKind, false, "invalid non-string kind format"},
+		"valid RandomPolicy": {
+			manifest: map[string]interface{}{
+				"apiVersion": policyAPIVersion,
+				"kind":       "RandomPolicy",
+				"metadata": map[string]interface{}{
+					"name": "foo",
+				},
+			},
+			wantVal: true,
+			wantErr: "",
+		},
+		"valid ConfigurationPolicy": {
+			manifest: map[string]interface{}{
+				"apiVersion": policyAPIVersion,
+				"kind":       "ConfigurationPolicy",
+				"metadata": map[string]interface{}{
+					"name": "foo",
+				},
+			},
+			wantVal: true,
+			wantErr: "",
+		},
+		"valid Policy": {
+			manifest: map[string]interface{}{
+				"apiVersion": policyAPIVersion,
+				"kind":       "Policy",
+				"metadata": map[string]interface{}{
+					"name": "foo",
+				},
+			},
+			wantVal: false,
+			wantErr: "",
+		},
+		"valid PlacementRule": {
+			manifest: map[string]interface{}{
+				"apiVersion": "apps.open-cluster-management.io/v1",
+				"kind":       "PlacementRule",
+				"metadata": map[string]interface{}{
+					"name": "foo",
+				},
+			},
+			wantVal: false,
+			wantErr: "",
+		},
+		"wrong ApiVersion": {
+			manifest: map[string]interface{}{
+				"apiVersion": "fake.test.io/v3alpha2",
+				"kind":       "RandomPolicy",
+				"metadata": map[string]interface{}{
+					"name": "foo",
+				},
+			},
+			wantVal: false,
+			wantErr: "",
+		},
+		"invalid kind": {
+			manifest: map[string]interface{}{
+				"apiVersion": policyAPIVersion,
+				"kind":       []interface{}{"foo", "bar", "baz"},
+				"metadata": map[string]interface{}{
+					"name": "foo",
+				},
+			},
+			wantVal: false,
+			wantErr: "invalid or not found kind",
+		},
+		"missing apiVersion": {
+			manifest: map[string]interface{}{
+				"kind": "ConfigurationPolicy",
+				"metadata": map[string]interface{}{
+					"name": "foo",
+				},
+			},
+			wantVal: false,
+			wantErr: "invalid or not found apiVersion",
+		},
+		"missing name": {
+			manifest: map[string]interface{}{
+				"apiVersion": policyAPIVersion,
+				"kind":       "ConfigurationPolicy",
+				"metadata": map[string]interface{}{
+					"namespace": "foo",
+				},
+			},
+			wantVal: false,
+			wantErr: "invalid or not found metadata.name",
+		},
 	}
 
-	for _, test := range tests {
+	for name, test := range tests {
 		test := test
-		t.Run(
-			fmt.Sprintf("apiVersion=%s, kind=%s", test.apiVersion, test.kind),
-			func(t *testing.T) {
-				t.Parallel()
-				manifest := map[string]interface{}{}
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-				if test.invalidAPI == nil {
-					manifest["apiVersion"] = test.apiVersion
-				} else {
-					manifest["apiVersion"] = test.invalidAPI
-				}
-
-				if test.invalidKind == nil {
-					manifest["kind"] = test.kind
-				} else {
-					manifest["kind"] = test.invalidKind
-				}
-
-				isPolicyType, err := isPolicyTypeManifest(manifest)
-				assertEqual(t, isPolicyType, test.expectedFlag)
-
-				if test.expectedErrMsg == "" {
-					assertEqual(t, err, nil)
-				} else {
-					assertEqual(t, err.Error(), test.expectedErrMsg)
-				}
-			},
-		)
+			gotVal, gotErr := isPolicyTypeManifest(test.manifest)
+			if gotErr != nil {
+				assertEqual(t, gotErr.Error(), test.wantErr)
+			}
+			assertEqual(t, gotVal, test.wantVal)
+		})
 	}
 }
 

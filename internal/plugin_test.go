@@ -1185,7 +1185,7 @@ metadata:
 	}
 
 	expected := fmt.Sprintf(
-		"invalid non-string kind format in manifest path: %s", manifestPath,
+		"invalid or not found kind in manifest path: %s", manifestPath,
 	)
 	assertEqual(t, err.Error(), expected)
 }
