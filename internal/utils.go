@@ -150,7 +150,7 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 // policyConf.ConsolidateManifests = false will generate a policy templates slice
 // that each template includes a single manifest specified in policyConf.
 // An error is returned if one or more manifests cannot be read or are invalid.
-func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{}, error) {
+func getPolicyTemplates(policyConf *types.PolicyConfig, ns string) ([]map[string]interface{}, error) {
 	manifestGroups, err := getManifests(policyConf)
 	if err != nil {
 		return nil, err
@@ -170,6 +170,8 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 	for i, manifestGroup := range manifestGroups {
 		complianceType := policyConf.Manifests[i].ComplianceType
 		metadataComplianceType := policyConf.Manifests[i].MetadataComplianceType
+		ignorePending := policyConf.Manifests[i].IgnorePending
+		extraDeps := policyConf.Manifests[i].ExtraDependencies
 
 		for _, manifest := range manifestGroup {
 			isPolicyTypeManifest, err := isPolicyTypeManifest(manifest)
@@ -184,6 +186,8 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 			if isPolicyTypeManifest {
 				policyTemplate := map[string]interface{}{"objectDefinition": manifest}
 
+				setTemplateOptions(manifest, ignorePending, extraDeps)
+
 				policyTemplates = append(policyTemplates, policyTemplate)
 
 				continue
@@ -192,10 +196,6 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 			objTemplate := map[string]interface{}{
 				"complianceType":   complianceType,
 				"objectDefinition": manifest,
-			}
-
-			if policyConf.IgnorePending {
-				objTemplate["ignorePending"] = policyConf.IgnorePending
 			}
 
 			if metadataComplianceType != "" {
@@ -214,6 +214,9 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 					[]map[string]interface{}{objTemplate},
 					&policyConf.Manifests[i].ConfigurationPolicyOptions,
 				)
+
+				setTemplateOptions(policyTemplate, ignorePending, extraDeps)
+
 				policyTemplates = append(policyTemplates, policyTemplate)
 			}
 		}
@@ -238,12 +241,50 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 	}
 
 	// check the enabled expanders and add additional policy templates
-	for _, manifestGroup := range manifestGroups {
-		expandedPolicyTemplates := handleExpanders(manifestGroup, *policyConf)
-		policyTemplates = append(policyTemplates, expandedPolicyTemplates...)
+	for i, manifestGroup := range manifestGroups {
+		ignorePending := policyConf.Manifests[i].IgnorePending
+		extraDeps := policyConf.Manifests[i].ExtraDependencies
+
+		for _, additionalTemplate := range handleExpanders(manifestGroup, *policyConf) {
+			setTemplateOptions(additionalTemplate, ignorePending, extraDeps)
+			policyTemplates = append(policyTemplates, additionalTemplate)
+		}
+	}
+
+	// order manifests now that everything is defined
+	if policyConf.OrderManifests {
+		previousTemplate := types.PolicyDependency{Compliance: "Compliant"}
+
+		for i, tmpl := range policyTemplates {
+			if previousTemplate.Name != "" {
+				policyTemplates[i]["extraDependencies"] = []types.PolicyDependency{previousTemplate}
+			}
+
+			prevNS, found, err := unstructured.NestedString(tmpl, "objectDefinition", "metadata", "namespace")
+			if !found || err != nil {
+				previousTemplate.Namespace = ns
+			} else {
+				previousTemplate.Namespace = prevNS
+			}
+
+			// these fields are already known to exist from previous validation
+			previousTemplate.Name, _, _ = unstructured.NestedString(tmpl, "objectDefinition", "metadata", "name")
+			previousTemplate.APIVersion, _, _ = unstructured.NestedString(tmpl, "objectDefinition", "apiVersion")
+			previousTemplate.Kind, _, _ = unstructured.NestedString(tmpl, "objectDefinition", "kind")
+		}
 	}
 
 	return policyTemplates, nil
+}
+
+func setTemplateOptions(tmpl map[string]interface{}, ignorePending bool, extraDeps []types.PolicyDependency) {
+	if ignorePending {
+		tmpl["ignorePending"] = ignorePending
+	}
+
+	if len(extraDeps) > 0 {
+		tmpl["extraDependencies"] = extraDeps
+	}
 }
 
 // isPolicyTypeManifest determines if the manifest is a non-root policy manifest

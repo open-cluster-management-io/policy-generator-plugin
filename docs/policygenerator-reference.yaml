@@ -10,11 +10,6 @@ placementBindingDefaults:
   # Set an explicit placement binding name to use rather than rely on the default.
   name: ""
 
-# Optional. Determines whether to define dependencies on the policies so they are applied in the
-# order they are defined in the manifests list. This defaults to false, and all the policies
-# can be applied at the same time.
-orderViaDependencies: false
-
 # Required. Any default value listed here can be overridden under an entry in the policies array
 # except for "namespace".
 policyDefaults:
@@ -38,7 +33,7 @@ policyDefaults:
   # be generated. This defaults to true.
   consolidateManifests: true
   # Optional. A list of objects that should be in specific compliance states before this policy is
-  # applied.
+  # applied. Cannot be specified when policyDefaults.orderPolicies is set to true.
   dependencies:
       # Required. The name of the object being depended on.
     - name: ""
@@ -63,6 +58,20 @@ policyDefaults:
     # avoid evaluating the policy after it has become a particular compliance state.
     compliant: 30m
     noncompliant: 45s
+  # Optional. A list of objects that should be in specific compliance states before this policy is
+  # applied. These are added to each policy template (eg ConfigurationPolicy) separately from the
+  # dependencies list. Cannot be specified when policyDefaults.orderManifests is set to true.
+  extraDependencies:
+      # Required. (See policyDefaults.dependencies.name for description.)
+    - name: ""
+      # Optional. (See policyDefaults.dependencies.namespace for description.)
+      namespace: ""
+      # Optional. (See policyDefaults.dependencies.compliance for description.)
+      compliance: "Compliant"
+      # Optional. (See policyDefaults.dependencies.kind for description.)
+      kind: "Policy"
+      # Optional. (See policyDefaults.dependencies.apiVersion for description.)
+      apiVersion: "policy.open-cluster-management.io/v1"
   # Optional. Determines whether objects created or monitored by the policy should be deleted when the policy is
   # deleted. Pruning only takes place if the remediation action of the policy has been set to "enforce". Example values
   # are "DeleteIfCreated", "DeleteAll", or "None". This defaults to unset, which is equivalent to "None".
@@ -91,6 +100,14 @@ policyDefaults:
     exclude: []
     matchLabels: {}
     matchExpressions: []
+  # Optional. Determines whether to define extraDependencies on policy templates so that they are
+  # applied in the order they are defined in the manifests list for that policy. Cannot be specified
+  # when consolidateManifests is set to true. Cannot be specified at the same time as extraDependencies.
+  orderManifests: false
+  # Optional. Determines whether to define dependencies on the policies so they are applied in the
+  # order they are defined in the policies list. This defaults to false, and all the policies
+  # can be applied at the same time. Cannot be specified at the same time as dependencies.
+  orderPolicies: false
   # Optional. The placement configuration for the policies. This defaults to a placement
   # configuration that matches all clusters.
   placement:
@@ -170,12 +187,18 @@ policies:
         # Optional. (See policyDefaults.namespaceSelector for description.)
         # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         namespaceSelector: {}
-         # Optional. (See policyDefaults.evaluationInterval for description.)
+        # Optional. (See policyDefaults.evaluationInterval for description.)
         # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         evaluationInterval: {}
+        # Optional. (See policyDefaults.extraDependencies for description)
+        # Cannot be specified when policyDefaults.consolidateManifests is set to true.
+        extraDependencies: []
         # Optional. (See policyDefaults.pruneObjectBehavior for description.)
         # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         pruneObjectBehavior: ""
+        # Optional. (See policyDefaults.ignorePending for description.)
+        # Cannot be specified when policyDefaults.consolidateManifests is set to true.
+        ignorePending: false
         # Optional. (See policyDefaults.remediationAction for description.)
         # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         remediationAction: ""
@@ -214,23 +237,16 @@ policies:
     # Optional. (See policyDefaults.controls for description.)
     controls:
       - "CM-2 Baseline Configuration"
-    # Optional. (See policyDefaults.dependencies for description.) Note: the list defined here will
-    # be merged with the default list.
-    dependencies:
-        # Required. (See policyDefaults.dependencies.name for description.)
-      - name: ""
-        # Optional. (See policyDefaults.dependencies.namespace for description.)
-        namespace: ""
-        # Optional. (See policyDefaults.dependencies.compliance for description.)
-        compliance: "Compliant"
-        # Optional. (See policyDefaults.dependencies.kind for description.)
-        kind: "Policy"
-        # Optional. (See policyDefaults.dependencies.apiVersion for description.)
-        apiVersion: "policy.open-cluster-management.io/v1"
+    # Optional. (See policyDefaults.dependencies for description.)
+    # Cannot be specified when policyDefaults.orderPolicies is set to true.
+    dependencies: []
     # Optional. (See policyDefaults.disabled for description.)
     disabled: false
     # Optional. (See policyDefaults.evaluationInterval for description.)
     evaluationInterval: {}
+    # Optional. (See policyDefaults.extraDependencies for description.)
+    # Cannot be specified when orderManifests is set to true.
+    extraDependencies: []
     # Optional. (See policyDefaults.pruneObjectBehavior for description.)
     pruneObjectBehavior: ""
     # Optional. (See policyDefaults.ignorePending for description.)
@@ -241,8 +257,12 @@ policies:
     informKyvernoPolicies: true
     # Optional. (See policyDefaults.consolidateManifests for description.)
     consolidateManifests: true
-    # Optional.(See policyDefaults.namespaceSelector for description.)
+    # Optional. (See policyDefaults.namespaceSelector for description.)
     namespaceSelector: {}
+    # Optional. (See policyDefaults.orderManifests for description.)
+    # Cannot be specified when consolidateManifests is set to true.
+    # If set true here, the default extraDependencies will be overwritten.
+    orderManifests: false
     # Optional. (See policyDefaults.placement for description.)
     placement: {}
     # Optional. (See policyDefaults.remediationAction for description.)
