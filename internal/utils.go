@@ -150,7 +150,7 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 // policyConf.ConsolidateManifests = false will generate a policy templates slice
 // that each template includes a single manifest specified in policyConf.
 // An error is returned if one or more manifests cannot be read or are invalid.
-func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string]interface{}, error) {
+func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{}, error) {
 	manifestGroups, err := getManifests(policyConf)
 	if err != nil {
 		return nil, err
@@ -165,7 +165,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 	}
 
 	objectTemplates := make([]map[string]interface{}, 0, objectTemplatesLength)
-	policyTemplates := make([]map[string]map[string]interface{}, 0, policyTemplatesLength)
+	policyTemplates := make([]map[string]interface{}, 0, policyTemplatesLength)
 
 	for i, manifestGroup := range manifestGroups {
 		complianceType := policyConf.Manifests[i].ComplianceType
@@ -182,7 +182,8 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]map[string
 			}
 
 			if isPolicyTypeManifest {
-				policyTemplate := map[string]map[string]interface{}{"objectDefinition": manifest}
+				policyTemplate := map[string]interface{}{"objectDefinition": manifest}
+
 				policyTemplates = append(policyTemplates, policyTemplate)
 
 				continue
@@ -275,14 +276,15 @@ func isPolicyTypeManifest(manifest map[string]interface{}) (bool, error) {
 // setNamespaceSelector sets the namespace selector, if set, on the input policy template.
 func setNamespaceSelector(
 	policyConf *types.ConfigurationPolicyOptions,
-	policyTemplate map[string]map[string]interface{},
+	policyTemplate map[string]interface{},
 ) {
 	selector := policyConf.NamespaceSelector
 	if selector.Exclude != nil ||
 		selector.Include != nil ||
 		selector.MatchLabels != nil ||
 		selector.MatchExpressions != nil {
-		spec := policyTemplate["objectDefinition"]["spec"].(map[string]interface{})
+		objDef := policyTemplate["objectDefinition"].(map[string]interface{})
+		spec := objDef["spec"].(map[string]interface{})
 		spec["namespaceSelector"] = selector
 	}
 }
@@ -317,7 +319,7 @@ func buildPolicyTemplate(
 	policyNum int,
 	objectTemplates []map[string]interface{},
 	configPolicyOptionsOverrides *types.ConfigurationPolicyOptions,
-) map[string]map[string]interface{} {
+) map[string]interface{} {
 	var name string
 	if policyNum > 1 {
 		name = fmt.Sprintf("%s%d", policyConf.Name, policyNum)
@@ -325,8 +327,8 @@ func buildPolicyTemplate(
 		name = policyConf.Name
 	}
 
-	policyTemplate := map[string]map[string]interface{}{
-		"objectDefinition": {
+	policyTemplate := map[string]interface{}{
+		"objectDefinition": map[string]interface{}{
 			"apiVersion": policyAPIVersion,
 			"kind":       configPolicyKind,
 			"metadata": map[string]interface{}{
@@ -344,11 +346,13 @@ func buildPolicyTemplate(
 	setNamespaceSelector(&policyConf.ConfigurationPolicyOptions, policyTemplate)
 
 	if len(policyConf.ConfigurationPolicyAnnotations) > 0 {
-		metadata := policyTemplate["objectDefinition"]["metadata"].(map[string]interface{})
+		objDef := policyTemplate["objectDefinition"].(map[string]interface{})
+		metadata := objDef["metadata"].(map[string]interface{})
 		metadata["annotations"] = policyConf.ConfigurationPolicyAnnotations
 	}
 
-	configSpec := policyTemplate["objectDefinition"]["spec"].(map[string]interface{})
+	objDef := policyTemplate["objectDefinition"].(map[string]interface{})
+	configSpec := objDef["spec"].(map[string]interface{})
 
 	// Set EvaluationInterval with manifest overrides
 	evaluationInterval := configPolicyOptionsOverrides.EvaluationInterval
@@ -389,10 +393,8 @@ func buildPolicyTemplate(
 
 // handleExpanders will go through all the enabled expanders and generate additional
 // policy templates to include in the policy.
-func handleExpanders(
-	manifests []map[string]interface{}, policyConf types.PolicyConfig,
-) []map[string]map[string]interface{} {
-	policyTemplates := []map[string]map[string]interface{}{}
+func handleExpanders(manifests []map[string]interface{}, policyConf types.PolicyConfig) []map[string]interface{} {
+	policyTemplates := []map[string]interface{}{}
 
 	for _, expander := range expanders.GetExpanders() {
 		for _, m := range manifests {
@@ -499,11 +501,12 @@ func verifyManifestPath(baseDirectory string, manifestPath string) error {
 }
 
 // Check policy-templates to see if all the remediation actions match, if so return the root policy remediation action
-func getRootRemediationAction(policyTemplates []map[string]map[string]interface{}) string {
+func getRootRemediationAction(policyTemplates []map[string]interface{}) string {
 	var action string
 
 	for _, value := range policyTemplates {
-		if spec, ok := value["objectDefinition"]["spec"].(map[string]interface{}); ok {
+		objDef := value["objectDefinition"].(map[string]interface{})
+		if spec, ok := objDef["spec"].(map[string]interface{}); ok {
 			if _, ok = spec["remediationAction"].(string); ok {
 				if action == "" {
 					action = spec["remediationAction"].(string)

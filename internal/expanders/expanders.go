@@ -20,7 +20,7 @@ type Expander interface {
 	// Enabled determines if the policy configuration allows a policy to be expanded.
 	Enabled(policyConf *types.PolicyConfig) bool
 	// Expand will generate additional policy templates for the policy for auditing purposes.
-	Expand(manifest map[string]interface{}, severity string) []map[string]map[string]interface{}
+	Expand(manifest map[string]interface{}, severity string) []map[string]interface{}
 }
 
 // Common constants for the expanders.

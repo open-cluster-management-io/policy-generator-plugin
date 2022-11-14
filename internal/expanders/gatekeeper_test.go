@@ -92,9 +92,9 @@ func TestGatekeeperExpand(t *testing.T) {
 		},
 	}
 
-	expected := []map[string]map[string]interface{}{
+	expected := []map[string]interface{}{
 		{
-			"objectDefinition": {
+			"objectDefinition": map[string]interface{}{
 				"apiVersion": configPolicyAPIVersion,
 				"kind":       configPolicyKind,
 				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-audit-my-awesome-constraint"},
@@ -124,7 +124,7 @@ func TestGatekeeperExpand(t *testing.T) {
 			},
 		},
 		{
-			"objectDefinition": {
+			"objectDefinition": map[string]interface{}{
 				"apiVersion": configPolicyAPIVersion,
 				"kind":       configPolicyKind,
 				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-admission-my-awesome-constraint"},

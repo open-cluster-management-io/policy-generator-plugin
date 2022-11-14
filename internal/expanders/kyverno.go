@@ -44,14 +44,14 @@ func (k KyvernoPolicyExpander) Enabled(policyConf *types.PolicyConfig) bool {
 // through Open Cluster Management. This should be run after the CanHandle method.
 func (k KyvernoPolicyExpander) Expand(
 	manifest map[string]interface{}, severity string,
-) []map[string]map[string]interface{} {
-	templates := []map[string]map[string]interface{}{}
+) []map[string]interface{} {
+	templates := []map[string]interface{}{}
 	// This was previously validated in the CanHandle method.
 	policyName, _, _ := unstructured.NestedString(manifest, "metadata", "name")
 
 	configPolicyName := fmt.Sprintf("inform-kyverno-%s", policyName)
-	configurationPolicy := map[string]map[string]interface{}{
-		"objectDefinition": {
+	configurationPolicy := map[string]interface{}{
+		"objectDefinition": map[string]interface{}{
 			"apiVersion": configPolicyAPIVersion,
 			"kind":       configPolicyKind,
 			"metadata":   map[string]interface{}{"name": configPolicyName},
