@@ -150,7 +150,7 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 // policyConf.ConsolidateManifests = false will generate a policy templates slice
 // that each template includes a single manifest specified in policyConf.
 // An error is returned if one or more manifests cannot be read or are invalid.
-func getPolicyTemplates(policyConf *types.PolicyConfig, ns string) ([]map[string]interface{}, error) {
+func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{}, error) {
 	manifestGroups, err := getManifests(policyConf)
 	if err != nil {
 		return nil, err
@@ -258,13 +258,6 @@ func getPolicyTemplates(policyConf *types.PolicyConfig, ns string) ([]map[string
 		for i, tmpl := range policyTemplates {
 			if previousTemplate.Name != "" {
 				policyTemplates[i]["extraDependencies"] = []types.PolicyDependency{previousTemplate}
-			}
-
-			prevNS, found, err := unstructured.NestedString(tmpl, "objectDefinition", "metadata", "namespace")
-			if !found || err != nil {
-				previousTemplate.Namespace = ns
-			} else {
-				previousTemplate.Namespace = prevNS
 			}
 
 			// these fields are known to exist since the plugin created them
