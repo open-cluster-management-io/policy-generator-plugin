@@ -267,7 +267,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig, ns string) ([]map[string
 				previousTemplate.Namespace = prevNS
 			}
 
-			// these fields are already known to exist from previous validation
+			// these fields are known to exist since the plugin created them
 			previousTemplate.Name, _, _ = unstructured.NestedString(tmpl, "objectDefinition", "metadata", "name")
 			previousTemplate.APIVersion, _, _ = unstructured.NestedString(tmpl, "objectDefinition", "apiVersion")
 			previousTemplate.Kind, _, _ = unstructured.NestedString(tmpl, "objectDefinition", "kind")
@@ -289,7 +289,8 @@ func setTemplateOptions(tmpl map[string]interface{}, ignorePending bool, extraDe
 
 // isPolicyTypeManifest determines if the manifest is a non-root policy manifest
 // by checking apiVersion and kind fields.
-// Return error when apiVersion and kind fields aren't string.
+// Return error when apiVersion and kind fields aren't string, or if the manifest
+// is a non-root policy manifest, but it is invalid because it is missing a name.
 func isPolicyTypeManifest(manifest map[string]interface{}) (bool, error) {
 	apiVersion, found, err := unstructured.NestedString(manifest, "apiVersion")
 	if !found || err != nil {
@@ -301,15 +302,17 @@ func isPolicyTypeManifest(manifest map[string]interface{}) (bool, error) {
 		return false, errors.New("invalid or not found kind")
 	}
 
-	// Name is required in manifests, of all types.
-	_, found, err = unstructured.NestedString(manifest, "metadata", "name")
-	if !found || err != nil {
-		return false, errors.New("invalid or not found metadata.name")
-	}
-
 	isPolicy := strings.HasPrefix(apiVersion, "policy.open-cluster-management.io") &&
 		kind != "Policy" &&
 		strings.HasSuffix(kind, "Policy")
+
+	if isPolicy {
+		// metadata.name is required on policy manifests
+		_, found, err = unstructured.NestedString(manifest, "metadata", "name")
+		if !found || err != nil {
+			return true, errors.New("invalid or not found metadata.name")
+		}
+	}
 
 	return isPolicy, nil
 }

@@ -673,7 +673,7 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantVal: false,
 			wantErr: "invalid or not found apiVersion",
 		},
-		"missing name": {
+		"missing name in ConfigurationPolicy": {
 			manifest: map[string]interface{}{
 				"apiVersion": policyAPIVersion,
 				"kind":       "ConfigurationPolicy",
@@ -681,8 +681,19 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 					"namespace": "foo",
 				},
 			},
-			wantVal: false,
+			wantVal: true,
 			wantErr: "invalid or not found metadata.name",
+		},
+		"missing name in non-policy": {
+			manifest: map[string]interface{}{
+				"apiVersion": "apps.open-cluster-management.io/v1",
+				"kind":       "PlacementRule",
+				"metadata": map[string]interface{}{
+					"name": "foo",
+				},
+			},
+			wantVal: false,
+			wantErr: "",
 		},
 	}
 
