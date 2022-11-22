@@ -1302,7 +1302,7 @@ func (p *Plugin) assertValidConfig() error {
 // The generated policy is written to the plugin's output buffer. An error is returned if the
 // manifests specified in the configuration are invalid or can't be read.
 func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
-	policyTemplates, err := getPolicyTemplates(policyConf, p.PolicyDefaults.Namespace)
+	policyTemplates, err := getPolicyTemplates(policyConf)
 	if err != nil {
 		return err
 	}

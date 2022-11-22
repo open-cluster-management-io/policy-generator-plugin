@@ -243,7 +243,7 @@ data:
 			Name:      "policy-app-config",
 		}
 
-		policyTemplates, err := getPolicyTemplates(&policyConf, "default")
+		policyTemplates, err := getPolicyTemplates(&policyConf)
 		if err != nil {
 			t.Fatalf("Failed to get the policy templates: %v", err)
 		}
@@ -405,7 +405,7 @@ resources:
 			Name: "policy-kustomize",
 		}
 
-		policyTemplates, err := getPolicyTemplates(&policyConf, "default")
+		policyTemplates, err := getPolicyTemplates(&policyConf)
 		if err != nil {
 			if test.ErrMsg != "" {
 				assertEqual(t, err.Error(), test.ErrMsg)
@@ -544,7 +544,7 @@ data:
 			Name:      "policy-app-config",
 		}
 
-		policyTemplates, err := getPolicyTemplates(&policyConf, "default")
+		policyTemplates, err := getPolicyTemplates(&policyConf)
 		if err != nil {
 			t.Fatalf("Failed to get the policy templates: %v", err)
 		}
@@ -745,7 +745,7 @@ func TestGetPolicyTemplateFromPolicyTypeManifest(t *testing.T) {
 			},
 		}
 
-		policyTemplates, err := getPolicyTemplates(&policyConf, "default")
+		policyTemplates, err := getPolicyTemplates(&policyConf)
 		if err != nil {
 			t.Fatalf("Failed to get the policy templates: %v", err)
 		}
@@ -818,7 +818,7 @@ data:
 		Name:      "policy-app-config",
 	}
 
-	policyTemplates, err := getPolicyTemplates(&policyConf, "default")
+	policyTemplates, err := getPolicyTemplates(&policyConf)
 	if err != nil {
 		t.Fatalf("Failed to get the policy templates: %v", err)
 	}
@@ -906,7 +906,7 @@ data:
 		Name:      "policy-app-config",
 	}
 
-	policyTemplates, err := getPolicyTemplates(&policyConf, "default")
+	policyTemplates, err := getPolicyTemplates(&policyConf)
 	if err != nil {
 		t.Fatalf("Failed to get the policy templates: %v ", err)
 	}
@@ -1015,7 +1015,7 @@ data:
 		Name:      "policy-app-config",
 	}
 
-	_, err = getPolicyTemplates(&policyConf, "default")
+	_, err = getPolicyTemplates(&policyConf)
 	assertEqual(t, err != nil, true)
 }
 
@@ -1047,7 +1047,7 @@ metadata:
 		Name:      "policy-kyverno-config",
 	}
 
-	policyTemplates, err := getPolicyTemplates(&policyConf, "default")
+	policyTemplates, err := getPolicyTemplates(&policyConf)
 	if err != nil {
 		t.Fatalf("Failed to get the policy templates: %v", err)
 	}
@@ -1104,7 +1104,7 @@ func TestGetPolicyTemplateNoManifests(t *testing.T) {
 		Name:      "policy-app-config",
 	}
 
-	_, err := getPolicyTemplates(&policyConf, "default")
+	_, err := getPolicyTemplates(&policyConf)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1132,7 +1132,7 @@ func TestGetPolicyTemplateInvalidPath(t *testing.T) {
 		Name: "policy-app-config",
 	}
 
-	_, err := getPolicyTemplates(&policyConf, "default")
+	_, err := getPolicyTemplates(&policyConf)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1161,7 +1161,7 @@ func TestGetPolicyTemplateInvalidManifest(t *testing.T) {
 		Name:      "policy-app-config",
 	}
 
-	_, err = getPolicyTemplates(&policyConf, "default")
+	_, err = getPolicyTemplates(&policyConf)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
