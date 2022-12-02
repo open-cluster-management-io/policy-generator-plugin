@@ -152,6 +152,10 @@ policyDefaults:
   # generated for the policy since one is generated for the set. Set policies[*].generatePlacementWhenInSet 
   # or policyDefaults.generatePlacementWhenInSet to override.
   policySets: []
+  # Optional. Whether to generate placement manifests for policies. Placement generation occurs except when policies are
+  # part of a policy set. Use this setting to turn off placement generation for policies not in policy sets. This
+  # defaults to "true".
+  generatePolicyPlacement: true
   # Optional. When a policy is part of a policy set, by default the generator will not generate the placement
   # for this policy since a placement is generated for the policy set. If a placement should still be generated, 
   # set it to "true" so that the policy will be deployed with both policy placement and policy set placement. 

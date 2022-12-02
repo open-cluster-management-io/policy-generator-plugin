@@ -142,9 +142,10 @@ func (p *Plugin) Generate() ([]byte, error) {
 	plcNameToPolicyAndSetIdxs := map[string]map[string][]int{}
 
 	for i := range p.Policies {
-		// only generate placement when GeneratePlacementWhenInSet equals to true or policy is not
-		// part of any policy sets
-		if p.Policies[i].GeneratePlacementWhenInSet || len(p.Policies[i].PolicySets) == 0 {
+		// only generate placement when GeneratePlacementWhenInSet equals to true, GeneratePlacement is true,
+		// or policy is not part of any policy sets
+		if p.Policies[i].GeneratePlacementWhenInSet ||
+			(p.Policies[i].GeneratePolicyPlacement && len(p.Policies[i].PolicySets) == 0) {
 			plcName, err := p.createPlacement(&p.Policies[i].Placement, p.Policies[i].Name)
 			if err != nil {
 				return nil, err
@@ -429,6 +430,14 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		p.PolicyDefaults.Standards = defaults.Standards
 	}
 
+	// GeneratePolicyPlacement defaults to true unless explicitly set in the config.
+	gppValue, setGpp := getDefaultBool(unmarshaledConfig, "generatePolicyPlacement")
+	if setGpp {
+		p.PolicyDefaults.GeneratePolicyPlacement = gppValue
+	} else {
+		p.PolicyDefaults.GeneratePolicyPlacement = true
+	}
+
 	// Generate temporary sets to later merge the policy sets declared in p.Policies[*] and p.PolicySets
 	plcsetToPlc := make(map[string]map[string]bool)
 	plcToPlcset := make(map[string]map[string]bool)
@@ -516,10 +525,18 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.PolicySets = p.PolicyDefaults.PolicySets
 		}
 
-		// GeneratePlacementWhenInSet default to false unless explicitly set in the config.
-		gpValue, setGp := getPolicyBool(unmarshaledConfig, i, "generatePlacementWhenInSet")
-		if setGp {
-			policy.GeneratePlacementWhenInSet = gpValue
+		// GeneratePolicyPlacement defaults to true unless explicitly set in the config.
+		gppValue, setGpp := getPolicyBool(unmarshaledConfig, i, "generatePolicyPlacement")
+		if setGpp {
+			policy.GeneratePolicyPlacement = gppValue
+		} else {
+			policy.GeneratePolicyPlacement = p.PolicyDefaults.GeneratePolicyPlacement
+		}
+
+		// GeneratePlacementWhenInSet defaults to false unless explicitly set in the config.
+		gpsetValue, setGpset := getPolicyBool(unmarshaledConfig, i, "generatePlacementWhenInSet")
+		if setGpset {
+			policy.GeneratePlacementWhenInSet = gpsetValue
 		} else {
 			policy.GeneratePlacementWhenInSet = p.PolicyDefaults.GeneratePlacementWhenInSet
 		}
@@ -824,6 +841,12 @@ func (p *Plugin) assertValidConfig() error {
 		defaultPlacementOptions++
 	}
 
+	if defaultPlacementOptions > 0 && !p.PolicyDefaults.GeneratePolicyPlacement {
+		return errors.New(
+			"policyDefaults must not specify a placement when generatePlacement is set to false",
+		)
+	}
+
 	if defaultPlacementOptions > 1 {
 		return errors.New(
 			"policyDefaults must specify only one of placement selector, placement path, or placement name",
@@ -1104,6 +1127,12 @@ func (p *Plugin) assertValidConfig() error {
 
 		if policy.Placement.PlacementRuleName != "" || policy.Placement.PlacementName != "" {
 			policyPlacementOptions++
+		}
+
+		if policyPlacementOptions > 0 && !policy.GeneratePolicyPlacement {
+			return fmt.Errorf(
+				"policy %s must not specify a placement when generatePlacement is set to false", policy.Name,
+			)
 		}
 
 		if policyPlacementOptions > 1 {
