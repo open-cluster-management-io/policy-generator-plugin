@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stolostron/policy-generator-plugin/internal/types"
 	yaml "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/validation"
-	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
 )
 
 const (

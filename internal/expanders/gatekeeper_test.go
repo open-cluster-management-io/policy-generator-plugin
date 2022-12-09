@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
+	"github.com/stolostron/policy-generator-plugin/internal/types"
 )
 
 func TestGatekeeperCanHandle(t *testing.T) {

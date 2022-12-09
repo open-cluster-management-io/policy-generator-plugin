@@ -14,9 +14,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/stolostron/policy-generator-plugin/internal/types"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
 )
 
 func assertEqual(t *testing.T, a interface{}, b interface{}) {
