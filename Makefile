@@ -48,11 +48,11 @@ clean:
 
 .PHONY: build
 build: layout
-	go build -o $(API_PLUGIN_PATH)/PolicyGenerator cmd/main.go
+	go build -o $(API_PLUGIN_PATH)/ ./cmd/PolicyGenerator
 
 .PHONY: build-binary
 build-binary:
-	go build -o PolicyGenerator cmd/main.go
+	go build ./cmd/PolicyGenerator
 
 .PHONY: build-release
 build-release:
@@ -62,9 +62,9 @@ build-release:
 			exit 1; \
 	fi
 	@mkdir -p build_output
-	GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/linux-amd64-PolicyGenerator cmd/main.go
-	GOOS=darwin CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/darwin-amd64-PolicyGenerator cmd/main.go
-	GOOS=windows CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/windows-amd64-PolicyGenerator.exe cmd/main.go
+	GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/linux-amd64-PolicyGenerator ./cmd/PolicyGenerator
+	GOOS=darwin CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/darwin-amd64-PolicyGenerator ./cmd/PolicyGenerator
+	GOOS=windows CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/windows-amd64-PolicyGenerator.exe ./cmd/PolicyGenerator
 
 .PHONY: generate
 generate:

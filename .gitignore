@@ -5,7 +5,7 @@
 *.so
 *.dylib
 **/.DS_Store
-PolicyGenerator
+/PolicyGenerator
 build_output
 
 # Test binary, built with `go test -c`

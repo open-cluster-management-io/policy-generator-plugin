@@ -16,7 +16,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
+	"open-cluster-management.io/policy-generator-plugin/internal/types"
 )
 
 func assertEqual(t *testing.T, a interface{}, b interface{}) {
@@ -1475,7 +1475,7 @@ func TestProcessKustomizeDir(t *testing.T) {
 		"kustomization.yaml": `
 resources:
 - configmap.yaml
-- https://github.com/stolostron/policy-generator-plugin/examples/input-kustomize/?ref=main
+- https://github.com/open-cluster-management-io/policy-generator-plugin/examples/input-kustomize/?ref=main
 
 namespace: kustomize-test
 `,

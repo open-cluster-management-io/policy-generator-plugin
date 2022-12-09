@@ -13,8 +13,8 @@ import (
 
 	yaml "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/expanders"
-	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
+	"open-cluster-management.io/policy-generator-plugin/internal/expanders"
+	"open-cluster-management.io/policy-generator-plugin/internal/types"
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
