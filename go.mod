@@ -1,4 +1,4 @@
-module open-cluster-management.io/ocm-kustomize-generator-plugins
+module open-cluster-management.io/policy-generator-plugin
 
 go 1.18
 

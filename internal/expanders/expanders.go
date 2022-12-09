@@ -2,7 +2,7 @@
 package expanders
 
 import (
-	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
+	"open-cluster-management.io/policy-generator-plugin/internal/types"
 )
 
 // GetExpanders returns the list of available expanders.
