@@ -10,7 +10,7 @@ For more about Open Cluster Management and its Policy Framework:
 
 - [Open Cluster Management website](https://open-cluster-management.io/)
 - [Governance Policy Framework](https://open-cluster-management.io/getting-started/integration/policy-framework/)
-- [Policy Collection repository](https://github.com/stolostron/policy-collection)
+- [Policy Collection repository](https://github.com/open-cluster-management-io/policy-collection)
 
 ## Using the Policy Generator
 

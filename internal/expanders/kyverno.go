@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
+	"open-cluster-management.io/policy-generator-plugin/internal/types"
 )
 
 type KyvernoPolicyExpander struct{}

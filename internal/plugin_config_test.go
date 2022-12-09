@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
+	"open-cluster-management.io/policy-generator-plugin/internal/types"
 )
 
 func createConfigMap(t *testing.T, tmpDir, filename string) {
@@ -72,9 +72,9 @@ metadata:
 placementBindingDefaults:
   name: my-placement-binding
 policyDefaults:
-  controls: 
+  controls:
     - PR.DS-1 Data-at-rest
-  metadataComplianceType: musthave 
+  metadataComplianceType: musthave
   namespace: my-policies
   namespaceSelector:
     include:

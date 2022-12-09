@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
+	"open-cluster-management.io/policy-generator-plugin/internal/types"
 )
 
 func TestKyvernoCanHandle(t *testing.T) {
