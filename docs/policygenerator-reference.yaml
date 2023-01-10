@@ -4,65 +4,62 @@ metadata:
   # Required. Used to uniquely identify the configuration file.
   name: ""
 
-# Required if multiple policies are consolidated in a PlacementBinding so that the generator can
-# create unique PlacementBinding names using the name given here.
+# Required if multiple policies are consolidated in a PlacementBinding so that the generator can create unique
+# PlacementBinding names using the name given here.
 placementBindingDefaults:
   # Set an explicit placement binding name to use rather than rely on the default.
   name: ""
 
-# Required. Any default value listed here can be overridden under an entry in the policies array
-# except for "namespace".
+# Required. Any default value listed here can be overridden under an entry in the policies array except for "namespace".
 policyDefaults:
-  # Optional. Array of categories to be used in the policy.open-cluster-management.io/categories
-  # annotation. This defaults to ["CM Configuration Management"].
+  # Optional. Array of categories to be used in the policy.open-cluster-management.io/categories annotation. This
+  # defaults to ["CM Configuration Management"].
   categories:
     - "CM Configuration Management"
-  # Optional. Determines the policy controller behavior when comparing the manifest to objects on
-  # the cluster ("musthave",  "mustonlyhave", or "mustnothave"). Defaults to "musthave".
+  # Optional. Determines the policy controller behavior when comparing the manifest to objects on the cluster
+  # ("musthave",  "mustonlyhave", or "mustnothave"). Defaults to "musthave".
   complianceType: "musthave"
-  # Optional. Key-value pairs of annotations to set on generated configuration policies. For
-  # example, to disable policy templates, you can set this to:
-  # {"policy.open-cluster-management.io/disable-templates": "true"}. This defaults to {}.
+  # Optional. Key-value pairs of annotations to set on generated configuration policies. For example, to disable policy
+  # templates, you can set this to: {"policy.open-cluster-management.io/disable-templates": "true"}. This defaults to
+  # {}.
   configurationPolicyAnnotations: {}
-  # Optional. Array of controls to be used in the policy.open-cluster-management.io/controls
-  # annotation. This defaults to ["CM-2 Baseline Configuration"].
+  # Optional. Array of controls to be used in the policy.open-cluster-management.io/controls annotation. This defaults
+  # to ["CM-2 Baseline Configuration"].
   controls:
     - "CM-2 Baseline Configuration"
-  # Optional. This determines if a single configuration policy should be generated for all the
-  # manifests being wrapped in the policy. If set to false, a configuration policy per manifest will
-  # be generated. This defaults to true.
+  # Optional. This determines if a single configuration policy should be generated for all the manifests being wrapped
+  # in the policy. If set to false, a configuration policy per manifest will be generated. This defaults to true.
   consolidateManifests: true
-  # Optional. A list of objects that should be in specific compliance states before this policy is
-  # applied. Cannot be specified when policyDefaults.orderPolicies is set to true.
+  # Optional. A list of objects that should be in specific compliance states before this policy is applied. Cannot be
+  # specified when policyDefaults.orderPolicies is set to true.
   dependencies:
-      # Required. The name of the object being depended on.
+    # Required. The name of the object being depended on.
     - name: ""
-      # Optional. The namespace of the object being depended on. Will default to the namespace of
-      # policies from this generator.
+      # Optional. The namespace of the object being depended on. Will default to the namespace of policies from this
+      # generator.
       namespace: ""
       # Optional. The compliance state the object should be in. Defaults to "Compliant"
       compliance: "Compliant"
-      # Optional. The kind of the object. Defaults to "Policy", but can also be things like
-      # ConfigurationPolicy.
+      # Optional. The kind of the object. Defaults to "Policy", but can also be things like ConfigurationPolicy.
       kind: "Policy"
       # Optional. The APIVersion of the object. Defaults to "policy.open-cluster-management.io/v1"
       apiVersion: "policy.open-cluster-management.io/v1"
-  # Optional. Determines whether the policy is enabled or disabled. A disabled policy will not be
-  # propagated to any managed clusters and will show no status as a result.
+  # Optional. Determines whether the policy is enabled or disabled. A disabled policy will not be propagated to any
+  # managed clusters and will show no status as a result.
   disabled: false
-  # Optional. This is how often a policy should be evaluated when in a particular compliance state.
-  # When managed clusters have low CPU resources, the evaluation interval can be increased to
-  # to reduce CPU usage on the Kubernetes API.
+  # Optional. This is how often a policy should be evaluated when in a particular compliance state. When managed
+  # clusters have low CPU resources, the evaluation interval can be increased to to reduce CPU usage on the Kubernetes
+  # API.
   evaluationInterval:
-    # These are in the format of durations (e.g. "1h25m3s"). These can also be set to "never" to
-    # avoid evaluating the policy after it has become a particular compliance state.
+    # These are in the format of durations (e.g. "1h25m3s"). These can also be set to "never" to avoid evaluating the
+    # policy after it has become a particular compliance state.
     compliant: 30m
     noncompliant: 45s
-  # Optional. A list of objects that should be in specific compliance states before this policy is
-  # applied. These are added to each policy template (eg ConfigurationPolicy) separately from the
-  # dependencies list. Cannot be specified when policyDefaults.orderManifests is set to true.
+  # Optional. A list of objects that should be in specific compliance states before this policy is applied. These are
+  # added to each policy template (eg ConfigurationPolicy) separately from the dependencies list. Cannot be specified
+  # when policyDefaults.orderManifests is set to true.
   extraDependencies:
-      # Required. (See policyDefaults.dependencies.name for description.)
+    # Required. (See policyDefaults.dependencies.name for description.)
     - name: ""
       # Optional. (See policyDefaults.dependencies.namespace for description.)
       namespace: ""
@@ -76,90 +73,84 @@ policyDefaults:
   # deleted. Pruning only takes place if the remediation action of the policy has been set to "enforce". Example values
   # are "DeleteIfCreated", "DeleteAll", or "None". This defaults to unset, which is equivalent to "None".
   pruneObjectBehavior: "None"
-  # Optional. Determines whether to treat the policy as compliant when it is waiting for its
-  # dependencies to reach their desired states. Defaults to false.
+  # Optional. Determines whether to treat the policy as compliant when it is waiting for its dependencies to reach their
+  # desired states. Defaults to false.
   ignorePending: false
-  # Optional. When the policy references a Gatekeeper policy manifest, this determines if an additional
-  # configuration policy should be generated in order to receive policy violations in Open Cluster
-  # Management when the Gatekeeper policy has been violated. This defaults to true.
+  # Optional. When the policy references a Gatekeeper policy manifest, this determines if an additional configuration
+  # policy should be generated in order to receive policy violations in Open Cluster Management when the Gatekeeper
+  # policy has been violated. This defaults to true.
   informGatekeeperPolicies: true
-  # Optional. When the policy references a Kyverno policy manifest, this determines if an additional
-  # configuration policy should be generated in order to receive policy violations in Open Cluster
-  # Management when the Kyverno policy has been violated. This defaults to true.
+  # Optional. When the policy references a Kyverno policy manifest, this determines if an additional configuration
+  # policy should be generated in order to receive policy violations in Open Cluster Management when the Kyverno policy
+  # has been violated. This defaults to true.
   informKyvernoPolicies: true
-  # Optional. Overrides complianceType when comparing the manifest's metadata section to objects on
-  # the cluster ("musthave",  "mustonlyhave"). Default is unset to not override complianceType for metadata.
+  # Optional. Overrides complianceType when comparing the manifest's metadata section to objects on the cluster
+  # ("musthave",  "mustonlyhave"). Default is unset to not override complianceType for metadata.
   metadataComplianceType: ""
   # Required. The namespace of all the policies.
   namespace: ""
-  # Optional. Determines the list of namespaces to check on the cluster for the given manifest. If
-  # a namespace is specified in the manifest, the selector is not necessary. This defaults to no
-  # selectors.
+  # Optional. Determines the list of namespaces to check on the cluster for the given manifest. If a namespace is
+  # specified in the manifest, the selector is not necessary. This defaults to no selectors.
   namespaceSelector:
     include: []
     exclude: []
     matchLabels: {}
     matchExpressions: []
-  # Optional. Determines whether to define extraDependencies on policy templates so that they are
-  # applied in the order they are defined in the manifests list for that policy. Cannot be specified
-  # when consolidateManifests is set to true. Cannot be specified at the same time as extraDependencies.
+  # Optional. Determines whether to define extraDependencies on policy templates so that they are applied in the order
+  # they are defined in the manifests list for that policy. Cannot be specified when consolidateManifests is set to
+  # true. Cannot be specified at the same time as extraDependencies.
   orderManifests: false
-  # Optional. Determines whether to define dependencies on the policies so they are applied in the
-  # order they are defined in the policies list. This defaults to false, and all the policies
-  # can be applied at the same time. Cannot be specified at the same time as dependencies.
+  # Optional. Determines whether to define dependencies on the policies so they are applied in the order they are
+  # defined in the policies list. This defaults to false, and all the policies can be applied at the same time. Cannot
+  # be specified at the same time as dependencies.
   orderPolicies: false
-  # Optional. The placement configuration for the policies. This defaults to a placement
-  # configuration that matches all clusters.
+  # Optional. The placement configuration for the policies. This defaults to a placement configuration that matches all
+  # clusters.
   placement:
-    # To specify a placement rule, specify key:value pair cluster selectors. (See placementRulePath
-    # to specify an existing file instead.)
+    # To specify a placement rule, specify key:value pair cluster selectors. (See placementRulePath to specify an
+    # existing file instead.)
     clusterSelectors: {}
-    # To specify a placement, specify key:value pair cluster label selectors. (See placementPath to
-    # specify an existing file instead.)
+    # To specify a placement, specify key:value pair cluster label selectors. (See placementPath to specify an existing
+    # file instead.)
     labelSelector: {}
-    # Optional. Specifying a name will consolidate placement rules that contain the same cluster
-    # selectors.
+    # Optional. Specifying a name will consolidate placement rules that contain the same cluster selectors.
     name: ""
-    # To reuse an existing placement manifest, specify the path here relative to the
-    # kustomization.yaml file. If given, this placement will be used by all policies by default.
-    # (See clusterSelectors to generate a new Placement instead.)
+    # To reuse an existing placement manifest, specify the path here relative to the kustomization.yaml file. If given,
+    # this placement will be used by all policies by default. (See clusterSelectors to generate a new Placement
+    # instead.)
     placementPath: ""
-    # To reuse an existing placement rule manifest, specify the path here relative to the
-    # kustomization.yaml file. If given, this placement rule will be used by all policies by
-    # default. (See clusterSelectors to generate a new PlacementRule instead.)
+    # To reuse an existing placement rule manifest, specify the path here relative to the kustomization.yaml file. If
+    # given, this placement rule will be used by all policies by default. (See clusterSelectors to generate a new
+    # PlacementRule instead.)
     placementRulePath: ""
-    # Use a placement that already exists in the cluster in the same namespace as the policy to be
-    # generated. It is the responsibility of the administrator to ensure the placement exists. Use
-    # of this setting will prevent a Placement from being generated, but the Placement Binding will
-    # still be created.
+    # Use a placement that already exists in the cluster in the same namespace as the policy to be generated. It is the
+    # responsibility of the administrator to ensure the placement exists. Use of this setting will prevent a Placement
+    # from being generated, but the Placement Binding will still be created.
     placementName: ""
-    # Use a placement rule that already exists in the cluster in the same namespace as the policy to
-    # be generated. It is the responsibility of the administrator to ensure the placement rule
-    # exists. Use of this setting will prevent a placement rule from being generated, but the
-    # placement binding will still be created.
+    # Use a placement rule that already exists in the cluster in the same namespace as the policy to be generated. It is
+    # the responsibility of the administrator to ensure the placement rule exists. Use of this setting will prevent a
+    # placement rule from being generated, but the placement binding will still be created.
     placementRuleName: ""
-  # Optional. The remediation action ("inform" or "enforce") for each configuration policy. This
-  # defaults to "inform".
+  # Optional. The remediation action ("inform" or "enforce") for each configuration policy. This defaults to "inform".
   remediationAction: "inform"
   # Optional. The severity of the policy violation. This defaults to "low".
   severity: "low"
-  # Optional. Array of standards to be used in the policy.open-cluster-management.io/standards
-  # annotation. This defaults to ["NIST SP 800-53"].
+  # Optional. Array of standards to be used in the policy.open-cluster-management.io/standards annotation. This defaults
+  # to ["NIST SP 800-53"].
   standards:
     - "NIST SP 800-53"
-  # Optional. Array of policy sets that the policy will join. Policy set details can be defined
-  # in the policySets section. When a policy is part of a policy set, a placement binding will not be 
-  # generated for the policy since one is generated for the set. Set policies[*].generatePlacementWhenInSet 
-  # or policyDefaults.generatePlacementWhenInSet to override.
+  # Optional. Array of policy sets that the policy will join. Policy set details can be defined in the policySets
+  # section. When a policy is part of a policy set, a placement binding will not be generated for the policy since one
+  # is generated for the set. Set policies[*].generatePlacementWhenInSet or policyDefaults.generatePlacementWhenInSet to
+  # override.
   policySets: []
   # Optional. Whether to generate placement manifests for policies. Placement generation occurs except when policies are
   # part of a policy set. Use this setting to turn off placement generation for policies not in policy sets. This
   # defaults to "true".
   generatePolicyPlacement: true
-  # Optional. When a policy is part of a policy set, by default the generator will not generate the placement
-  # for this policy since a placement is generated for the policy set. If a placement should still be generated, 
-  # set it to "true" so that the policy will be deployed with both policy placement and policy set placement. 
-  # This defaults to "false".
+  # Optional. When a policy is part of a policy set, by default the generator will not generate the placement for this
+  # policy since a placement is generated for the policy set. If a placement should still be generated, set it to "true"
+  # so that the policy will be deployed with both policy placement and policy set placement. This defaults to "false".
   generatePlacementWhenInSet: false
   # Optional. Annotations that the policy will include under its metadata.annotations. It will be applied for all
   # policies unless specified in the policy.
@@ -167,22 +158,24 @@ policyDefaults:
 
 # Required. The list of policies to create along with overrides to either the default values or, if
 # set, the values given in policyDefaults.
+
+# Required. The list of policies to create along with overrides to either the default values or, if set, the values
+# given in policyDefaults.
 policies:
-    # Required. The name of the policy to create.
+  # Required. The name of the policy to create.
   - name: ""
     # Required. The list of Kubernetes resource object manifests to include in the policy.
     manifests:
-        # Required. Path to a single file or a flat directory of files relative to the
-        # kustomization.yaml file. This path cannot be in a directory outside of the directory with
-        # the kustomization.yaml file. Subdirectories within the directory of the kustomization.yaml
-        # file are allowed. Kustomization subdirectories are also supported and will not process any
-        # YAML files in the subdirectory if a kustomization.yaml file is found.
-        # Supported manifests:
-        #   1) Non-root policy type manifests such as IamPolicy, CertificatePolicy, and ConfigurationPolicy
-        #      that have a "Policy" suffix. These are not modified except for patches and are directly added 
-        #      as a Policy's policy-templates entry.
-        #   2) For everything else, ConfigurationPolicy objects are generated to wrap these manifests. 
-        #      The resulting ConfigurationPolicy is added as a Policy's policy-templates entry.
+      # Required. Path to a single file or a flat directory of files relative to the kustomization.yaml file. This path
+      # cannot be in a directory outside of the directory with the kustomization.yaml file. Subdirectories within the
+      # directory of the kustomization.yaml file are allowed. Kustomization subdirectories are also supported and will
+      # not process any YAML files in the subdirectory if a kustomization.yaml file is found.
+      # Supported manifests:
+      #   1) Non-root policy type manifests such as IamPolicy, CertificatePolicy, and ConfigurationPolicy that have a
+      #      "Policy" suffix. These are not modified except for patches and are directly added as a Policy's
+      #      policy-templates entry.
+      #   2) For everything else, ConfigurationPolicy objects are generated to wrap these manifests. The resulting
+      #      ConfigurationPolicy is added as a Policy's policy-templates entry.
       - path: ""
         # Optional. (See policyDefaults.complianceType for description.)
         complianceType: "musthave"
@@ -214,17 +207,16 @@ policies:
         # the apiVersion, kind, metadata.name, and metadata.namespace (if applicable) fields to be set so Kustomize can
         # identify the manifest the patch applies to.
         patches:
-            # Optional: Only required when there are multiple manifests in the path.
+          # Optional: Only required when there are multiple manifests in the path.
           - apiVersion: ""
             # Optional: Only required when there are multiple manifests in the path.
             kind: ""
             metadata:
-              # Optional: Only required when there are multiple manifests in the path.
-              # Optional: Replace metadata.name is only allowed for a single YAML structure manifest.
+              # Optional: Only required when there are multiple manifests in the path. Replacing metadata.name is only
+              # allowed for a single YAML structure manifest.
               name: ""
-              # Optional: Only required when there are multiple manifests in the path and it's a
-              # manifest to a namespaced resource.
-              # Optional: Replace metadata.namespace is only allowed for a single YAML structure manifest.
+              # Optional: Only required when there are multiple manifests in the path and it's a manifest to a
+              # namespaced resource. Replace metadata.namespace is only allowed for a single YAML structure manifest.
               namespace: ""
               # An example modification to the manifest
               annotations:
@@ -280,20 +272,20 @@ policies:
     policySets: []
     # Optional. (See policyDefaults.generatePlacementWhenInSet for description.)
     generatePlacementWhenInSet: false
-    # Optional. Annotations that the policy will include under its metadata.annotations. It will overwrite
-    # the policyAnnotation defined in the policyDefaults.
+    # Optional. Annotations that the policy will include under its metadata.annotations. It will overwrite the
+    # policyAnnotation defined in the policyDefaults.
     policyAnnotations: {}
 
-# Optional. The list of policy sets to create. To include a policy in a policy set, use 
-# policies[*].policySets or policyDefaults.policySets or policySets.policies.
+# Optional. The list of policy sets to create. To include a policy in a policy set, use policies[*].policySets or
+# policyDefaults.policySets or policySets.policies.
 policySets:
-    # Required. The name of the policy set to create.
+  # Required. The name of the policy set to create.
   - name: ""
     # Optional. The description of the policy set to create.
     description: ""
-    # Optional. The list of policies to be included in the policy set. If policies[*].policySets or 
+    # Optional. The list of policies to be included in the policy set. If policies[*].policySets or
     # policyDefaults.policySets is also specified, the list is merged.
     policies: []
-    # Optional. The placement configuration for the policy set. This defaults to a placement
-    # configuration that matches all clusters. (See policyDefaults.placement for description.)
+    # Optional. The placement configuration for the policy set. This defaults to a placement configuration that matches
+    # all clusters. (See policyDefaults.placement for description.)
     placement: {}
