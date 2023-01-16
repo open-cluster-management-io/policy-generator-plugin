@@ -46,9 +46,10 @@ type Plugin struct {
 	PlacementBindingDefaults struct {
 		Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	} `json:"placementBindingDefaults,omitempty" yaml:"placementBindingDefaults,omitempty"`
-	PolicyDefaults types.PolicyDefaults    `json:"policyDefaults,omitempty" yaml:"policyDefaults,omitempty"`
-	Policies       []types.PolicyConfig    `json:"policies" yaml:"policies"`
-	PolicySets     []types.PolicySetConfig `json:"policySets" yaml:"policySets"`
+	PolicyDefaults    types.PolicyDefaults    `json:"policyDefaults,omitempty" yaml:"policyDefaults,omitempty"`
+	PolicySetDefaults types.PolicySetDefaults `json:"policySetDefaults,omitempty" yaml:"policySetDefaults,omitempty"`
+	Policies          []types.PolicyConfig    `json:"policies" yaml:"policies"`
+	PolicySets        []types.PolicySetConfig `json:"policySets" yaml:"policySets"`
 	// A set of all placement names that have been processed or generated
 	allPlcs map[string]bool
 	// The base of the directory tree to restrict all manifest files to be within
@@ -160,16 +161,19 @@ func (p *Plugin) Generate() ([]byte, error) {
 	}
 
 	for i := range p.PolicySets {
-		plcName, err := p.createPlacement(&p.PolicySets[i].Placement, p.PolicySets[i].Name)
-		if err != nil {
-			return nil, err
-		}
+		// only generate placement when GeneratePolicySetPlacement equals to true
+		if p.PolicySets[i].GeneratePolicySetPlacement {
+			plcName, err := p.createPlacement(&p.PolicySets[i].Placement, p.PolicySets[i].Name)
+			if err != nil {
+				return nil, err
+			}
 
-		if plcNameToPolicyAndSetIdxs[plcName] == nil {
-			plcNameToPolicyAndSetIdxs[plcName] = map[string][]int{}
-		}
+			if plcNameToPolicyAndSetIdxs[plcName] == nil {
+				plcNameToPolicyAndSetIdxs[plcName] = map[string][]int{}
+			}
 
-		plcNameToPolicyAndSetIdxs[plcName]["policyset"] = append(plcNameToPolicyAndSetIdxs[plcName]["policyset"], i)
+			plcNameToPolicyAndSetIdxs[plcName]["policyset"] = append(plcNameToPolicyAndSetIdxs[plcName]["policyset"], i)
+		}
 	}
 
 	// Sort the keys of plcNameToPolicyseetsIdxs so that the policy bindings are generated in a
@@ -241,8 +245,16 @@ func (p *Plugin) Generate() ([]byte, error) {
 	return p.outputBuffer.Bytes(), nil
 }
 
-func getDefaultBool(config map[string]interface{}, key string) (value bool, set bool) {
-	defaults, ok := config["policyDefaults"].(map[string]interface{})
+func getPolicyDefaultBool(config map[string]interface{}, key string) (value bool, set bool) {
+	return getDefaultBool(config, "policyDefaults", key)
+}
+
+func getPolicySetDefaultBool(config map[string]interface{}, key string) (value bool, set bool) {
+	return getDefaultBool(config, "policySetDefaults", key)
+}
+
+func getDefaultBool(config map[string]interface{}, defaultKey string, key string) (value bool, set bool) {
+	defaults, ok := config[defaultKey].(map[string]interface{})
 	if ok {
 		value, set = defaults[key].(bool)
 
@@ -265,23 +277,45 @@ func getPolicyBool(
 	return
 }
 
+func getPolicySetBool(
+	config map[string]interface{}, policySetIndex int, key string,
+) (value bool, set bool) {
+	policySet := getPolicySet(config, policySetIndex)
+	if policySet == nil {
+		return false, false
+	}
+
+	value, set = policySet[key].(bool)
+
+	return
+}
+
+func getArrayObject(config map[string]interface{}, key string, idx int) map[string]interface{} {
+	array, ok := config[key].([]interface{})
+	if !ok {
+		return nil
+	}
+
+	if len(array)-1 < idx {
+		return nil
+	}
+
+	object, ok := array[idx].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	return object
+}
+
 // getPolicy will return a policy at the specified index in the Policy Generator configuration YAML.
 func getPolicy(config map[string]interface{}, policyIndex int) map[string]interface{} {
-	policies, ok := config["policies"].([]interface{})
-	if !ok {
-		return nil
-	}
+	return getArrayObject(config, "policies", policyIndex)
+}
 
-	if len(policies)-1 < policyIndex {
-		return nil
-	}
-
-	policy, ok := policies[policyIndex].(map[string]interface{})
-	if !ok {
-		return nil
-	}
-
-	return policy
+// getPolicySet will return a policy at the specified index in the Policy Generator configuration YAML.
+func getPolicySet(config map[string]interface{}, policySetIndex int) map[string]interface{} {
+	return getArrayObject(config, "policySets", policySetIndex)
 }
 
 // getEvaluationInterval will return the evaluation interval of specified policy in the Policy Generator configuration
@@ -397,21 +431,21 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 	// Policy expanders default to true unless explicitly set in the config.
 	// Gatekeeper policy expander policyDefault
-	igvValue, setIgv := getDefaultBool(unmarshaledConfig, "informGatekeeperPolicies")
+	igvValue, setIgv := getPolicyDefaultBool(unmarshaledConfig, "informGatekeeperPolicies")
 	if setIgv {
 		p.PolicyDefaults.InformGatekeeperPolicies = igvValue
 	} else {
 		p.PolicyDefaults.InformGatekeeperPolicies = true
 	}
 	// Kyverno policy expander policyDefault
-	ikvValue, setIkv := getDefaultBool(unmarshaledConfig, "informKyvernoPolicies")
+	ikvValue, setIkv := getPolicyDefaultBool(unmarshaledConfig, "informKyvernoPolicies")
 	if setIkv {
 		p.PolicyDefaults.InformKyvernoPolicies = ikvValue
 	} else {
 		p.PolicyDefaults.InformKyvernoPolicies = true
 	}
 
-	consolidatedValue, setConsolidated := getDefaultBool(unmarshaledConfig, "consolidateManifests")
+	consolidatedValue, setConsolidated := getPolicyDefaultBool(unmarshaledConfig, "consolidateManifests")
 	if setConsolidated {
 		p.PolicyDefaults.ConsolidateManifests = consolidatedValue
 	} else {
@@ -431,7 +465,7 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 	}
 
 	// GeneratePolicyPlacement defaults to true unless explicitly set in the config.
-	gppValue, setGpp := getDefaultBool(unmarshaledConfig, "generatePolicyPlacement")
+	gppValue, setGpp := getPolicyDefaultBool(unmarshaledConfig, "generatePolicyPlacement")
 	if setGpp {
 		p.PolicyDefaults.GeneratePolicyPlacement = gppValue
 	} else {
@@ -594,41 +628,7 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.OrderManifests = p.PolicyDefaults.OrderManifests
 		}
 
-		// Determine whether defaults are set for placement
-		plcDefaultSet := len(p.PolicyDefaults.Placement.LabelSelector) != 0 ||
-			p.PolicyDefaults.Placement.PlacementPath != "" ||
-			p.PolicyDefaults.Placement.PlacementName != ""
-		plrDefaultSet := len(p.PolicyDefaults.Placement.ClusterSelectors) != 0 ||
-			p.PolicyDefaults.Placement.PlacementRulePath != "" ||
-			p.PolicyDefaults.Placement.PlacementRuleName != ""
-
-		// If both cluster label selectors and placement path/name aren't set, then use the defaults with a
-		// priority on placement path followed by placement name.
-		if len(policy.Placement.LabelSelector) == 0 &&
-			policy.Placement.PlacementPath == "" &&
-			policy.Placement.PlacementName == "" &&
-			plcDefaultSet {
-			if p.PolicyDefaults.Placement.PlacementPath != "" {
-				policy.Placement.PlacementPath = p.PolicyDefaults.Placement.PlacementPath
-			} else if p.PolicyDefaults.Placement.PlacementName != "" {
-				policy.Placement.PlacementName = p.PolicyDefaults.Placement.PlacementName
-			} else if len(p.PolicyDefaults.Placement.LabelSelector) > 0 {
-				policy.Placement.LabelSelector = p.PolicyDefaults.Placement.LabelSelector
-			}
-		} else if len(policy.Placement.ClusterSelectors) == 0 &&
-			// Else if both cluster selectors and placement rule path/name aren't set, then use the defaults with a
-			// priority on placement rule path followed by placement rule name.
-			policy.Placement.PlacementRulePath == "" &&
-			policy.Placement.PlacementRuleName == "" &&
-			plrDefaultSet {
-			if p.PolicyDefaults.Placement.PlacementRulePath != "" {
-				policy.Placement.PlacementRulePath = p.PolicyDefaults.Placement.PlacementRulePath
-			} else if p.PolicyDefaults.Placement.PlacementRuleName != "" {
-				policy.Placement.PlacementRuleName = p.PolicyDefaults.Placement.PlacementRuleName
-			} else if len(p.PolicyDefaults.Placement.ClusterSelectors) > 0 {
-				policy.Placement.ClusterSelectors = p.PolicyDefaults.Placement.ClusterSelectors
-			}
-		}
+		applyDefaultPlacementFields(&policy.Placement, p.PolicyDefaults.Placement)
 
 		// Only use defaults when when the namespaceSelector is not set on the policy
 		nsSelector := policy.NamespaceSelector
@@ -733,6 +733,13 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		}
 	}
 
+	gpspValue, setGpsp := getPolicySetDefaultBool(unmarshaledConfig, "generatePolicySetPlacement")
+	if setGpsp {
+		p.PolicySetDefaults.GeneratePolicySetPlacement = gpspValue
+	} else {
+		p.PolicySetDefaults.GeneratePolicySetPlacement = true
+	}
+
 	// Sync up the declared policy sets in p.Policies[*]
 	for i := range p.PolicySets {
 		plcset := &p.PolicySets[i]
@@ -741,6 +748,16 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		for plc := range plcsetToPlc[plcset.Name] {
 			plcset.Policies = append(plcset.Policies, plc)
 		}
+
+		// GeneratePolicySetPlacement defaults to true unless explicitly set in the config.
+		gpspValue, setGpsp := getPolicySetBool(unmarshaledConfig, i, "generatePolicySetPlacement")
+		if setGpsp {
+			plcset.GeneratePolicySetPlacement = gpspValue
+		} else {
+			plcset.GeneratePolicySetPlacement = p.PolicySetDefaults.GeneratePolicySetPlacement
+		}
+
+		applyDefaultPlacementFields(&plcset.Placement, p.PolicySetDefaults.Placement)
 
 		// Sort alphabetically to make it deterministic
 		sort.Strings(plcset.Policies)
@@ -767,6 +784,45 @@ func applyDefaultDependencyFields(deps []types.PolicyDependency, namespace strin
 	}
 }
 
+// applyDefaultPlacementFields is a helper for applyDefaults that handles default Placement configuration
+func applyDefaultPlacementFields(placement *types.PlacementConfig, defaultPlacement types.PlacementConfig) {
+	// Determine whether defaults are set for placement
+	plcDefaultSet := len(defaultPlacement.LabelSelector) != 0 ||
+		defaultPlacement.PlacementPath != "" ||
+		defaultPlacement.PlacementName != ""
+	plrDefaultSet := len(defaultPlacement.ClusterSelectors) != 0 ||
+		defaultPlacement.PlacementRulePath != "" ||
+		defaultPlacement.PlacementRuleName != ""
+
+	// If both cluster label selectors and placement path/name aren't set, then use the defaults with a
+	// priority on placement path followed by placement name.
+	if len(placement.LabelSelector) == 0 &&
+		placement.PlacementPath == "" &&
+		placement.PlacementName == "" &&
+		plcDefaultSet {
+		if defaultPlacement.PlacementPath != "" {
+			placement.PlacementPath = defaultPlacement.PlacementPath
+		} else if defaultPlacement.PlacementName != "" {
+			placement.PlacementName = defaultPlacement.PlacementName
+		} else if len(defaultPlacement.LabelSelector) > 0 {
+			placement.LabelSelector = defaultPlacement.LabelSelector
+		}
+	} else if len(placement.ClusterSelectors) == 0 &&
+		// Else if both cluster selectors and placement rule path/name aren't set, then use the defaults with a
+		// priority on placement rule path followed by placement rule name.
+		placement.PlacementRulePath == "" &&
+		placement.PlacementRuleName == "" &&
+		plrDefaultSet {
+		if defaultPlacement.PlacementRulePath != "" {
+			placement.PlacementRulePath = defaultPlacement.PlacementRulePath
+		} else if defaultPlacement.PlacementRuleName != "" {
+			placement.PlacementRuleName = defaultPlacement.PlacementRuleName
+		} else if len(defaultPlacement.ClusterSelectors) > 0 {
+			placement.ClusterSelectors = defaultPlacement.ClusterSelectors
+		}
+	}
+}
+
 // assertValidConfig verifies that the user provided configuration has all the
 // required fields. Note that this should be run only after applyDefaults is run.
 func (p *Plugin) assertValidConfig() error {
@@ -774,82 +830,20 @@ func (p *Plugin) assertValidConfig() error {
 		return errors.New("policyDefaults.namespace is empty but it must be set")
 	}
 
-	// Validate default Placement settings
-	if p.PolicyDefaults.Placement.PlacementRulePath != "" && p.PolicyDefaults.Placement.PlacementPath != "" {
-		return errors.New(
-			"policyDefaults must provide only one of placement.placementPath or placement.placementRulePath",
-		)
+	// Validate default policy placement settings
+	err := assertValidPlacement(
+		p.PolicyDefaults.Placement, p.PolicyDefaults.GeneratePolicyPlacement, "policyDefaults", nil)
+	if err != nil {
+		return err
 	}
 
-	if len(p.PolicyDefaults.Placement.ClusterSelectors) > 0 && len(p.PolicyDefaults.Placement.LabelSelector) > 0 {
-		return errors.New(
-			"policyDefaults must provide only one of placement.labelSelector or placement.clusterSelectors",
-		)
-	}
-
-	if p.PolicyDefaults.Placement.PlacementRuleName != "" && p.PolicyDefaults.Placement.PlacementName != "" {
-		return errors.New(
-			"policyDefaults must provide only one of placement.placementName or placement.placementRuleName",
-		)
-	}
-
-	// validate placement and binding names are DNS compliant
-	defPlrName := p.PolicyDefaults.Placement.PlacementRuleName
-	if defPlrName != "" && len(validation.IsDNS1123Subdomain(defPlrName)) > 0 {
-		return fmt.Errorf(
-			"PolicyDefaults.Placement.PlacementRuleName placement name `%s` is not DNS compliant. See %s",
-			defPlrName,
-			dnsReference,
-		)
-	}
-
-	defPlcmtPlName := p.PolicyDefaults.Placement.PlacementName
-	if defPlcmtPlName != "" && len(validation.IsDNS1123Subdomain(defPlcmtPlName)) > 0 {
-		return fmt.Errorf(
-			"PolicyDefaults.Placement.PlacementName `%s` is not DNS compliant. See %s",
-			defPlcmtPlName,
-			dnsReference,
-		)
-	}
-
-	defPlName := p.PolicyDefaults.Placement.Name
-	if defPlName != "" && len(validation.IsDNS1123Subdomain(defPlName)) > 0 {
-		return fmt.Errorf(
-			"PolicyDefaults.Placement.Name `%s` is not DNS compliant. See %s", defPlName, dnsReference,
-		)
-	}
-
+	// validate placement binding names are DNS compliant
 	if p.PlacementBindingDefaults.Name != "" &&
 		len(validation.IsDNS1123Subdomain(p.PlacementBindingDefaults.Name)) > 0 {
 		return fmt.Errorf(
 			"PlacementBindingDefaults.Name `%s` is not DNS compliant. See %s",
 			p.PlacementBindingDefaults.Name,
 			dnsReference,
-		)
-	}
-
-	defaultPlacementOptions := 0
-	if len(p.PolicyDefaults.Placement.LabelSelector) != 0 || len(p.PolicyDefaults.Placement.ClusterSelectors) != 0 {
-		defaultPlacementOptions++
-	}
-
-	if p.PolicyDefaults.Placement.PlacementRulePath != "" || p.PolicyDefaults.Placement.PlacementPath != "" {
-		defaultPlacementOptions++
-	}
-
-	if p.PolicyDefaults.Placement.PlacementRuleName != "" || p.PolicyDefaults.Placement.PlacementName != "" {
-		defaultPlacementOptions++
-	}
-
-	if defaultPlacementOptions > 0 && !p.PolicyDefaults.GeneratePolicyPlacement {
-		return errors.New(
-			"policyDefaults must not specify a placement when generatePlacement is set to false",
-		)
-	}
-
-	if defaultPlacementOptions > 1 {
-		return errors.New(
-			"policyDefaults must specify only one of placement selector, placement path, or placement name",
 		)
 	}
 
@@ -1068,120 +1062,18 @@ func (p *Plugin) assertValidConfig() error {
 			}
 		}
 
-		// Validate policy Placement settings
-		if policy.Placement.PlacementRulePath != "" && policy.Placement.PlacementPath != "" {
-			return fmt.Errorf(
-				"policy %s must provide only one of placementRulePath or placementPath", policy.Name,
-			)
+		err := assertValidPlacement(
+			policy.Placement, policy.GeneratePolicyPlacement, fmt.Sprintf("policy %s", policy.Name), &plCount)
+		if err != nil {
+			return err
 		}
+	}
 
-		if policy.Placement.PlacementRuleName != "" && policy.Placement.PlacementName != "" {
-			return fmt.Errorf(
-				"policy %s must provide only one of placementRuleName or placementName", policy.Name,
-			)
-		}
-
-		if len(policy.Placement.ClusterSelectors) > 0 && len(policy.Placement.LabelSelector) > 0 {
-			return fmt.Errorf(
-				"policy %s must provide only one of placement.labelSelector or placement.clusterselectors",
-				policy.Name,
-			)
-		}
-
-		// validate placement names are DNS compliant
-		plcPlrName := policy.Placement.PlacementRuleName
-		if plcPlrName != "" && len(validation.IsDNS1123Subdomain(plcPlrName)) > 0 {
-			return fmt.Errorf(
-				"policy.Placement.PlacementRuleName `%s` is not DNS compliant. See %s",
-				plcPlrName,
-				dnsReference,
-			)
-		}
-
-		plcPlcmtPlName := policy.Placement.PlacementName
-		if plcPlcmtPlName != "" && len(validation.IsDNS1123Subdomain(plcPlcmtPlName)) > 0 {
-			return fmt.Errorf(
-				"policy.Placement.PlacementRuleName `%s` is not DNS compliant. See %s",
-				plcPlcmtPlName,
-				dnsReference,
-			)
-		}
-
-		plcPlName := policy.Placement.Name
-		if plcPlName != "" && len(validation.IsDNS1123Subdomain(plcPlName)) > 0 {
-			return fmt.Errorf(
-				"policy.Placement.PlacementRuleName `%s` is not DNS compliant. See %s",
-				plcPlName,
-				dnsReference,
-			)
-		}
-
-		policyPlacementOptions := 0
-		if len(policy.Placement.LabelSelector) != 0 || len(policy.Placement.ClusterSelectors) != 0 {
-			policyPlacementOptions++
-		}
-
-		if policy.Placement.PlacementRulePath != "" || policy.Placement.PlacementPath != "" {
-			policyPlacementOptions++
-		}
-
-		if policy.Placement.PlacementRuleName != "" || policy.Placement.PlacementName != "" {
-			policyPlacementOptions++
-		}
-
-		if policyPlacementOptions > 0 && !policy.GeneratePolicyPlacement {
-			return fmt.Errorf(
-				"policy %s must not specify a placement when generatePlacement is set to false", policy.Name,
-			)
-		}
-
-		if policyPlacementOptions > 1 {
-			return fmt.Errorf(
-				"policy %s must specify only one of placement selector, placement path, or placement name", policy.Name,
-			)
-		}
-
-		if policy.Placement.PlacementRulePath != "" {
-			_, err := os.Stat(policy.Placement.PlacementRulePath)
-			if err != nil {
-				return fmt.Errorf(
-					"could not read the placement rule path %s",
-					policy.Placement.PlacementRulePath,
-				)
-			}
-		}
-
-		if policy.Placement.PlacementPath != "" {
-			_, err := os.Stat(policy.Placement.PlacementPath)
-			if err != nil {
-				return fmt.Errorf(
-					"could not read the placement path %s",
-					policy.Placement.PlacementPath,
-				)
-			}
-		}
-
-		foundPl := false
-
-		if len(policy.Placement.LabelSelector) != 0 ||
-			policy.Placement.PlacementPath != "" ||
-			policy.Placement.PlacementName != "" {
-			plCount.plc++
-
-			foundPl = true
-		}
-
-		if len(policy.Placement.ClusterSelectors) != 0 ||
-			policy.Placement.PlacementRulePath != "" ||
-			policy.Placement.PlacementRuleName != "" {
-			plCount.plr++
-
-			if foundPl {
-				return fmt.Errorf(
-					"policy %s may not use both Placement and PlacementRule kinds", policy.Name,
-				)
-			}
-		}
+	// Validate default policy set placement settings
+	err = assertValidPlacement(
+		p.PolicySetDefaults.Placement, p.PolicySetDefaults.GeneratePolicySetPlacement, "policySetDefaults", nil)
+	if err != nil {
+		return err
 	}
 
 	seenPlcset := map[string]bool{}
@@ -1209,107 +1101,11 @@ func (p *Plugin) assertValidConfig() error {
 
 		seenPlcset[plcset.Name] = true
 
-		// Validate policy Placement settings
-		if plcset.Placement.PlacementRulePath != "" && plcset.Placement.PlacementPath != "" {
-			return fmt.Errorf(
-				"policySet %s must provide only one of placementRulePath or placementPath", plcset.Name,
-			)
-		}
-
-		if plcset.Placement.PlacementRuleName != "" && plcset.Placement.PlacementName != "" {
-			return fmt.Errorf(
-				"policySet %s must provide only one of placementRuleName or placementName", plcset.Name,
-			)
-		}
-
-		if len(plcset.Placement.ClusterSelectors) > 0 && len(plcset.Placement.LabelSelector) > 0 {
-			return fmt.Errorf(
-				"policySet %s must provide only one of placement.labelSelector or placement.clusterselectors",
-				plcset.Name,
-			)
-		}
-
-		// validate placement names are DNS compliant
-		plcSetPlrName := plcset.Placement.PlacementRuleName
-		if plcSetPlrName != "" && len(validation.IsDNS1123Subdomain(plcSetPlrName)) > 0 {
-			return fmt.Errorf(
-				"plcset.Placement.PlacementRuleName `%s` is not DNS compliant. See %s", plcSetPlrName, dnsReference,
-			)
-		}
-
-		plcSetPlcmtPlName := plcset.Placement.PlacementName
-		if plcSetPlcmtPlName != "" && len(validation.IsDNS1123Subdomain(plcSetPlcmtPlName)) > 0 {
-			return fmt.Errorf(
-				"plcset.Placement.PlacementName `%s` is not DNS compliant. See %s", plcSetPlcmtPlName, dnsReference,
-			)
-		}
-
-		plcSetPlName := plcset.Placement.Name
-		if plcSetPlName != "" && len(validation.IsDNS1123Subdomain(plcSetPlName)) > 0 {
-			return fmt.Errorf(
-				"plcset.Placement.Name `%s` is not DNS compliant. See %s", plcSetPlName, dnsReference,
-			)
-		}
-
-		policySetPlacementOptions := 0
-		if len(plcset.Placement.LabelSelector) != 0 || len(plcset.Placement.ClusterSelectors) != 0 {
-			policySetPlacementOptions++
-		}
-
-		if plcset.Placement.PlacementRulePath != "" || plcset.Placement.PlacementPath != "" {
-			policySetPlacementOptions++
-		}
-
-		if plcset.Placement.PlacementRuleName != "" || plcset.Placement.PlacementName != "" {
-			policySetPlacementOptions++
-		}
-
-		if policySetPlacementOptions > 1 {
-			return fmt.Errorf(
-				"policySet %s must specify only one of placement selector, placement path, or placement name",
-				plcset.Name,
-			)
-		}
-
-		if plcset.Placement.PlacementRulePath != "" {
-			_, err := os.Stat(plcset.Placement.PlacementRulePath)
-			if err != nil {
-				return fmt.Errorf(
-					"could not read the placement rule path %s",
-					plcset.Placement.PlacementRulePath,
-				)
-			}
-		}
-
-		if plcset.Placement.PlacementPath != "" {
-			_, err := os.Stat(plcset.Placement.PlacementPath)
-			if err != nil {
-				return fmt.Errorf(
-					"could not read the placement path %s",
-					plcset.Placement.PlacementPath,
-				)
-			}
-		}
-
-		foundPl := false
-
-		plcSetPlc := plcset.Placement
-		if len(plcSetPlc.LabelSelector) != 0 || plcSetPlc.PlacementPath != "" || plcSetPlc.PlacementName != "" {
-			plCount.plc++
-
-			foundPl = true
-		}
-
-		if len(plcSetPlc.ClusterSelectors) != 0 ||
-			plcSetPlc.PlacementRulePath != "" ||
-			plcSetPlc.PlacementRuleName != "" {
-			plCount.plr++
-
-			if foundPl {
-				return fmt.Errorf(
-					"policySet %s may not use both Placement and PlacementRule kinds", plcset.Name,
-				)
-			}
+		// Validate policy set Placement settings
+		err := assertValidPlacement(
+			plcset.Placement, plcset.GeneratePolicySetPlacement, fmt.Sprintf("policySet %s", plcset.Name), &plCount)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -1323,6 +1119,134 @@ func (p *Plugin) assertValidConfig() error {
 	}
 
 	p.usingPlR = plCount.plc == 0
+
+	return nil
+}
+
+// assertValidPlacement is a helper for assertValidConfig to verify placement configurations
+func assertValidPlacement(
+	placement types.PlacementConfig,
+	generatePlacement bool,
+	path string,
+	plCount *struct {
+		plc int
+		plr int
+	},
+) error {
+	if placement.PlacementRulePath != "" && placement.PlacementPath != "" {
+		return fmt.Errorf(
+			"%s must provide only one of placement.placementPath or placement.placementRulePath", path,
+		)
+	}
+
+	if len(placement.ClusterSelectors) > 0 && len(placement.LabelSelector) > 0 {
+		return fmt.Errorf(
+			"%s must provide only one of placement.labelSelector or placement.clusterSelectors", path,
+		)
+	}
+
+	if placement.PlacementRuleName != "" && placement.PlacementName != "" {
+		return fmt.Errorf(
+			"%s must provide only one of placement.placementName or placement.placementRuleName", path,
+		)
+	}
+
+	defaultPlacementOptions := 0
+	if len(placement.LabelSelector) != 0 || len(placement.ClusterSelectors) != 0 {
+		defaultPlacementOptions++
+	}
+
+	if placement.PlacementRulePath != "" || placement.PlacementPath != "" {
+		defaultPlacementOptions++
+	}
+
+	if placement.PlacementRuleName != "" || placement.PlacementName != "" {
+		defaultPlacementOptions++
+	}
+
+	if defaultPlacementOptions > 0 && !generatePlacement {
+		return fmt.Errorf(
+			"%s must not specify a placement when generatePlacement is set to false", path,
+		)
+	}
+
+	if defaultPlacementOptions > 1 {
+		return fmt.Errorf(
+			"%s must specify only one of placement selector, placement path, or placement name", path,
+		)
+	}
+
+	// validate placement names are DNS compliant
+	defPlrName := placement.PlacementRuleName
+	if defPlrName != "" && len(validation.IsDNS1123Subdomain(defPlrName)) > 0 {
+		return fmt.Errorf(
+			"%s placement.placementRuleName placement name `%s` is not DNS compliant. See %s",
+			path,
+			defPlrName,
+			dnsReference,
+		)
+	}
+
+	defPlcmtPlName := placement.PlacementName
+	if defPlcmtPlName != "" && len(validation.IsDNS1123Subdomain(defPlcmtPlName)) > 0 {
+		return fmt.Errorf(
+			"%s placement.placementName `%s` is not DNS compliant. See %s",
+			path,
+			defPlcmtPlName,
+			dnsReference,
+		)
+	}
+
+	defPlName := placement.Name
+	if defPlName != "" && len(validation.IsDNS1123Subdomain(defPlName)) > 0 {
+		return fmt.Errorf(
+			"%s placement.name `%s` is not DNS compliant. See %s", path, defPlName, dnsReference,
+		)
+	}
+
+	if placement.PlacementRulePath != "" {
+		_, err := os.Stat(placement.PlacementRulePath)
+		if err != nil {
+			return fmt.Errorf(
+				"%s placement.placementRulePath could not read the path %s",
+				path, placement.PlacementRulePath,
+			)
+		}
+	}
+
+	if placement.PlacementPath != "" {
+		_, err := os.Stat(placement.PlacementPath)
+		if err != nil {
+			return fmt.Errorf(
+				"%s placement.placementPath could not read the path %s",
+				path, placement.PlacementPath,
+			)
+		}
+	}
+
+	if plCount != nil {
+		foundPl := false
+
+		if len(placement.LabelSelector) != 0 ||
+			placement.PlacementPath != "" ||
+			placement.PlacementName != "" {
+			plCount.plc++
+
+			foundPl = true
+		}
+
+		if len(placement.ClusterSelectors) != 0 ||
+			placement.PlacementRulePath != "" ||
+			placement.PlacementRuleName != "" {
+			plCount.plr++
+
+			if foundPl {
+				return fmt.Errorf(
+					"%s may not use both Placement and PlacementRule kinds", path,
+				)
+			}
+		}
+	}
 
 	return nil
 }
