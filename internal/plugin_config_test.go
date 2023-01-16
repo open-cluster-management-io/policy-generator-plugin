@@ -715,7 +715,7 @@ policies:
 	}
 
 	expected := "policy policy-app-config must provide only one of " +
-		"placement.labelSelector or placement.clusterselectors"
+		"placement.labelSelector or placement.clusterSelectors"
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -790,7 +790,16 @@ policies:
 func TestConfigMultipleDefaultAndPolicyPlacements(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
-	createConfigMap(t, tmpDir, "configmap.yaml")
+	plFileName := "plr.yaml"
+	cmFileName := "configmap.yaml"
+
+	createConfigMap(t, tmpDir, cmFileName)
+
+	err := os.WriteFile(path.Join(tmpDir, plFileName), []byte{}, 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", plFileName)
+	}
+
 	config := fmt.Sprintf(`
 apiVersion: policy.open-cluster-management.io/v1
 kind: PolicyGenerator
@@ -799,7 +808,7 @@ metadata:
 policyDefaults:
   namespace: my-policies
   placement:
-    placementPath: path/to/pl.yaml
+    placementPath: %s
 policies:
 - name: policy-app-config
   placement:
@@ -808,11 +817,12 @@ policies:
   manifests:
   - path: %s
 `,
-		path.Join(tmpDir, "configmap.yaml"),
+		path.Join(tmpDir, plFileName),
+		path.Join(tmpDir, cmFileName),
 	)
 	p := Plugin{}
 
-	err := p.Config([]byte(config), tmpDir)
+	err = p.Config([]byte(config), tmpDir)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -924,7 +934,7 @@ policies:
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	expected := "could not read the placement path path/to/pl.yaml"
+	expected := "policy policy-app-config placement.placementPath could not read the path path/to/pl.yaml"
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -1280,7 +1290,7 @@ policies:
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	expected := fmt.Sprintf("could not read the placement rule path %s", plrPath)
+	expected := fmt.Sprintf("policyDefaults placement.placementRulePath could not read the path %s", plrPath)
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -1295,9 +1305,11 @@ func TestPolicySetConfig(t *testing.T) {
 			setupFunc: func(p *Plugin) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
-						Placement: types.PlacementConfig{
-							Name:             "policyset-placement",
-							ClusterSelectors: map[string]string{"my": "app"},
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								Name:             "policyset-placement",
+								ClusterSelectors: map[string]string{"my": "app"},
+							},
 						},
 					},
 				}
@@ -1324,14 +1336,17 @@ func TestPolicySetConfig(t *testing.T) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							PlacementPath:     "../config/plc.yaml",
-							PlacementRulePath: "../config/plr.yaml",
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								PlacementPath:     "../config/plc.yaml",
+								PlacementRulePath: "../config/plr.yaml",
+							},
 						},
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset must provide only one of placementRulePath or placementPath",
+			expectedErrMsg: "policySet my-policyset must provide only one of " +
+				"placement.placementPath or placement.placementRulePath",
 		},
 		{
 			name: "policySet must provide only one of placementRuleName or placementName",
@@ -1339,30 +1354,35 @@ func TestPolicySetConfig(t *testing.T) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							PlacementName:     "plExistingName",
-							PlacementRuleName: "plrExistingName",
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								PlacementName:     "plExistingName",
+								PlacementRuleName: "plrExistingName",
+							},
 						},
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset must provide only one of placementRuleName or placementName",
+			expectedErrMsg: "policySet my-policyset must provide only one of " +
+				"placement.placementName or placement.placementRuleName",
 		},
 		{
-			name: "policySet must provide only one of labelSelector or clusterselectors",
+			name: "policySet must provide only one of labelSelector or clusterSelectors",
 			setupFunc: func(p *Plugin) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							LabelSelector:    map[string]string{"cloud": "red hat"},
-							ClusterSelectors: map[string]string{"cloud": "red hat"},
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								LabelSelector:    map[string]string{"cloud": "red hat"},
+								ClusterSelectors: map[string]string{"cloud": "red hat"},
+							},
 						},
 					},
 				}
 			},
 			expectedErrMsg: "policySet my-policyset must provide only one of placement.labelSelector or " +
-				"placement.clusterselectors",
+				"placement.clusterSelectors",
 		},
 		{
 			name: "policySet may not specify a cluster selector and placement path together",
@@ -1370,9 +1390,11 @@ func TestPolicySetConfig(t *testing.T) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							PlacementPath:    "../config/plc.yaml",
-							ClusterSelectors: map[string]string{"cloud": "red hat"},
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								PlacementPath:    "../config/plc.yaml",
+								ClusterSelectors: map[string]string{"cloud": "red hat"},
+							},
 						},
 					},
 				}
@@ -1386,9 +1408,11 @@ func TestPolicySetConfig(t *testing.T) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							PlacementName:    "plexistingname",
-							ClusterSelectors: map[string]string{"cloud": "red hat"},
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								PlacementName:    "plexistingname",
+								ClusterSelectors: map[string]string{"cloud": "red hat"},
+							},
 						},
 					},
 				}
@@ -1402,9 +1426,11 @@ func TestPolicySetConfig(t *testing.T) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							PlacementPath: "../config/plc.yaml",
-							LabelSelector: map[string]string{"cloud": "red hat"},
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								PlacementPath: "../config/plc.yaml",
+								LabelSelector: map[string]string{"cloud": "red hat"},
+							},
 						},
 					},
 				}
@@ -1418,9 +1444,11 @@ func TestPolicySetConfig(t *testing.T) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							PlacementName: "plexistingname",
-							LabelSelector: map[string]string{"cloud": "red hat"},
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								PlacementName: "plexistingname",
+								LabelSelector: map[string]string{"cloud": "red hat"},
+							},
 						},
 					},
 				}
@@ -1434,9 +1462,11 @@ func TestPolicySetConfig(t *testing.T) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							PlacementRulePath: "../config/plc.yaml",
-							ClusterSelectors:  map[string]string{"cloud": "red hat"},
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								PlacementRulePath: "../config/plc.yaml",
+								ClusterSelectors:  map[string]string{"cloud": "red hat"},
+							},
 						},
 					},
 				}
@@ -1450,9 +1480,11 @@ func TestPolicySetConfig(t *testing.T) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							PlacementRuleName: "plrexistingname",
-							ClusterSelectors:  map[string]string{"cloud": "red hat"},
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								PlacementRuleName: "plrexistingname",
+								ClusterSelectors:  map[string]string{"cloud": "red hat"},
+							},
 						},
 					},
 				}
@@ -1466,9 +1498,11 @@ func TestPolicySetConfig(t *testing.T) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							PlacementRulePath: "../config/plc.yaml",
-							LabelSelector:     map[string]string{"cloud": "red hat"},
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								PlacementRulePath: "../config/plc.yaml",
+								LabelSelector:     map[string]string{"cloud": "red hat"},
+							},
 						},
 					},
 				}
@@ -1482,9 +1516,11 @@ func TestPolicySetConfig(t *testing.T) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							PlacementRuleName: "plrexistingname",
-							LabelSelector:     map[string]string{"cloud": "red hat"},
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								PlacementRuleName: "plrexistingname",
+								LabelSelector:     map[string]string{"cloud": "red hat"},
+							},
 						},
 					},
 				}
@@ -1498,13 +1534,16 @@ func TestPolicySetConfig(t *testing.T) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							PlacementRulePath: "../config/plc.yaml",
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								PlacementRulePath: "../config/plc.yaml",
+							},
 						},
 					},
 				}
 			},
-			expectedErrMsg: "could not read the placement rule path ../config/plc.yaml",
+			expectedErrMsg: "policySet my-policyset placement.placementRulePath " +
+				"could not read the path ../config/plc.yaml",
 		},
 		{
 			name: "policySet placement path not resolvable",
@@ -1512,13 +1551,15 @@ func TestPolicySetConfig(t *testing.T) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							PlacementPath: "../config/plc.yaml",
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								PlacementPath: "../config/plc.yaml",
+							},
 						},
 					},
 				}
 			},
-			expectedErrMsg: "could not read the placement path ../config/plc.yaml",
+			expectedErrMsg: "policySet my-policyset placement.placementPath could not read the path ../config/plc.yaml",
 		},
 		{
 			name: "Placement and PlacementRule can't be mixed",
@@ -1529,8 +1570,10 @@ func TestPolicySetConfig(t *testing.T) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
-						Placement: types.PlacementConfig{
-							ClusterSelectors: map[string]string{"cloud": "red hat"},
+						PolicySetOptions: types.PolicySetOptions{
+							Placement: types.PlacementConfig{
+								ClusterSelectors: map[string]string{"cloud": "red hat"},
+							},
 						},
 					},
 				}

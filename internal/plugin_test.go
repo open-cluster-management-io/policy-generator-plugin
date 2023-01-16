@@ -1963,6 +1963,9 @@ func TestGeneratePolicySets(t *testing.T) {
 						"policy-app-config",
 						"policy-app-config2",
 					},
+					PolicySetOptions: types.PolicySetOptions{
+						GeneratePolicySetPlacement: true,
+					},
 				},
 			},
 		},
@@ -1993,11 +1996,17 @@ func TestGeneratePolicySets(t *testing.T) {
 					Policies: []string{
 						"policy-app-config",
 					},
+					PolicySetOptions: types.PolicySetOptions{
+						GeneratePolicySetPlacement: true,
+					},
 				},
 				{
 					Name: "policyset-default",
 					Policies: []string{
 						"policy-app-config2",
+					},
+					PolicySetOptions: types.PolicySetOptions{
+						GeneratePolicySetPlacement: true,
 					},
 				},
 			},
@@ -2028,6 +2037,9 @@ func TestGeneratePolicySets(t *testing.T) {
 					Name: "policyset-default",
 					Policies: []string{
 						"policy-app-config2",
+					},
+					PolicySetOptions: types.PolicySetOptions{
+						GeneratePolicySetPlacement: true,
 					},
 				},
 			},
@@ -2060,6 +2072,9 @@ func TestGeneratePolicySets(t *testing.T) {
 						"policy-app-config",
 						"policy-app-config2",
 						"pre-exists-policy",
+					},
+					PolicySetOptions: types.PolicySetOptions{
+						GeneratePolicySetPlacement: true,
 					},
 				},
 			},
@@ -2214,6 +2229,98 @@ subjects:
 	assertEqual(t, string(output), expected)
 }
 
+func TestGeneratePolicySetsWithoutPlacement(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	p := Plugin{}
+	var err error
+
+	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	p.PlacementBindingDefaults.Name = "my-placement-binding"
+	p.PolicyDefaults.Placement.Name = "my-placement-rule"
+	p.PolicyDefaults.Namespace = "my-policies"
+
+	policyConf := types.PolicyConfig{
+		Name: "policy-app-config",
+		Manifests: []types.Manifest{
+			{
+				Path: path.Join(tmpDir, "configmap.yaml"),
+			},
+		},
+		PolicyOptions: types.PolicyOptions{
+			PolicySets: []string{"policyset"},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf)
+
+	p.applyDefaults(map[string]interface{}{
+		"policySetDefaults": map[string]interface{}{
+			"generatePolicySetPlacement": false,
+		},
+	})
+
+	if err := p.assertValidConfig(); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+    remediationAction: inform
+---
+apiVersion: policy.open-cluster-management.io/v1beta1
+kind: PolicySet
+metadata:
+    name: policyset
+    namespace: my-policies
+spec:
+    description: ""
+    policies:
+        - policy-app-config
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	output, err := p.Generate()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, string(output), expected)
+}
+
 func TestGeneratePolicySetsWithPolicyPlacement(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -2246,9 +2353,11 @@ func TestGeneratePolicySetsWithPolicyPlacement(t *testing.T) {
 	p.PolicySets = []types.PolicySetConfig{
 		{
 			Name: "my-policyset",
-			Placement: types.PlacementConfig{
-				Name:             "policyset-placement",
-				ClusterSelectors: map[string]string{"my": "app"},
+			PolicySetOptions: types.PolicySetOptions{
+				Placement: types.PlacementConfig{
+					Name:             "policyset-placement",
+					ClusterSelectors: map[string]string{"my": "app"},
+				},
 			},
 		},
 	}
@@ -2908,7 +3017,7 @@ func TestGenerateNonDNSPlacementName(t *testing.T) {
 			}
 
 			expected := fmt.Sprintf(
-				"PolicyDefaults.Placement.Name `%s` is not DNS compliant. See "+
+				"policyDefaults placement.name `%s` is not DNS compliant. See "+
 					"https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names",
 				test.placementName,
 			)

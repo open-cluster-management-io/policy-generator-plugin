@@ -10,7 +10,8 @@ placementBindingDefaults:
   # Set an explicit placement binding name to use rather than rely on the default.
   name: ""
 
-# Required. Any default value listed here can be overridden under an entry in the policies array except for "namespace".
+# Required. Defaults for policy generation. Any default value listed here can be overridden under an entry in the
+# policies array except for "namespace".
 policyDefaults:
   # Optional. Array of categories to be used in the policy.open-cluster-management.io/categories annotation. This
   # defaults to ["CM Configuration Management"].
@@ -156,8 +157,14 @@ policyDefaults:
   # policies unless specified in the policy.
   policyAnnotations: {}
 
-# Required. The list of policies to create along with overrides to either the default values or, if
-# set, the values given in policyDefaults.
+# Optional. Defaults for policy set generation. Any default value listed here can be overridden under an entry in the
+# policySets array.
+policySetDefaults:
+  # Optional. The placement configuration for the policy sets. This defaults to a placement configuration that matches
+  # all clusters. (See policyDefaults.placement for description.)
+  placement: {}
+  # Optional. Whether to generate placement manifests for policy sets. This defaults to "true".
+  generatePolicySetPlacement: true
 
 # Required. The list of policies to create along with overrides to either the default values or, if set, the values
 # given in policyDefaults.
@@ -270,6 +277,8 @@ policies:
       - "NIST SP 800-53"
     # Optional. (See policyDefaults.policySets for description.)
     policySets: []
+    # Optional. (See policyDefaults.generatePolicyPlacement for description.)
+    generatePolicyPlacement: true
     # Optional. (See policyDefaults.generatePlacementWhenInSet for description.)
     generatePlacementWhenInSet: false
     # Optional. Annotations that the policy will include under its metadata.annotations. It will overwrite the
@@ -286,6 +295,8 @@ policySets:
     # Optional. The list of policies to be included in the policy set. If policies[*].policySets or
     # policyDefaults.policySets is also specified, the list is merged.
     policies: []
-    # Optional. The placement configuration for the policy set. This defaults to a placement configuration that matches
-    # all clusters. (See policyDefaults.placement for description.)
+    # Optional. (See policySetDefaults.placement to set a default placement for policy sets. See
+    # policyDefaults.placement for description of placement options.)
     placement: {}
+    # Optional. (See policySetDefaults.generatePolicySetPlacement for description.)
+    generatePolicySetPlacement: true

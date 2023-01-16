@@ -27,6 +27,11 @@ type PolicyOptions struct {
 	ConfigurationPolicyAnnotations map[string]string  `json:"configurationPolicyAnnotations,omitempty" yaml:"configurationPolicyAnnotations,omitempty"`
 }
 
+type PolicySetOptions struct {
+	Placement                  PlacementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
+	GeneratePolicySetPlacement bool            `json:"generatePolicySetPlacement,omitempty" yaml:"generatePolicySetPlacement,omitempty"`
+}
+
 type ConfigurationPolicyOptions struct {
 	RemediationAction      string             `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
 	Severity               string             `json:"severity,omitempty" yaml:"severity,omitempty"`
@@ -103,10 +108,14 @@ type PolicyDefaults struct {
 }
 
 type PolicySetConfig struct {
-	Name        string          `json:"name,omitempty" yaml:"name,omitempty"`
-	Description string          `json:"description,omitempty" yaml:"description,omitempty"`
-	Policies    []string        `json:"policies,omitempty" yaml:"policies,omitempty"`
-	Placement   PlacementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
+	Name             string   `json:"name,omitempty" yaml:"name,omitempty"`
+	Description      string   `json:"description,omitempty" yaml:"description,omitempty"`
+	Policies         []string `json:"policies,omitempty" yaml:"policies,omitempty"`
+	PolicySetOptions `json:",inline" yaml:",inline"`
+}
+
+type PolicySetDefaults struct {
+	PolicySetOptions `json:",inline" yaml:",inline"`
 }
 
 type PolicyDependency struct {
