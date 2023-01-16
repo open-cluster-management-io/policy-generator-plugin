@@ -147,7 +147,7 @@ func (p *Plugin) Generate() ([]byte, error) {
 		// or policy is not part of any policy sets
 		if p.Policies[i].GeneratePlacementWhenInSet ||
 			(p.Policies[i].GeneratePolicyPlacement && len(p.Policies[i].PolicySets) == 0) {
-			plcName, err := p.createPlacement(&p.Policies[i].Placement, p.Policies[i].Name)
+			plcName, err := p.createPolicyPlacement(p.Policies[i].Placement, p.Policies[i].Name)
 			if err != nil {
 				return nil, err
 			}
@@ -163,7 +163,7 @@ func (p *Plugin) Generate() ([]byte, error) {
 	for i := range p.PolicySets {
 		// only generate placement when GeneratePolicySetPlacement equals to true
 		if p.PolicySets[i].GeneratePolicySetPlacement {
-			plcName, err := p.createPlacement(&p.PolicySets[i].Placement, p.PolicySets[i].Name)
+			plcName, err := p.createPolicySetPlacement(p.PolicySets[i].Placement, p.PolicySets[i].Name)
 			if err != nil {
 				return nil, err
 			}
@@ -1432,17 +1432,26 @@ func (p *Plugin) getPlcFromPath(plcPath string) (string, map[string]interface{},
 
 // getCsKey generates the key for the policy's cluster/label selectors to be used in
 // Policies.csToPlc.
-func getCsKey(placementConfig *types.PlacementConfig) string {
+func getCsKey(placementConfig types.PlacementConfig) string {
 	return fmt.Sprintf("%#v", placementConfig.ClusterSelectors)
 }
 
 // getPlcName will generate a placement name for the policy. If the placement has
 // previously been generated, skip will be true.
-func (p *Plugin) getPlcName(placementConfig *types.PlacementConfig, nameDefault string) (string, bool) {
+func (p *Plugin) getPlcName(
+	defaultPlacementConfig types.PlacementConfig,
+	placementConfig types.PlacementConfig,
+	nameDefault string,
+) (string, bool) {
 	if placementConfig.Name != "" {
 		// If the policy explicitly specifies a placement name, use it
 		return placementConfig.Name, false
-	} else if p.PolicyDefaults.Placement.Name != "" {
+	} else if defaultPlacementConfig.Name != "" || p.PolicyDefaults.Placement.Name != "" {
+		// Prioritize the provided default but fall back to policyDefaults
+		defaultPlacementName := p.PolicyDefaults.Placement.Name
+		if defaultPlacementConfig.Name != "" {
+			defaultPlacementName = defaultPlacementConfig.Name
+		}
 		// If the policy doesn't explicitly specify a placement name, and there is a
 		// default placement name set, check if one has already been generated for these
 		// cluster/label selectors
@@ -1455,20 +1464,35 @@ func (p *Plugin) getPlcName(placementConfig *types.PlacementConfig, nameDefault 
 		// default placement name, use that
 		if len(p.csToPlc) == 0 {
 			// If this is the first generated placement, just use it as is
-			return p.PolicyDefaults.Placement.Name, false
+			return defaultPlacementName, false
 		}
 		// If there is already one or more generated placements, increment the name
-		return fmt.Sprintf("%s%d", p.PolicyDefaults.Placement.Name, len(p.csToPlc)+1), false
+		return fmt.Sprintf("%s%d", defaultPlacementName, len(p.csToPlc)+1), false
 	}
 	// Default to a placement per policy
 	return "placement-" + nameDefault, false
+}
+
+func (p *Plugin) createPolicyPlacement(placementConfig types.PlacementConfig, nameDefault string) (
+	name string, err error,
+) {
+	return p.createPlacement(p.PolicyDefaults.Placement, placementConfig, nameDefault)
+}
+
+func (p *Plugin) createPolicySetPlacement(placementConfig types.PlacementConfig, nameDefault string) (
+	name string, err error,
+) {
+	return p.createPlacement(p.PolicySetDefaults.Placement, placementConfig, nameDefault)
 }
 
 // createPlacement creates a placement for the input placement config and default name by writing it to
 // the policy generator's output buffer. The name of the placement or an error is returned.
 // If the placement has already been generated, it will be reused and not added to the
 // policy generator's output buffer. An error is returned if the placement cannot be created.
-func (p *Plugin) createPlacement(placementConfig *types.PlacementConfig, nameDefault string) (
+func (p *Plugin) createPlacement(
+	defaultPlacementConfig types.PlacementConfig,
+	placementConfig types.PlacementConfig,
+	nameDefault string) (
 	name string, err error,
 ) {
 	// If a placementName or placementRuleName is defined just return it
@@ -1511,7 +1535,7 @@ func (p *Plugin) createPlacement(placementConfig *types.PlacementConfig, nameDef
 		p.processedPlcs[name] = true
 	} else {
 		var skip bool
-		name, skip = p.getPlcName(placementConfig, nameDefault)
+		name, skip = p.getPlcName(defaultPlacementConfig, placementConfig, nameDefault)
 		if skip {
 			return
 		}

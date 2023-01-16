@@ -1281,7 +1281,7 @@ func TestCreatePlacementDefault(t *testing.T) {
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{Name: "policy-app-config"}
 
-	name, err := p.createPlacement(&policyConf.Placement, policyConf.Name)
+	name, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -1316,12 +1316,12 @@ func TestCreatePlacementSinglePlr(t *testing.T) {
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	policyConf := types.PolicyConfig{Name: "policy-app-config"}
 
-	name, err := p.createPlacement(&policyConf.Placement, policyConf.Name)
+	name, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 
-	name2, err := p.createPlacement(&policyConf.Placement, policyConf.Name)
+	name2, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -1363,7 +1363,7 @@ func TestCreatePlacementClusterSelectors(t *testing.T) {
 		"game":   "pacman",
 	}
 
-	name, err := p.createPlacement(&policyConf.Placement, policyConf.Name)
+	name, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -1410,7 +1410,7 @@ func TestCreatePlacementLabelSelector(t *testing.T) {
 		"game":   "pacman",
 	}
 
-	name, err := p.createPlacement(&policyConf.Placement, policyConf.Name)
+	name, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -1470,12 +1470,12 @@ func TestCreatePlacementDuplicateName(t *testing.T) {
 		},
 	}
 
-	_, err := p.createPlacement(&policyConf.Placement, policyConf.Name)
+	_, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 
-	_, err = p.createPlacement(&policyConf2.Placement, policyConf2.Name)
+	_, err = p.createPolicyPlacement(policyConf2.Placement, policyConf2.Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1533,7 +1533,7 @@ spec:
 	plrYAML = strings.TrimPrefix(plrYAML, "\n")
 	p, _ := plPathHelper(t, plrYAML, true)
 
-	name, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	name, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -1561,7 +1561,7 @@ metadata:
 
 	p.processedPlcs = map[string]bool{"my-plr": true}
 
-	name, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	name, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -1585,7 +1585,7 @@ spec:
 `
 	p, plrPath := plPathHelper(t, plrYAML, true)
 
-	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	_, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1609,7 +1609,7 @@ spec:
 `
 	p, plrPath := plPathHelper(t, plrYAML, true)
 
-	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	_, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1634,7 +1634,7 @@ spec:
 `
 	p, plrPath := plPathHelper(t, plrYAML, true)
 
-	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	_, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1662,7 +1662,7 @@ data:
 `
 	p, plrPath := plPathHelper(t, plrYAML, true)
 
-	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	_, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1694,7 +1694,7 @@ spec:
 	plrYAML = strings.TrimPrefix(plrYAML, "\n")
 	p, _ := plPathHelper(t, plrYAML, false)
 
-	name, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	name, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -1722,7 +1722,7 @@ metadata:
 
 	p.processedPlcs = map[string]bool{"my-plr": true}
 
-	name, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	name, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -1748,7 +1748,7 @@ spec:
 `
 	p, plrPath := plPathHelper(t, plrYAML, false)
 
-	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	_, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1774,7 +1774,7 @@ spec:
 `
 	p, plrPath := plPathHelper(t, plrYAML, false)
 
-	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	_, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1801,7 +1801,7 @@ spec:
 `
 	p, plrPath := plPathHelper(t, plrYAML, false)
 
-	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	_, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1827,7 +1827,7 @@ metadata:
 `
 	p, plrPath := plPathHelper(t, plrYAML, false)
 
-	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	_, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1852,7 +1852,7 @@ metadata:
 `
 	p, plrPath := plPathHelper(t, plrYAML, true)
 
-	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	_, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -1879,7 +1879,7 @@ data:
 `
 	p, plrPath := plPathHelper(t, plrYAML, false)
 
-	_, err := p.createPlacement(&p.Policies[0].Placement, p.Policies[0].Name)
+	_, err := p.createPolicyPlacement(p.Policies[0].Placement, p.Policies[0].Name)
 	if err == nil {
 		t.Fatal("Expected an error but did not get one")
 	}
@@ -2229,6 +2229,137 @@ subjects:
 	assertEqual(t, string(output), expected)
 }
 
+func TestGeneratePolicySetsOverridePlacement(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	p := Plugin{}
+	var err error
+
+	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	p.PlacementBindingDefaults.Name = "my-placement-binding"
+	p.PolicyDefaults.Placement.Name = "my-placement"
+	p.PolicyDefaults.Namespace = "my-policies"
+	p.PolicySetDefaults.Placement.Name = "other-placement"
+
+	policyConf := types.PolicyConfig{
+		Name: "policy-app-config",
+		Manifests: []types.Manifest{
+			{
+				Path: path.Join(tmpDir, "configmap.yaml"),
+			},
+		},
+		PolicyOptions: types.PolicyOptions{
+			PolicySets: []string{"policyset-overrides"},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf)
+
+	policySetConf := types.PolicySetConfig{
+		Name: "policyset-overrides",
+		PolicySetOptions: types.PolicySetOptions{
+			Placement: types.PlacementConfig{
+				LabelSelector: map[string]string{
+					"my-label": "my-cluster",
+				},
+			},
+		},
+	}
+	p.PolicySets = append(p.PolicySets, policySetConf)
+
+	p.applyDefaults(map[string]interface{}{})
+
+	if err := p.assertValidConfig(); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+    remediationAction: inform
+---
+apiVersion: policy.open-cluster-management.io/v1beta1
+kind: PolicySet
+metadata:
+    name: policyset-overrides
+    namespace: my-policies
+spec:
+    description: ""
+    policies:
+        - policy-app-config
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+    name: other-placement
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions:
+                    - key: my-label
+                      operator: In
+                      values:
+                        - my-cluster
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+    name: my-placement-binding
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: other-placement
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: PolicySet
+      name: policyset-overrides
+`
+	expected = strings.TrimPrefix(expected, "\n")
+
+	output, err := p.Generate()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, string(output), expected)
+}
+
 func TestGeneratePolicySetsWithoutPlacement(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -2313,6 +2444,7 @@ spec:
         - policy-app-config
 `
 	expected = strings.TrimPrefix(expected, "\n")
+
 	output, err := p.Generate()
 	if err != nil {
 		t.Fatal(err.Error())
