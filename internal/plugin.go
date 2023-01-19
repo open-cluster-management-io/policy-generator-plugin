@@ -831,8 +831,7 @@ func (p *Plugin) assertValidConfig() error {
 	}
 
 	// Validate default policy placement settings
-	err := assertValidPlacement(
-		p.PolicyDefaults.Placement, p.PolicyDefaults.GeneratePolicyPlacement, "policyDefaults", nil)
+	err := assertValidPlacement(p.PolicyDefaults.Placement, "policyDefaults", nil)
 	if err != nil {
 		return err
 	}
@@ -1062,16 +1061,14 @@ func (p *Plugin) assertValidConfig() error {
 			}
 		}
 
-		err := assertValidPlacement(
-			policy.Placement, policy.GeneratePolicyPlacement, fmt.Sprintf("policy %s", policy.Name), &plCount)
+		err := assertValidPlacement(policy.Placement, fmt.Sprintf("policy %s", policy.Name), &plCount)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Validate default policy set placement settings
-	err = assertValidPlacement(
-		p.PolicySetDefaults.Placement, p.PolicySetDefaults.GeneratePolicySetPlacement, "policySetDefaults", nil)
+	err = assertValidPlacement(p.PolicySetDefaults.Placement, "policySetDefaults", nil)
 	if err != nil {
 		return err
 	}
@@ -1102,8 +1099,7 @@ func (p *Plugin) assertValidConfig() error {
 		seenPlcset[plcset.Name] = true
 
 		// Validate policy set Placement settings
-		err := assertValidPlacement(
-			plcset.Placement, plcset.GeneratePolicySetPlacement, fmt.Sprintf("policySet %s", plcset.Name), &plCount)
+		err := assertValidPlacement(plcset.Placement, fmt.Sprintf("policySet %s", plcset.Name), &plCount)
 		if err != nil {
 			return err
 		}
@@ -1126,7 +1122,6 @@ func (p *Plugin) assertValidConfig() error {
 // assertValidPlacement is a helper for assertValidConfig to verify placement configurations
 func assertValidPlacement(
 	placement types.PlacementConfig,
-	generatePlacement bool,
 	path string,
 	plCount *struct {
 		plc int
@@ -1151,26 +1146,20 @@ func assertValidPlacement(
 		)
 	}
 
-	defaultPlacementOptions := 0
+	placementOptionCount := 0
 	if len(placement.LabelSelector) != 0 || len(placement.ClusterSelectors) != 0 {
-		defaultPlacementOptions++
+		placementOptionCount++
 	}
 
 	if placement.PlacementRulePath != "" || placement.PlacementPath != "" {
-		defaultPlacementOptions++
+		placementOptionCount++
 	}
 
 	if placement.PlacementRuleName != "" || placement.PlacementName != "" {
-		defaultPlacementOptions++
+		placementOptionCount++
 	}
 
-	if defaultPlacementOptions > 0 && !generatePlacement {
-		return fmt.Errorf(
-			"%s must not specify a placement when generatePlacement is set to false", path,
-		)
-	}
-
-	if defaultPlacementOptions > 1 {
+	if placementOptionCount > 1 {
 		return fmt.Errorf(
 			"%s must specify only one of placement selector, placement path, or placement name", path,
 		)
