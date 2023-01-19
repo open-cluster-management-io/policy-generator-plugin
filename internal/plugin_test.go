@@ -306,6 +306,7 @@ func TestGeneratePolicyDisablePlacement(t *testing.T) {
 
 	p.PolicyDefaults.Namespace = "my-policies"
 	p.PolicyDefaults.MetadataComplianceType = "musthave"
+	p.PolicyDefaults.Placement.PlacementName = "my-placement"
 	policyConf := types.PolicyConfig{
 		Name: "policy-app-config",
 		Manifests: []types.Manifest{
@@ -318,6 +319,97 @@ func TestGeneratePolicyDisablePlacement(t *testing.T) {
 	p.applyDefaults(map[string]interface{}{
 		"policyDefaults": map[string]interface{}{
 			"generatePolicyPlacement": false,
+		},
+	})
+	assertEqual(t, p.Policies[0].GeneratePolicyPlacement, false)
+	// Default all policy ConsolidateManifests flags are set to true
+	// unless explicitly set
+	assertEqual(t, p.Policies[0].ConsolidateManifests, true)
+
+	if err := p.assertValidConfig(); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      metadataComplianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+    remediationAction: inform
+`
+	expected = strings.TrimPrefix(expected, "\n")
+
+	output, err := p.Generate()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, string(output), expected)
+}
+
+func TestGeneratePolicyDisablePlacementOverride(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	p := Plugin{}
+	var err error
+
+	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	p.PolicyDefaults.Namespace = "my-policies"
+	p.PolicyDefaults.MetadataComplianceType = "musthave"
+	p.PolicyDefaults.Placement.PlacementName = "my-placement"
+	policyConf := types.PolicyConfig{
+		Name: "policy-app-config",
+		Manifests: []types.Manifest{
+			{
+				Path: path.Join(tmpDir, "configmap.yaml"),
+			},
+		},
+		PolicyOptions: types.PolicyOptions{
+			GeneratePolicyPlacement: false,
+			Placement: types.PlacementConfig{
+				PlacementName: "my-placement",
+			},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf)
+	p.applyDefaults(map[string]interface{}{
+		"policies": []interface{}{
+			map[string]interface{}{
+				"generatePolicyPlacement": false,
+			},
 		},
 	})
 	assertEqual(t, p.Policies[0].GeneratePolicyPlacement, false)
