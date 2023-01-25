@@ -3,6 +3,7 @@ package internal
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -12,7 +13,9 @@ import (
 	"time"
 
 	yaml "gopkg.in/yaml.v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"open-cluster-management.io/ocm-kustomize-generator-plugins/internal/types"
 )
@@ -831,7 +834,7 @@ func (p *Plugin) assertValidConfig() error {
 	}
 
 	// Validate default policy placement settings
-	err := assertValidPlacement(p.PolicyDefaults.Placement, "policyDefaults", nil)
+	err := p.assertValidPlacement(p.PolicyDefaults.Placement, "policyDefaults", nil)
 	if err != nil {
 		return err
 	}
@@ -1061,14 +1064,14 @@ func (p *Plugin) assertValidConfig() error {
 			}
 		}
 
-		err := assertValidPlacement(policy.Placement, fmt.Sprintf("policy %s", policy.Name), &plCount)
+		err := p.assertValidPlacement(policy.Placement, fmt.Sprintf("policy %s", policy.Name), &plCount)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Validate default policy set placement settings
-	err = assertValidPlacement(p.PolicySetDefaults.Placement, "policySetDefaults", nil)
+	err = p.assertValidPlacement(p.PolicySetDefaults.Placement, "policySetDefaults", nil)
 	if err != nil {
 		return err
 	}
@@ -1099,7 +1102,7 @@ func (p *Plugin) assertValidConfig() error {
 		seenPlcset[plcset.Name] = true
 
 		// Validate policy set Placement settings
-		err := assertValidPlacement(plcset.Placement, fmt.Sprintf("policySet %s", plcset.Name), &plCount)
+		err := p.assertValidPlacement(plcset.Placement, fmt.Sprintf("policySet %s", plcset.Name), &plCount)
 		if err != nil {
 			return err
 		}
@@ -1120,7 +1123,7 @@ func (p *Plugin) assertValidConfig() error {
 }
 
 // assertValidPlacement is a helper for assertValidConfig to verify placement configurations
-func assertValidPlacement(
+func (p *Plugin) assertValidPlacement(
 	placement types.PlacementConfig,
 	path string,
 	plCount *struct {
@@ -1235,6 +1238,26 @@ func assertValidPlacement(
 				)
 			}
 		}
+	}
+
+	if len(placement.ClusterSelectors) > 0 && len(placement.ClusterSelector) > 0 {
+		return fmt.Errorf("cannot use both clusterSelector and clusterSelectors in %s placement config "+
+			"(clusterSelector is recommended since it matches the actual placement field)", path)
+	}
+
+	// Determine which selectors to use
+	var resolvedSelectors map[string]interface{}
+	if len(placement.ClusterSelectors) > 0 {
+		resolvedSelectors = placement.ClusterSelectors
+	} else if len(placement.ClusterSelector) > 0 {
+		resolvedSelectors = placement.ClusterSelector
+	} else if len(placement.LabelSelector) > 0 {
+		resolvedSelectors = placement.LabelSelector
+	}
+
+	_, err := p.generateSelector(resolvedSelectors)
+	if err != nil {
+		return fmt.Errorf("%s placement has invalid selectors: %w", path, err)
 	}
 
 	return nil
@@ -1530,32 +1553,19 @@ func (p *Plugin) createPlacement(
 		}
 
 		// Determine which selectors to use
-		var resolvedSelectors map[string]string
+		var resolvedSelectors map[string]interface{}
 		if len(placementConfig.ClusterSelectors) > 0 {
 			resolvedSelectors = placementConfig.ClusterSelectors
+		} else if len(placementConfig.ClusterSelector) > 0 {
+			resolvedSelectors = placementConfig.ClusterSelector
 		} else if len(placementConfig.LabelSelector) > 0 {
 			resolvedSelectors = placementConfig.LabelSelector
 		}
 
-		// Sort the keys so that the match expressions can be ordered based on the label name
-		keys := make([]string, 0, len(resolvedSelectors))
-		for key := range resolvedSelectors {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
-
-		matchExpressions := []map[string]interface{}{}
-		for _, label := range keys {
-			matchExpression := map[string]interface{}{
-				"key": label,
-			}
-			if resolvedSelectors[label] == "" {
-				matchExpression["operator"] = "Exists"
-			} else {
-				matchExpression["operator"] = "In"
-				matchExpression["values"] = []string{resolvedSelectors[label]}
-			}
-			matchExpressions = append(matchExpressions, matchExpression)
+		// Build cluster selector object
+		selectorObj, err := p.generateSelector(resolvedSelectors)
+		if err != nil {
+			return "", err
 		}
 
 		if p.usingPlR {
@@ -1567,9 +1577,7 @@ func (p *Plugin) createPlacement(
 					"namespace": p.PolicyDefaults.Namespace,
 				},
 				"spec": map[string]interface{}{
-					"clusterSelector": map[string]interface{}{
-						"matchExpressions": matchExpressions,
-					},
+					"clusterSelector": selectorObj,
 				},
 			}
 		} else {
@@ -1584,9 +1592,7 @@ func (p *Plugin) createPlacement(
 					"predicates": []map[string]interface{}{
 						{
 							"requiredClusterSelector": map[string]interface{}{
-								"labelSelector": map[string]interface{}{
-									"matchExpressions": matchExpressions,
-								},
+								"labelSelector": selectorObj,
 							},
 						},
 					},
@@ -1619,6 +1625,60 @@ func (p *Plugin) createPlacement(
 	p.outputBuffer.Write(placementYAML)
 
 	return
+}
+
+// generateSelector determines the type of input and creates a map of selectors to be used in either the
+// clusterSelector or labelSelector field
+func (p *Plugin) generateSelector(
+	resolvedSelectors map[string]interface{},
+) (map[string]interface{}, error) {
+	if resolvedSelectors == nil {
+		return map[string]interface{}{"matchExpressions": []interface{}{}}, nil
+	}
+
+	resolvedSelectorsJSON, err := json.Marshal(resolvedSelectors)
+	if err != nil {
+		return nil, err
+	}
+
+	resolvedSelectorsLS := metav1.LabelSelector{}
+	decoder := json.NewDecoder(bytes.NewReader(resolvedSelectorsJSON))
+	decoder.DisallowUnknownFields()
+
+	err = decoder.Decode(&resolvedSelectorsLS)
+	if err != nil {
+		resolvedSelectorsLS = metav1.LabelSelector{}
+
+		// Check if it's a legacy selector
+		for label, value := range resolvedSelectors {
+			valueStr, ok := value.(string)
+			if !ok {
+				return nil, fmt.Errorf(
+					"the input is not a valid label selector or key-value label matching map",
+				)
+			}
+
+			lsReq := metav1.LabelSelectorRequirement{Key: label}
+
+			if valueStr == "" {
+				lsReq.Operator = metav1.LabelSelectorOpExists
+			} else {
+				lsReq.Operator = metav1.LabelSelectorOpIn
+				lsReq.Values = []string{valueStr}
+			}
+
+			resolvedSelectorsLS.MatchExpressions = append(resolvedSelectorsLS.MatchExpressions, lsReq)
+		}
+
+		resolved, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&resolvedSelectorsLS)
+		if err != nil {
+			panic(err)
+		}
+
+		return resolved, nil
+	}
+
+	return resolvedSelectors, nil
 }
 
 // createPlacementBinding creates a placement binding for the input placement, policies and policy sets by
