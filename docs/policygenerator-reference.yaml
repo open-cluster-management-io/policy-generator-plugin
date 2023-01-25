@@ -108,11 +108,15 @@ policyDefaults:
   # Optional. The placement configuration for the policies. This defaults to a placement configuration that matches all
   # clusters.
   placement:
-    # To specify a placement rule, specify key:value pair cluster selectors. (See placementRulePath to specify an
-    # existing file instead.)
+    # Deprecated: use clusterSelector instead
+    # To specify a placement rule, specify key:value pair cluster selectors or the full YAML for the desired cluster
+    # selectors. (See placementRulePath to specify an existing file instead.)
     clusterSelectors: {}
-    # To specify a placement, specify key:value pair cluster label selectors. (See placementPath to specify an existing
-    # file instead.)
+    # To specify a placement rule, specify key:value pair cluster selectors or the full YAML for the desired cluster
+    # selectors. (See placementRulePath to specify an existing file instead.)
+    clusterSelector: {}
+    # To specify a placement, specify key:value pair cluster label selectors or the full YAML for the desired cluster
+    # label selectors. (See placementPath to specify an existing file instead.)
     labelSelector: {}
     # Optional. Specifying a name will consolidate placement rules that contain the same cluster selectors.
     name: ""

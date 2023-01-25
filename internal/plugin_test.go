@@ -1449,7 +1449,7 @@ func TestCreatePlacementClusterSelectors(t *testing.T) {
 	p.csToPlc = map[string]string{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{Name: "policy-app-config"}
-	policyConf.Placement.ClusterSelectors = map[string]string{
+	policyConf.Placement.ClusterSelectors = map[string]interface{}{
 		"cloud":  "red hat",
 		"doesIt": "",
 		"game":   "pacman",
@@ -1496,7 +1496,7 @@ func TestCreatePlacementLabelSelector(t *testing.T) {
 	p.csToPlc = map[string]string{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{Name: "policy-app-config"}
-	policyConf.Placement.LabelSelector = map[string]string{
+	policyConf.Placement.LabelSelector = map[string]interface{}{
 		"cloud":  "red hat",
 		"doesIt": "",
 		"game":   "pacman",
@@ -1556,7 +1556,7 @@ func TestCreatePlacementDuplicateName(t *testing.T) {
 		Name: "policy-app-config2",
 		PolicyOptions: types.PolicyOptions{
 			Placement: types.PlacementConfig{
-				ClusterSelectors: map[string]string{"my": "app"},
+				ClusterSelectors: map[string]interface{}{"my": "app"},
 				Name:             "my-placement",
 			},
 		},
@@ -2356,7 +2356,7 @@ func TestGeneratePolicySetsOverridePlacement(t *testing.T) {
 		Name: "policyset-overrides",
 		PolicySetOptions: types.PolicySetOptions{
 			Placement: types.PlacementConfig{
-				LabelSelector: map[string]string{
+				LabelSelector: map[string]interface{}{
 					"my-label": "my-cluster",
 				},
 			},
@@ -2580,7 +2580,7 @@ func TestGeneratePolicySetsWithPolicyPlacement(t *testing.T) {
 			PolicySetOptions: types.PolicySetOptions{
 				Placement: types.PlacementConfig{
 					Name:             "policyset-placement",
-					ClusterSelectors: map[string]string{"my": "app"},
+					ClusterSelectors: map[string]interface{}{"my": "app"},
 				},
 			},
 		},
@@ -3319,4 +3319,277 @@ func TestGenerateNonDNSBindingName(t *testing.T) {
 			assertEqual(t, err.Error(), expected)
 		})
 	}
+}
+
+func TestCreatePlacementRuleFromMatchExpressions(t *testing.T) {
+	t.Parallel()
+
+	p := Plugin{}
+	p.usingPlR = true
+	p.allPlcs = map[string]bool{}
+	p.csToPlc = map[string]string{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := types.PolicyConfig{Name: "policy-app-config"}
+	me := map[string]interface{}{
+		"key":      "cloud",
+		"operator": "In",
+		"values": []string{
+			"red hat",
+			"test",
+		},
+	}
+	policyConf.Placement.ClusterSelectors = map[string]interface{}{
+		"matchExpressions": []interface{}{me},
+	}
+
+	name, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, name, "placement-policy-app-config")
+
+	output := p.outputBuffer.String()
+	expected := `
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+    name: placement-policy-app-config
+    namespace: my-policies
+spec:
+    clusterSelector:
+        matchExpressions:
+            - key: cloud
+              operator: In
+              values:
+                - red hat
+                - test
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+}
+
+func TestCreatePlacementRuleWithClusterSelector(t *testing.T) {
+	t.Parallel()
+
+	p := Plugin{}
+	p.usingPlR = true
+	p.allPlcs = map[string]bool{}
+	p.csToPlc = map[string]string{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := types.PolicyConfig{Name: "policy-app-config"}
+	me := map[string]interface{}{
+		"key":      "cloud",
+		"operator": "In",
+		"values": []string{
+			"red hat",
+			"test",
+		},
+	}
+	policyConf.Placement.ClusterSelector = map[string]interface{}{
+		"matchExpressions": []interface{}{me},
+	}
+
+	name, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, name, "placement-policy-app-config")
+
+	output := p.outputBuffer.String()
+	expected := `
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+    name: placement-policy-app-config
+    namespace: my-policies
+spec:
+    clusterSelector:
+        matchExpressions:
+            - key: cloud
+              operator: In
+              values:
+                - red hat
+                - test
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+}
+
+func TestCreatePlacementFromMatchLabels(t *testing.T) {
+	t.Parallel()
+
+	p := Plugin{}
+	p.allPlcs = map[string]bool{}
+	p.csToPlc = map[string]string{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := types.PolicyConfig{Name: "policy-app-config"}
+	ml := map[string]interface{}{
+		"cloud": "red hat",
+	}
+	policyConf.Placement.ClusterSelectors = map[string]interface{}{
+		"matchLabels": ml,
+	}
+
+	name, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, name, "placement-policy-app-config")
+
+	output := p.outputBuffer.String()
+	expected := `
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+    name: placement-policy-app-config
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchLabels:
+                    cloud: red hat
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+}
+
+func TestCreatePlacementFromMatchExpressions(t *testing.T) {
+	t.Parallel()
+
+	p := Plugin{}
+	p.allPlcs = map[string]bool{}
+	p.csToPlc = map[string]string{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := types.PolicyConfig{Name: "policy-app-config"}
+	me := map[string]interface{}{
+		"key":      "cloud",
+		"operator": "In",
+		"values": []string{
+			"red hat",
+			"test",
+		},
+	}
+	policyConf.Placement.LabelSelector = map[string]interface{}{
+		"matchExpressions": []interface{}{me},
+	}
+
+	name, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, name, "placement-policy-app-config")
+
+	output := p.outputBuffer.String()
+	expected := `
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+    name: placement-policy-app-config
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions:
+                    - key: cloud
+                      operator: In
+                      values:
+                        - red hat
+                        - test
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+}
+
+func TestCreatePlacementInvalidMatchExpressions(t *testing.T) {
+	t.Parallel()
+
+	p := Plugin{}
+	p.allPlcs = map[string]bool{}
+	p.csToPlc = map[string]string{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := types.PolicyConfig{Name: "policy-app-config"}
+	nestedMap := map[string]interface{}{
+		"test": "invalid",
+	}
+	me := map[string]interface{}{
+		"key":      "cloud",
+		"operator": "In",
+		"values": []interface{}{
+			"red hat",
+			nestedMap,
+		},
+	}
+	policyConf.Placement.LabelSelector = map[string]interface{}{
+		"matchExpressions": []interface{}{me},
+	}
+
+	_, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := "the input is not a valid label selector or key-value label matching map"
+	assertEqual(t, err.Error(), expected)
+}
+
+func TestCreatePlacementMultipleSelectors(t *testing.T) {
+	t.Parallel()
+
+	p := Plugin{}
+	p.allPlcs = map[string]bool{}
+	p.csToPlc = map[string]string{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := types.PolicyConfig{Name: "policy-app-config"}
+	me := map[string]interface{}{
+		"key":      "cloud",
+		"operator": "In",
+		"values": []string{
+			"red hat",
+		},
+	}
+	ml := map[string]interface{}{
+		"cloud": "red hat",
+	}
+	policyConf.Placement.LabelSelector = map[string]interface{}{
+		"matchExpressions": []interface{}{me},
+		"matchLabels":      ml,
+	}
+
+	_, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output := p.outputBuffer.String()
+	expected := `
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+    name: placement-policy-app-config
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions:
+                    - key: cloud
+                      operator: In
+                      values:
+                        - red hat
+                matchLabels:
+                    cloud: red hat
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
 }

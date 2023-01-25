@@ -135,7 +135,7 @@ policies:
 	assertReflectEqual(
 		t,
 		p.PolicyDefaults.Placement.ClusterSelectors,
-		map[string]string{"cloud": "red hat"},
+		map[string]interface{}{"cloud": "red hat"},
 	)
 	assertEqual(t, len(p.PolicyDefaults.Placement.LabelSelector), 0)
 	assertEqual(t, p.PolicyDefaults.RemediationAction, "enforce")
@@ -162,7 +162,7 @@ policies:
 	assertReflectEqual(
 		t,
 		policy1.Placement.ClusterSelectors,
-		map[string]string{"cloud": "red hat"},
+		map[string]interface{}{"cloud": "red hat"},
 	)
 	assertEqual(t, policy1.RemediationAction, "inform")
 	assertEqual(t, policy1.Severity, "medium")
@@ -184,7 +184,7 @@ policies:
 	assertReflectEqual(
 		t,
 		policy2.Placement.ClusterSelectors,
-		map[string]string{"cloud": "weather"},
+		map[string]interface{}{"cloud": "weather"},
 	)
 	assertEqual(t, policy2.RemediationAction, "enforce")
 	assertEqual(t, policy2.Severity, "medium")
@@ -1240,7 +1240,7 @@ func TestPolicySetConfig(t *testing.T) {
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
 								Name:             "policyset-placement",
-								ClusterSelectors: map[string]string{"my": "app"},
+								ClusterSelectors: map[string]interface{}{"my": "app"},
 							},
 						},
 					},
@@ -1306,8 +1306,8 @@ func TestPolicySetConfig(t *testing.T) {
 						Name: "my-policyset",
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
-								LabelSelector:    map[string]string{"cloud": "red hat"},
-								ClusterSelectors: map[string]string{"cloud": "red hat"},
+								LabelSelector:    map[string]interface{}{"cloud": "red hat"},
+								ClusterSelectors: map[string]interface{}{"cloud": "red hat"},
 							},
 						},
 					},
@@ -1325,7 +1325,7 @@ func TestPolicySetConfig(t *testing.T) {
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
 								PlacementPath:    "../config/plc.yaml",
-								ClusterSelectors: map[string]string{"cloud": "red hat"},
+								ClusterSelectors: map[string]interface{}{"cloud": "red hat"},
 							},
 						},
 					},
@@ -1343,7 +1343,7 @@ func TestPolicySetConfig(t *testing.T) {
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
 								PlacementName:    "plexistingname",
-								ClusterSelectors: map[string]string{"cloud": "red hat"},
+								ClusterSelectors: map[string]interface{}{"cloud": "red hat"},
 							},
 						},
 					},
@@ -1361,7 +1361,7 @@ func TestPolicySetConfig(t *testing.T) {
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
 								PlacementPath: "../config/plc.yaml",
-								LabelSelector: map[string]string{"cloud": "red hat"},
+								LabelSelector: map[string]interface{}{"cloud": "red hat"},
 							},
 						},
 					},
@@ -1379,7 +1379,7 @@ func TestPolicySetConfig(t *testing.T) {
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
 								PlacementName: "plexistingname",
-								LabelSelector: map[string]string{"cloud": "red hat"},
+								LabelSelector: map[string]interface{}{"cloud": "red hat"},
 							},
 						},
 					},
@@ -1397,7 +1397,7 @@ func TestPolicySetConfig(t *testing.T) {
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
 								PlacementRulePath: "../config/plc.yaml",
-								ClusterSelectors:  map[string]string{"cloud": "red hat"},
+								ClusterSelectors:  map[string]interface{}{"cloud": "red hat"},
 							},
 						},
 					},
@@ -1415,7 +1415,7 @@ func TestPolicySetConfig(t *testing.T) {
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
 								PlacementRuleName: "plrexistingname",
-								ClusterSelectors:  map[string]string{"cloud": "red hat"},
+								ClusterSelectors:  map[string]interface{}{"cloud": "red hat"},
 							},
 						},
 					},
@@ -1433,7 +1433,7 @@ func TestPolicySetConfig(t *testing.T) {
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
 								PlacementRulePath: "../config/plc.yaml",
-								LabelSelector:     map[string]string{"cloud": "red hat"},
+								LabelSelector:     map[string]interface{}{"cloud": "red hat"},
 							},
 						},
 					},
@@ -1451,7 +1451,7 @@ func TestPolicySetConfig(t *testing.T) {
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
 								PlacementRuleName: "plrexistingname",
-								LabelSelector:     map[string]string{"cloud": "red hat"},
+								LabelSelector:     map[string]interface{}{"cloud": "red hat"},
 							},
 						},
 					},
@@ -1497,14 +1497,14 @@ func TestPolicySetConfig(t *testing.T) {
 			name: "Placement and PlacementRule can't be mixed",
 			setupFunc: func(p *Plugin) {
 				p.Policies[0].Placement = types.PlacementConfig{
-					LabelSelector: map[string]string{"cloud": "red hat"},
+					LabelSelector: map[string]interface{}{"cloud": "red hat"},
 				}
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
-								ClusterSelectors: map[string]string{"cloud": "red hat"},
+								ClusterSelectors: map[string]interface{}{"cloud": "red hat"},
 							},
 						},
 					},
@@ -1600,4 +1600,49 @@ policies:
 
 	disabledPolicy := p.Policies[1]
 	assertEqual(t, disabledPolicy.Disabled, true)
+}
+
+func TestConflictingPlacementSelectors(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	configMapPath := path.Join(tmpDir, "configmap.yaml")
+	policyNS := "my-policies"
+	policyName := "policy-app"
+	defaultsConfig := fmt.Sprintf(
+		`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+policyDefaults:
+  namespace: %s
+  placement:
+    labelSelector:
+      matchExpressions:
+      - key: cloud
+        operator: In
+        values:
+          - red hat
+          - hello
+      cloud: red hat
+      clusterID: 1234-5678
+policies:
+- name: %s
+  manifests:
+    - path: %s
+`,
+		policyNS, policyName, configMapPath,
+	)
+
+	p := Plugin{}
+
+	err := p.Config([]byte(defaultsConfig), tmpDir)
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	expected := "policyDefaults placement has invalid selectors: " +
+		"the input is not a valid label selector or key-value label matching map"
+	assertEqual(t, err.Error(), expected)
 }
