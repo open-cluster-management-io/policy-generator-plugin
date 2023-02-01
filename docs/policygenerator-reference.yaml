@@ -31,6 +31,10 @@ policyDefaults:
   # Optional. This determines if a single configuration policy should be generated for all the manifests being wrapped
   # in the policy. If set to false, a configuration policy per manifest will be generated. This defaults to true.
   consolidateManifests: true
+  # Optional. If set to true (default), all the policy's labels and annotations will be copied to the replicated policy.
+  # If set to false, only the policy framework specific policy labels and annotations will be copied to the replicated
+  # policy.
+  copyPolicyMetadata: true
   # Optional. A list of objects that should be in specific compliance states before this policy is applied. Cannot be
   # specified when policyDefaults.orderPolicies is set to true.
   dependencies:
@@ -240,6 +244,8 @@ policies:
     complianceType: "musthave"
     # Optional. (See policyDefaults.configurationPolicyAnnotations for description.)
     configurationPolicyAnnotations: {}
+    # Optional. (See policyDefaults.copyPolicyMetadata for description.)
+    copyPolicyMetadata: true
     # Optional. (See policyDefaults.metadataComplianceType for description.)
     metadataComplianceType: ""
     # Optional. (See policyDefaults.controls for description.)

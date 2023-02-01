@@ -3593,3 +3593,82 @@ spec:
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
 }
+
+func TestCreatePolicyWithCopyPolicyMetadata(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	bTrue := true
+	bFalse := false
+
+	tests := []struct {
+		name               string
+		copyPolicyMetadata *bool
+		expected           *bool
+	}{
+		{name: "unset", copyPolicyMetadata: nil, expected: nil},
+		{name: "true", copyPolicyMetadata: &bTrue, expected: nil},
+		{name: "false", copyPolicyMetadata: &bFalse, expected: &bFalse},
+	}
+
+	for _, mode := range []string{"policyDefault", "policy"} {
+		mode := mode
+
+		for _, test := range tests {
+			test := test
+			t.Run(mode+" "+test.name, func(t *testing.T) {
+				t.Parallel()
+
+				p := Plugin{}
+				p.PolicyDefaults.Namespace = "my-policies"
+				policyConf := types.PolicyConfig{
+					Name: "policy-app-config", Manifests: []types.Manifest{
+						{Path: path.Join(tmpDir, "configmap.yaml")},
+					},
+				}
+
+				policyDefaultsUnmarshaled := map[string]interface{}{}
+				policyUnmarshaled := map[string]interface{}{}
+
+				if test.copyPolicyMetadata != nil {
+					if mode == "policyDefault" {
+						policyDefaultsUnmarshaled["copyPolicyMetadata"] = *test.copyPolicyMetadata
+					} else if mode == "policy" {
+						policyUnmarshaled["copyPolicyMetadata"] = *test.copyPolicyMetadata
+					}
+				}
+
+				p.Policies = append(p.Policies, policyConf)
+				p.applyDefaults(
+					map[string]interface{}{
+						"policyDefaults": policyDefaultsUnmarshaled,
+						"policies":       []interface{}{policyUnmarshaled},
+					},
+				)
+
+				err := p.createPolicy(&p.Policies[0])
+				if err != nil {
+					t.Fatal(err.Error())
+				}
+
+				output := p.outputBuffer.Bytes()
+				policyManifests, err := unmarshalManifestBytes(output)
+				if err != nil {
+					t.Fatal(err.Error())
+				}
+
+				// nolint: forcetypeassert
+				spec := policyManifests[0]["spec"].(map[string]interface{})
+
+				if test.expected == nil {
+					if _, set := spec["copyPolicyMetadata"]; set {
+						t.Fatal("Expected the policy's spec.copyPolicyMetadata to be unset")
+					}
+				} else {
+					assertEqual(t, spec["copyPolicyMetadata"], *test.expected)
+				}
+			})
+		}
+	}
+}

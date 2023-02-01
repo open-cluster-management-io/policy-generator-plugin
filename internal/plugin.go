@@ -432,6 +432,13 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		p.PolicyDefaults.Controls = defaults.Controls
 	}
 
+	cpmValue, setCPM := getPolicyDefaultBool(unmarshaledConfig, "copyPolicyMetadata")
+	if setCPM {
+		p.PolicyDefaults.CopyPolicyMetadata = cpmValue
+	} else {
+		p.PolicyDefaults.CopyPolicyMetadata = true
+	}
+
 	// Policy expanders default to true unless explicitly set in the config.
 	// Gatekeeper policy expander policyDefault
 	igvValue, setIgv := getPolicyDefaultBool(unmarshaledConfig, "informGatekeeperPolicies")
@@ -521,6 +528,13 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			}
 
 			policy.ConfigurationPolicyAnnotations = annotations
+		}
+
+		cpmValue, setCpm := getPolicyBool(unmarshaledConfig, i, "copyPolicyMetadata")
+		if setCpm {
+			policy.CopyPolicyMetadata = cpmValue
+		} else {
+			policy.CopyPolicyMetadata = p.PolicyDefaults.CopyPolicyMetadata
 		}
 
 		if policy.Standards == nil {
@@ -1305,6 +1319,12 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 
 	if len(policyConf.Dependencies) != 0 {
 		spec["dependencies"] = policyConf.Dependencies
+	}
+
+	// When copyPolicyMetadata is unset, it defaults to the behavior of true, so this leaves it out entirely when set to
+	// true to avoid unnecessarily including it in the Policy YAML.
+	if !policyConf.CopyPolicyMetadata {
+		spec["copyPolicyMetadata"] = false
 	}
 
 	policy := map[string]interface{}{
