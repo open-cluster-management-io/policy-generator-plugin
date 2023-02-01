@@ -92,12 +92,13 @@ func TestValidateManifestMissingData(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		name := fmt.Sprintf("manifest missing %s", strings.Join(test.missingFields, "."))
+
 		t.Run(
 			name,
 			func(t *testing.T) {
 				t.Parallel()
-				test := test
 				configmap := *createExConfigMap("configmap1")
 				err := unstructured.SetNestedField(configmap, "", test.missingFields...)
 				if err != nil {
@@ -128,12 +129,14 @@ func TestValidatePatchMissingData(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		name := fmt.Sprintf("patch missing %s", strings.Join(test.missingFields, "."))
+
 		t.Run(
 			name,
 			func(t *testing.T) {
 				t.Parallel()
-				test := test
+
 				manifests := []map[string]interface{}{
 					*createExConfigMap("configmap1"), *createExConfigMap("configmap2"),
 				}
@@ -177,12 +180,14 @@ func TestValidatePatchInvalidSingleManifest(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		name := fmt.Sprintf("patch invalid %s", strings.Join(test.invalidFields, "."))
+
 		t.Run(
 			name,
 			func(t *testing.T) {
 				t.Parallel()
-				test := test
+
 				manifests := []map[string]interface{}{*createExConfigMap("configmap1")}
 				patch := map[string]interface{}{
 					"apiVersion": "v1",
