@@ -10,6 +10,7 @@ import (
 type PolicyOptions struct {
 	Categories                     []string           `json:"categories,omitempty" yaml:"categories,omitempty"`
 	Controls                       []string           `json:"controls,omitempty" yaml:"controls,omitempty"`
+	CopyPolicyMetadata             bool               `json:"copyPolicyMetadata,omitempty" yaml:"copyPolicyMetadata,omitempty"`
 	Dependencies                   []PolicyDependency `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	ExtraDependencies              []PolicyDependency `json:"extraDependencies,omitempty" yaml:"extraDependencies,omitempty"`
 	Placement                      PlacementConfig    `json:"placement,omitempty" yaml:"placement,omitempty"`
