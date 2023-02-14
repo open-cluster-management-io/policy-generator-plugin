@@ -3379,16 +3379,13 @@ func TestCreatePlacementRuleWithClusterSelector(t *testing.T) {
 	p.csToPlc = map[string]string{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{Name: "policy-app-config"}
-	me := map[string]interface{}{
-		"key":      "cloud",
-		"operator": "In",
-		"values": []string{
-			"red hat",
-			"test",
-		},
+	labelSelectorReq := metav1.LabelSelectorRequirement{
+		Key:      "cloud",
+		Operator: metav1.LabelSelectorOpIn,
+		Values:   []string{"red hat", "test"},
 	}
-	policyConf.Placement.ClusterSelector = map[string]interface{}{
-		"matchExpressions": []interface{}{me},
+	policyConf.Placement.ClusterSelector = metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{labelSelectorReq},
 	}
 
 	name, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)

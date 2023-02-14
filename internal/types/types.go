@@ -78,7 +78,7 @@ func (t NamespaceSelector) String() string {
 
 type PlacementConfig struct {
 	ClusterSelectors  map[string]interface{} `json:"clusterSelectors,omitempty" yaml:"clusterSelectors,omitempty"`
-	ClusterSelector   map[string]interface{} `json:"clusterSelector,omitempty" yaml:"clusterSelector,omitempty"`
+	ClusterSelector   metav1.LabelSelector   `json:"clusterSelector,omitempty" yaml:"clusterSelector,omitempty"`
 	LabelSelector     map[string]interface{} `json:"labelSelector,omitempty" yaml:"labelSelector,omitempty"`
 	Name              string                 `json:"name,omitempty" yaml:"name,omitempty"`
 	PlacementPath     string                 `json:"placementPath,omitempty" yaml:"placementPath,omitempty"`

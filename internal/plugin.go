@@ -1254,22 +1254,26 @@ func (p *Plugin) assertValidPlacement(
 		}
 	}
 
-	if len(placement.ClusterSelectors) > 0 && len(placement.ClusterSelector) > 0 {
+	if len(placement.ClusterSelectors) > 0 && len(placement.ClusterSelector.MatchExpressions) > 0 {
 		return fmt.Errorf("cannot use both clusterSelector and clusterSelectors in %s placement config "+
 			"(clusterSelector is recommended since it matches the actual placement field)", path)
 	}
 
 	// Determine which selectors to use
-	var resolvedSelectors map[string]interface{}
-	if len(placement.ClusterSelectors) > 0 {
-		resolvedSelectors = placement.ClusterSelectors
-	} else if len(placement.ClusterSelector) > 0 {
-		resolvedSelectors = placement.ClusterSelector
-	} else if len(placement.LabelSelector) > 0 {
-		resolvedSelectors = placement.LabelSelector
+	var err error
+	if len(placement.ClusterSelector.MatchExpressions) > 0 {
+		_, err = runtime.DefaultUnstructuredConverter.ToUnstructured(&placement.ClusterSelector)
+	} else {
+		var resolvedSelectors map[string]interface{}
+		if len(placement.ClusterSelectors) > 0 {
+			resolvedSelectors = placement.ClusterSelectors
+		} else if len(placement.LabelSelector) > 0 {
+			resolvedSelectors = placement.LabelSelector
+		}
+
+		_, err = p.generateSelector(resolvedSelectors)
 	}
 
-	_, err := p.generateSelector(resolvedSelectors)
 	if err != nil {
 		return fmt.Errorf("%s placement has invalid selectors: %w", path, err)
 	}
@@ -1573,17 +1577,20 @@ func (p *Plugin) createPlacement(
 		}
 
 		// Determine which selectors to use
-		var resolvedSelectors map[string]interface{}
-		if len(placementConfig.ClusterSelectors) > 0 {
-			resolvedSelectors = placementConfig.ClusterSelectors
-		} else if len(placementConfig.ClusterSelector) > 0 {
-			resolvedSelectors = placementConfig.ClusterSelector
-		} else if len(placementConfig.LabelSelector) > 0 {
-			resolvedSelectors = placementConfig.LabelSelector
+		var selectorObj map[string]interface{}
+		if len(placementConfig.ClusterSelector.MatchExpressions) > 0 {
+			selectorObj, err = runtime.DefaultUnstructuredConverter.ToUnstructured(&placementConfig.ClusterSelector)
+		} else {
+			var resolvedSelectors map[string]interface{}
+			if len(placementConfig.ClusterSelectors) > 0 {
+				resolvedSelectors = placementConfig.ClusterSelectors
+			} else if len(placementConfig.LabelSelector) > 0 {
+				resolvedSelectors = placementConfig.LabelSelector
+			}
+			// Build cluster selector object
+			selectorObj, err = p.generateSelector(resolvedSelectors)
 		}
 
-		// Build cluster selector object
-		selectorObj, err := p.generateSelector(resolvedSelectors)
 		if err != nil {
 			return "", err
 		}
