@@ -116,11 +116,25 @@ policyDefaults:
     # To specify a placement rule, specify key:value pair cluster selectors or the full YAML for the desired cluster
     # selectors. (See placementRulePath to specify an existing file instead.)
     clusterSelectors: {}
-    # To specify a placement rule, specify key:value pair cluster selectors or the full YAML for the desired cluster
+    # To specify a placement rule, specify key:value pair cluster selectors or the full LabelSelector for the desired cluster
     # selectors. (See placementRulePath to specify an existing file instead.)
+    # For example, to specify a placement rule using matchExpressions:
+    #   clusterSelector:
+    #     matchExpressions:
+    #       - key: provider
+    #         operator: NotIn
+    #         values:
+    #          - "cloud"
     clusterSelector: {}
-    # To specify a placement, specify key:value pair cluster label selectors or the full YAML for the desired cluster
+    # To specify a placement, specify key:value pair cluster label selectors or the full LabelSelector for the desired cluster
     # label selectors. (See placementPath to specify an existing file instead.)
+    # For example, to specify a placement using matchExpressions:
+    #   labelSelector:
+    #     matchExpressions:
+    #       - key: provider
+    #         operator: NotIn
+    #         values:
+    #          - "cloud"
     labelSelector: {}
     # Optional. Specifying a name will consolidate placement rules that contain the same cluster selectors.
     name: ""

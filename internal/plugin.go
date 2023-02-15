@@ -808,6 +808,7 @@ func applyDefaultPlacementFields(placement *types.PlacementConfig, defaultPlacem
 		defaultPlacement.PlacementPath != "" ||
 		defaultPlacement.PlacementName != ""
 	plrDefaultSet := len(defaultPlacement.ClusterSelectors) != 0 ||
+		len(defaultPlacement.ClusterSelector) != 0 ||
 		defaultPlacement.PlacementRulePath != "" ||
 		defaultPlacement.PlacementRuleName != ""
 
@@ -827,6 +828,7 @@ func applyDefaultPlacementFields(placement *types.PlacementConfig, defaultPlacem
 	} else if len(placement.ClusterSelectors) == 0 &&
 		// Else if both cluster selectors and placement rule path/name aren't set, then use the defaults with a
 		// priority on placement rule path followed by placement rule name.
+		len(placement.ClusterSelector) == 0 &&
 		placement.PlacementRulePath == "" &&
 		placement.PlacementRuleName == "" &&
 		plrDefaultSet {
@@ -836,6 +838,8 @@ func applyDefaultPlacementFields(placement *types.PlacementConfig, defaultPlacem
 			placement.PlacementRuleName = defaultPlacement.PlacementRuleName
 		} else if len(defaultPlacement.ClusterSelectors) > 0 {
 			placement.ClusterSelectors = defaultPlacement.ClusterSelectors
+		} else if len(defaultPlacement.ClusterSelector) > 0 {
+			placement.ClusterSelector = defaultPlacement.ClusterSelector
 		}
 	}
 }
@@ -1151,7 +1155,8 @@ func (p *Plugin) assertValidPlacement(
 		)
 	}
 
-	if len(placement.ClusterSelectors) > 0 && len(placement.LabelSelector) > 0 {
+	if (len(placement.ClusterSelectors) > 0 || len(placement.ClusterSelector) > 0) &&
+		len(placement.LabelSelector) > 0 {
 		return fmt.Errorf(
 			"%s must provide only one of placement.labelSelector or placement.clusterSelectors", path,
 		)
@@ -1164,7 +1169,8 @@ func (p *Plugin) assertValidPlacement(
 	}
 
 	placementOptionCount := 0
-	if len(placement.LabelSelector) != 0 || len(placement.ClusterSelectors) != 0 {
+	if len(placement.LabelSelector) != 0 || len(placement.ClusterSelectors) != 0 ||
+		len(placement.ClusterSelector) != 0 {
 		placementOptionCount++
 	}
 
@@ -1242,6 +1248,7 @@ func (p *Plugin) assertValidPlacement(
 		}
 
 		if len(placement.ClusterSelectors) != 0 ||
+			len(placement.ClusterSelector) != 0 ||
 			placement.PlacementRulePath != "" ||
 			placement.PlacementRuleName != "" {
 			plCount.plr++
