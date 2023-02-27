@@ -21,7 +21,7 @@ For more about Open Cluster Management and its Policy Framework:
 ##### Install from the GitHub release
 
 1. Download the precompiled plugin binary from the
-  [release](https://github.com/stolostron/policy-generator-plugin/releases)
+  [release](https://github.com/open-cluster-management-io/policy-generator-plugin/releases)
   of your choice.
 
 2. Create the plugin directory:
