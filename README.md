@@ -77,7 +77,7 @@ For more about Open Cluster Management and its Policy Framework:
      ```
    - From any directory with a `kustomization.yaml` file pointing to `PolicyGenerator` manifests:
      ```bash
-     kustomize build --enable-alpha-plugins
+     kustomize build --enable_alpha_plugins
      ```
 
 ### As a standalone binary
