@@ -2,8 +2,8 @@
 
 ## Overview
 
-The Policy Generator constructs Open Cluster Management policies from Kubernetes YAML files provided
-through a PolicyGenerator Custom Resource. The Policy Generator is a binary compiled for use as a
+The Policy Generator constructs Open Cluster Management policies from Kubernetes YAML files provided through a
+PolicyGenerator Custom Resource. The Policy Generator is a binary compiled for use as a
 [kustomize](https://kustomize.io/) exec plugin.
 
 For more about Open Cluster Management and its Policy Framework:
@@ -16,62 +16,69 @@ For more about Open Cluster Management and its Policy Framework:
 
 ### As a Kustomize plugin
 
-#### Installation
+#### Install from the GitHub release
 
-##### Install from the GitHub release
-
-1. Download the precompiled plugin binary from the
-  [release](https://github.com/open-cluster-management-io/policy-generator-plugin/releases)
-  of your choice.
-
-2. Create the plugin directory:
+1. Create the plugin directory:
 
    ```bash
    mkdir -p ${HOME}/.config/kustomize/plugin/policy.open-cluster-management.io/v1/policygenerator
    ```
 
-3. Move the binary to the plugin directory:
+2. Install the binary. You can either:
 
-   - Linux:
+   - Download a released version:
 
-     ```bash
-     chmod +x linux-amd64-PolicyGenerator
-     mv linux-amd64-PolicyGenerator ${HOME}/.config/kustomize/plugin/policy.open-cluster-management.io/v1/policygenerator/PolicyGenerator
-     ```
+     1. Download the precompiled plugin binary from the
+        [release](https://github.com/open-cluster-management-io/policy-generator-plugin/releases) of your choice.
 
-   - MacOS:
+     2. Move the binary to the plugin directory:
 
-     ```bash
-     chmod +x darwin-amd64-PolicyGenerator
-     mv darwin-amd64-PolicyGenerator ${HOME}/.config/kustomize/plugin/policy.open-cluster-management.io/v1/policygenerator/PolicyGenerator
-     ```
+        - Linux:
 
-##### Build and install from source
+          ```bash
+          chmod +x linux-amd64-PolicyGenerator
+          mv linux-amd64-PolicyGenerator ${HOME}/.config/kustomize/plugin/policy.open-cluster-management.io/v1/policygenerator/PolicyGenerator
+          ```
+
+        - MacOS:
+
+          ```bash
+          chmod +x darwin-amd64-PolicyGenerator
+          mv darwin-amd64-PolicyGenerator ${HOME}/.config/kustomize/plugin/policy.open-cluster-management.io/v1/policygenerator/PolicyGenerator
+          ```
+
+   - Use `go install` (available for `v1.11.0` and higher):
+
+     - Set the `GOBIN` to the plugin directory and specify the desired version (this command uses `latest`):
+       ```bash
+       GOBIN=${HOME}/.config/kustomize/plugin/policy.open-cluster-management.io/v1/policygenerator \
+       go install open-cluster-management.io/policy-generator-plugin/cmd/PolicyGenerator@latest
+       ```
+
+#### Build and install from source
 
 1. Build the plugin binary (only needed once or to update the plugin):
    ```bash
    make build
    ```
-   **NOTE:** This will default to placing the binary in `${HOME}/.config/kustomize/plugin/`. You can
-   change this by exporting `KUSTOMIZE_PLUGIN_HOME` to a different path.
+   **NOTE:** This will default to placing the binary in `${HOME}/.config/kustomize/plugin/`. You can change this by
+   exporting `KUSTOMIZE_PLUGIN_HOME` to a different path.
 
 #### Configuration
 
-1. Create a `kustomization.yaml` file that points to `PolicyGenerator` manifest(s), with any
-   additional desired patches or customizations (see
-   [`examples/policyGenerator.yaml`](./examples/policyGenerator.yaml) for an example):
+1. Create a `kustomization.yaml` file that points to `PolicyGenerator` manifest(s), with any additional desired patches
+   or customizations (see [`examples/policyGenerator.yaml`](./examples/policyGenerator.yaml) for an example):
 
    ```yaml
    generators:
      - path/to/generator/file.yaml
    ```
 
-   - To read more about the `PolicyGenerator` YAML, see
-     [About the PolicyGenerator plugin](./docs/policygenerator.md)
+   - To read more about the `PolicyGenerator` YAML, see [About the PolicyGenerator plugin](./docs/policygenerator.md)
 
 2. To use the plugin to generate policies, do one of:
-   - Utilize the `examples/` directory in this repository (the directory can be modified by
-     exporting a new path to `SOURCE_DIR`):
+   - Utilize the `examples/` directory in this repository (the directory can be modified by exporting a new path to
+     `SOURCE_DIR`):
      ```bash
      make generate
      ```
@@ -84,11 +91,19 @@ For more about Open Cluster Management and its Policy Framework:
 
 In order to bypass Kustomize and run the generator binary directly:
 
-1. Build the binary:
+1. Get the binary. You can either:
 
-   ```bash
-   make build-binary
-   ```
+   - Build from source:
+
+     ```bash
+     make build-binary
+     ```
+
+   - Use `go install` (available for `v1.11.0` and higher):
+
+     ```bash
+     go install open-cluster-management.io/policy-generator-plugin/cmd/PolicyGenerator@latest
+     ```
 
 2. Run the binary from the location of the PolicyGenerator manifest(s):
    ```bash
@@ -99,5 +114,4 @@ In order to bypass Kustomize and run the generator binary directly:
      cd examples
      ../PolicyGenerator policyGenerator.yaml
      ```
-     **NOTE:** To print the trace in the case of an error, you can add the `--debug` flag to the
-     arguments.
+     **NOTE:** To print the trace in the case of an error, you can add the `--debug` flag to the arguments.
