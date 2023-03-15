@@ -112,12 +112,13 @@ policyDefaults:
   # Optional. The placement configuration for the policies. This defaults to a placement configuration that matches all
   # clusters.
   placement:
-    # Deprecated: use clusterSelector instead
+    # Deprecated: PlacementRule is deprecated. Use labelSelector instead to generate a Placement.
     # To specify a placement rule, specify key:value pair cluster selectors or the full YAML for the desired cluster
     # selectors. (See placementRulePath to specify an existing file instead.)
     clusterSelectors: {}
-    # To specify a placement rule, specify key:value pair cluster selectors or the full LabelSelector for the desired cluster
-    # selectors. (See placementRulePath to specify an existing file instead.)
+    # Deprecated: PlacementRule is deprecated. Use labelSelector instead to generate a Placement.
+    # To specify a placement rule, specify key:value pair cluster selectors or the full LabelSelector for the desired
+    # cluster selector. (See placementRulePath to specify an existing file instead.)
     # For example, to specify a placement rule using matchExpressions:
     #   clusterSelector:
     #     matchExpressions:
@@ -126,8 +127,8 @@ policyDefaults:
     #         values:
     #          - "cloud"
     clusterSelector: {}
-    # To specify a placement, specify key:value pair cluster label selectors or the full LabelSelector for the desired cluster
-    # label selectors. (See placementPath to specify an existing file instead.)
+    # To specify a placement, specify key:value pair cluster label selectors or the full LabelSelector for the desired
+    # cluster label selector. (See placementPath to specify an existing file instead.)
     # For example, to specify a placement using matchExpressions:
     #   labelSelector:
     #     matchExpressions:
@@ -139,17 +140,18 @@ policyDefaults:
     # Optional. Specifying a name will consolidate placement rules that contain the same cluster selectors.
     name: ""
     # To reuse an existing placement manifest, specify the path here relative to the kustomization.yaml file. If given,
-    # this placement will be used by all policies by default. (See clusterSelectors to generate a new Placement
-    # instead.)
+    # this placement will be used by all policies by default. (See labelSelector to generate a new Placement instead.)
     placementPath: ""
+    # Deprecated: PlacementRule is deprecated. Use placementPath instead to specify a Placement.
     # To reuse an existing placement rule manifest, specify the path here relative to the kustomization.yaml file. If
-    # given, this placement rule will be used by all policies by default. (See clusterSelectors to generate a new
+    # given, this placement rule will be used by all policies by default. (See clusterSelector to generate a new
     # PlacementRule instead.)
     placementRulePath: ""
     # Use a placement that already exists in the cluster in the same namespace as the policy to be generated. It is the
     # responsibility of the administrator to ensure the placement exists. Use of this setting will prevent a Placement
     # from being generated, but the Placement Binding will still be created.
     placementName: ""
+    # Deprecated: PlacementRule is deprecated. Use placementName instead to specify a Placement.
     # Use a placement rule that already exists in the cluster in the same namespace as the policy to be generated. It is
     # the responsibility of the administrator to ensure the placement rule exists. Use of this setting will prevent a
     # placement rule from being generated, but the placement binding will still be created.

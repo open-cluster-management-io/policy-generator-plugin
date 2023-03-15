@@ -15,8 +15,9 @@ policyDefaults:
     placementRulePath: input/placementrule.yaml
   # Example of using clusterSelectors to generate a placement rule
   # placement:
-  #   clusterSelectors:
-  #     cloud: red hat
+  #   clusterSelector:
+  #     matchLabels:
+  #       cloud: red hat
   remediationAction: inform
   severity: medium
   # standards: []
