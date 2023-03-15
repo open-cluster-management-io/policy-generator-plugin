@@ -18,8 +18,8 @@ generator plugin to be enabled.
 
 By default, a Placement and PlacementBinding are created for each policy with the policy name as the
 suffix. To signal that you'd like to consolidate policies that use the same Placement under a single
-PlacementBinding, either specify `placement.placementRulePath` to an existing Placement manifest or set
-`placement.name` along with `placement.clusterSelectors`. When the PlacementBinding is consolidated in
+PlacementBinding, either specify `placement.placementRulePath` to an existing Placement rule manifest or 
+set `placement.name` along with `placement.clusterSelector`. When the PlacementBinding is consolidated in
 this way, `placementBindingDefaults.name` must be specified so that the generator can create unique
 names for the bindings.
 
