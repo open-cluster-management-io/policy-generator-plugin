@@ -411,9 +411,9 @@ resources:
 				assertEqual(t, err.Error(), test.ErrMsg)
 
 				continue
-			} else {
-				t.Fatalf("Failed to get the policy templates: %v", err)
 			}
+
+			t.Fatalf("Failed to get the policy templates: %v", err)
 		}
 
 		assertEqual(t, len(policyTemplates), 1)
@@ -1054,7 +1054,7 @@ metadata:
 
 	assertEqual(t, len(policyTemplates), 2)
 
-	// This is not an in-depth test since the Kyverno expansion is tested elsewhere. This is to
+	// This is not an in-depth test since the Kyverno expansion is tested elsewhere. This is
 	// to test that glue code is working as expected.
 	expandedPolicyTemplate := policyTemplates[1]
 	objdef := expandedPolicyTemplate["objectDefinition"].(map[string]interface{})
@@ -1313,7 +1313,7 @@ func TestUnmarshalManifestFileNotObject(t *testing.T) {
 	assertEqual(t, err.Error(), expected)
 }
 
-// nolint: paralleltest
+//nolint:paralleltest
 func TestVerifyManifestPath(t *testing.T) {
 	baseDirectory, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
@@ -1439,7 +1439,7 @@ func TestVerifyManifestPath(t *testing.T) {
 
 	for _, test := range tests {
 		test := test
-		// nolint: paralleltest
+		//nolint:paralleltest
 		t.Run(
 			"manifestPath="+test.ManifestPath,
 			func(t *testing.T) {

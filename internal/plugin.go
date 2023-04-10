@@ -647,7 +647,7 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 		applyDefaultPlacementFields(&policy.Placement, p.PolicyDefaults.Placement)
 
-		// Only use defaults when when the namespaceSelector is not set on the policy
+		// Only use defaults when the namespaceSelector is not set on the policy
 		nsSelector := policy.NamespaceSelector
 		defNsSelector := p.PolicyDefaults.NamespaceSelector
 

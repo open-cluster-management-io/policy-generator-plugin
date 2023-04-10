@@ -27,7 +27,7 @@ func main() {
 	}
 
 	// Output results to stdout for Kustomize to handle
-	// nolint:forbidigo
+	//nolint:forbidigo
 	fmt.Print(outputBuffer.String())
 }
 
