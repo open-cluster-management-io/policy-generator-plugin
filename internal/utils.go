@@ -77,7 +77,7 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 			}
 
 			if len(manifestFile) == 0 {
-				continue
+				return nil, fmt.Errorf("found empty YAML in the manifest at %s", manifest.Path)
 			}
 			// Allowing replace the original manifest metadata.name and/or metadata.namespace if it is a single
 			// yaml structure in the manifest path
