@@ -909,6 +909,38 @@ spec:
 	assertEqual(t, output, expected)
 }
 
+func TestCreatePolicyEmptyManifest(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	err := os.WriteFile(path.Join(tmpDir, "empty.yaml"), []byte{}, 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write empty.yaml")
+	}
+
+	p := Plugin{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := types.PolicyConfig{
+		Name: "policy-app-config",
+		Manifests: []types.Manifest{
+			{
+				Path:                       path.Join(tmpDir, "empty.yaml"),
+				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{ComplianceType: "mustonlyhave"},
+			}, {
+				Path:                       path.Join(tmpDir, "configmap.yaml"),
+				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{ComplianceType: "mustnothave"},
+			},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf)
+	p.applyDefaults(map[string]interface{}{})
+
+	err = p.createPolicy(&p.Policies[0])
+	expectedErr := fmt.Sprintf("found empty YAML in the manifest at %s", path.Join(tmpDir, "empty.yaml"))
+	assertEqual(t, err.Error(), expectedErr)
+}
+
 func TestCreatePolicyWithAnnotations(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
