@@ -480,7 +480,7 @@ func unmarshalManifestBytes(manifestBytes []byte) ([]map[string]interface{}, err
 				break
 			}
 
-			// nolint:wrapcheck
+			//nolint:wrapcheck
 			return nil, err
 		}
 
