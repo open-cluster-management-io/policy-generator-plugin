@@ -295,9 +295,16 @@ func isPolicyTypeManifest(manifest map[string]interface{}) (bool, error) {
 		return false, errors.New("invalid or not found kind")
 	}
 
-	isPolicy := strings.HasPrefix(apiVersion, "policy.open-cluster-management.io") &&
-		kind != "Policy" &&
-		strings.HasSuffix(kind, "Policy")
+	// Don't allow generation for root Policies
+	isOcmAPI := strings.HasPrefix(apiVersion, "policy.open-cluster-management.io")
+	if isOcmAPI && kind == "Policy" {
+		return false, errors.New("providing a root Policy kind is not supported by the generator; " +
+			"the manifest should be applied to the hub cluster directly")
+	}
+
+	// Identify OCM Policies
+	isPolicy := isOcmAPI && kind != "Policy" && strings.HasSuffix(kind, "Policy")
+
 
 	if isPolicy {
 		// metadata.name is required on policy manifests
