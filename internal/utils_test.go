@@ -628,7 +628,8 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 				},
 			},
 			wantVal: false,
-			wantErr: "",
+			wantErr: "providing a root Policy kind is not supported by the generator; " +
+				"the manifest should be applied to the cluster directly",
 		},
 		"valid PlacementRule": {
 			manifest: map[string]interface{}{
