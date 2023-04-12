@@ -593,9 +593,10 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		manifest map[string]interface{}
-		wantVal  bool
-		wantErr  string
+		manifest        map[string]interface{}
+		wantIsPolicy    bool
+		wantIsOcmPolicy bool
+		wantErr         string
 	}{
 		"valid RandomPolicy": {
 			manifest: map[string]interface{}{
@@ -605,8 +606,9 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 					"name": "foo",
 				},
 			},
-			wantVal: true,
-			wantErr: "",
+			wantIsPolicy:    true,
+			wantIsOcmPolicy: true,
+			wantErr:         "",
 		},
 		"valid ConfigurationPolicy": {
 			manifest: map[string]interface{}{
@@ -616,8 +618,33 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 					"name": "foo",
 				},
 			},
-			wantVal: true,
-			wantErr: "",
+			wantIsPolicy:    true,
+			wantIsOcmPolicy: true,
+			wantErr:         "",
+		},
+		"valid Gatekeeper Constraint": {
+			manifest: map[string]interface{}{
+				"apiVersion": "constraints.gatekeeper.sh",
+				"kind":       "Foo",
+				"metadata": map[string]interface{}{
+					"name": "foo",
+				},
+			},
+			wantIsPolicy:    true,
+			wantIsOcmPolicy: false,
+			wantErr:         "",
+		},
+		"valid Gatekeeper ConstraintTemplate": {
+			manifest: map[string]interface{}{
+				"apiVersion": "templates.gatekeeper.sh",
+				"kind":       "ConstraintTemplate",
+				"metadata": map[string]interface{}{
+					"name": "foo",
+				},
+			},
+			wantIsPolicy:    true,
+			wantIsOcmPolicy: false,
+			wantErr:         "",
 		},
 		"valid Policy": {
 			manifest: map[string]interface{}{
@@ -627,9 +654,10 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 					"name": "foo",
 				},
 			},
-			wantVal: false,
+			wantIsPolicy:    false,
+			wantIsOcmPolicy: false,
 			wantErr: "providing a root Policy kind is not supported by the generator; " +
-				"the manifest should be applied to the cluster directly",
+				"the manifest should be applied to the hub cluster directly",
 		},
 		"valid PlacementRule": {
 			manifest: map[string]interface{}{
@@ -639,8 +667,9 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 					"name": "foo",
 				},
 			},
-			wantVal: false,
-			wantErr: "",
+			wantIsPolicy:    false,
+			wantIsOcmPolicy: false,
+			wantErr:         "",
 		},
 		"wrong ApiVersion": {
 			manifest: map[string]interface{}{
@@ -650,8 +679,9 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 					"name": "foo",
 				},
 			},
-			wantVal: false,
-			wantErr: "",
+			wantIsPolicy:    false,
+			wantIsOcmPolicy: false,
+			wantErr:         "",
 		},
 		"invalid kind": {
 			manifest: map[string]interface{}{
@@ -661,8 +691,9 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 					"name": "foo",
 				},
 			},
-			wantVal: false,
-			wantErr: "invalid or not found kind",
+			wantIsPolicy:    false,
+			wantIsOcmPolicy: false,
+			wantErr:         "invalid or not found kind",
 		},
 		"missing apiVersion": {
 			manifest: map[string]interface{}{
@@ -671,8 +702,9 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 					"name": "foo",
 				},
 			},
-			wantVal: false,
-			wantErr: "invalid or not found apiVersion",
+			wantIsPolicy:    false,
+			wantIsOcmPolicy: false,
+			wantErr:         "invalid or not found apiVersion",
 		},
 		"missing name in ConfigurationPolicy": {
 			manifest: map[string]interface{}{
@@ -682,8 +714,9 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 					"namespace": "foo",
 				},
 			},
-			wantVal: true,
-			wantErr: "invalid or not found metadata.name",
+			wantIsPolicy:    true,
+			wantIsOcmPolicy: true,
+			wantErr:         "invalid or not found metadata.name",
 		},
 		"missing name in non-policy": {
 			manifest: map[string]interface{}{
@@ -693,8 +726,9 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 					"name": "foo",
 				},
 			},
-			wantVal: false,
-			wantErr: "",
+			wantIsPolicy:    false,
+			wantIsOcmPolicy: false,
+			wantErr:         "",
 		},
 	}
 
@@ -704,11 +738,12 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			gotVal, gotErr := isPolicyTypeManifest(test.manifest)
+			gotIsPolicy, gotIsOcmPolicy, gotErr := isPolicyTypeManifest(test.manifest)
 			if gotErr != nil {
 				assertEqual(t, gotErr.Error(), test.wantErr)
 			}
-			assertEqual(t, gotVal, test.wantVal)
+			assertEqual(t, gotIsPolicy, test.wantIsPolicy)
+			assertEqual(t, gotIsOcmPolicy, test.wantIsOcmPolicy)
 		})
 	}
 }
