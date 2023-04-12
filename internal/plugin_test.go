@@ -1163,6 +1163,124 @@ spec:
 	assertEqual(t, output, expected)
 }
 
+func TestCreatePolicyWithGkConstraintTemplate(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	gatekeeperPath := path.Join(tmpDir, "gatekeeper.yaml")
+	yamlContent := `
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: myconstrainingtemplate
+`
+
+	err := os.WriteFile(gatekeeperPath, []byte(yamlContent), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", gatekeeperPath)
+	}
+
+	p := Plugin{}
+
+	p.PolicyDefaults.Namespace = "gatekeeper-policies"
+	p.PolicyDefaults.InformGatekeeperPolicies = false
+	policyConf := types.PolicyConfig{
+		Name: "policy-gatekeeper",
+		Manifests: []types.Manifest{
+			{Path: path.Join(tmpDir, "gatekeeper.yaml")},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf)
+	p.applyDefaults(map[string]interface{}{})
+
+	err = p.createPolicy(&p.Policies[0])
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output := p.outputBuffer.String()
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-gatekeeper
+    namespace: gatekeeper-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: templates.gatekeeper.sh/v1
+            kind: ConstraintTemplate
+            metadata:
+                name: myconstrainingtemplate
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+}
+
+func TestCreatePolicyWithGkConstraint(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	gatekeeperPath := path.Join(tmpDir, "gatekeeper.yaml")
+	yamlContent := `
+apiVersion: constraints.gatekeeper.sh/v1
+kind: MyConstrainingTemplate
+metadata:
+  name: thisthingimconstraining
+`
+
+	err := os.WriteFile(gatekeeperPath, []byte(yamlContent), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", gatekeeperPath)
+	}
+
+	p := Plugin{}
+
+	p.PolicyDefaults.Namespace = "gatekeeper-policies"
+	p.PolicyDefaults.InformGatekeeperPolicies = false
+	policyConf := types.PolicyConfig{
+		Name: "policy-gatekeeper",
+		Manifests: []types.Manifest{
+			{Path: path.Join(tmpDir, "gatekeeper.yaml")},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf)
+	p.applyDefaults(map[string]interface{}{})
+
+	err = p.createPolicy(&p.Policies[0])
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output := p.outputBuffer.String()
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-gatekeeper
+    namespace: gatekeeper-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: constraints.gatekeeper.sh/v1
+            kind: MyConstrainingTemplate
+            metadata:
+                name: thisthingimconstraining
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+}
+
 func TestCreatePolicyWithDifferentRemediationAction(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()

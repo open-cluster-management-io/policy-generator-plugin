@@ -174,7 +174,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 		extraDeps := policyConf.Manifests[i].ExtraDependencies
 
 		for _, manifest := range manifestGroup {
-			isPolicyTypeManifest, err := isPolicyTypeManifest(manifest)
+			isPolicyTypeManifest, isOcmPolicy, err := isPolicyTypeManifest(manifest)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"%w in manifest path: %s",
@@ -186,7 +186,10 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 			if isPolicyTypeManifest {
 				policyTemplate := map[string]interface{}{"objectDefinition": manifest}
 
-				setTemplateOptions(manifest, ignorePending, extraDeps)
+				// Only set dependency options if it's an OCM policy
+				if isOcmPolicy {
+					setTemplateOptions(manifest, ignorePending, extraDeps)
+				}
 
 				policyTemplates = append(policyTemplates, policyTemplate)
 
@@ -280,41 +283,49 @@ func setTemplateOptions(tmpl map[string]interface{}, ignorePending bool, extraDe
 	}
 }
 
-// isPolicyTypeManifest determines if the manifest is a non-root policy manifest
-// by checking apiVersion and kind fields.
-// Return error when apiVersion and kind fields aren't string, or if the manifest
-// is a non-root policy manifest, but it is invalid because it is missing a name.
-func isPolicyTypeManifest(manifest map[string]interface{}) (bool, error) {
+// isPolicyTypeManifest determines whether the manifest is a kind handled by the generator and
+// whether the manifest is a non-root OCM policy manifest by checking apiVersion and kind fields.
+// Return error when:
+// - apiVersion and kind fields can't be determined
+// - the manifest is a root policy manifest
+// - the manifest is invalid because it is missing a name
+func isPolicyTypeManifest(manifest map[string]interface{}) (bool, bool, error) {
 	apiVersion, found, err := unstructured.NestedString(manifest, "apiVersion")
 	if !found || err != nil {
-		return false, errors.New("invalid or not found apiVersion")
+		return false, false, errors.New("invalid or not found apiVersion")
 	}
 
 	kind, found, err := unstructured.NestedString(manifest, "kind")
 	if !found || err != nil {
-		return false, errors.New("invalid or not found kind")
+		return false, false, errors.New("invalid or not found kind")
 	}
 
 	// Don't allow generation for root Policies
 	isOcmAPI := strings.HasPrefix(apiVersion, "policy.open-cluster-management.io")
 	if isOcmAPI && kind == "Policy" {
-		return false, errors.New("providing a root Policy kind is not supported by the generator; " +
+		return false, false, errors.New("providing a root Policy kind is not supported by the generator; " +
 			"the manifest should be applied to the hub cluster directly")
 	}
 
 	// Identify OCM Policies
-	isPolicy := isOcmAPI && kind != "Policy" && strings.HasSuffix(kind, "Policy")
+	isOcmPolicy := isOcmAPI && kind != "Policy" && strings.HasSuffix(kind, "Policy")
 
+	// Identify Gatekeeper kinds
+	isGkConstraintTemplate := strings.HasPrefix(apiVersion, "templates.gatekeeper.sh") && kind == "ConstraintTemplate"
+	isGkConstraint := strings.HasPrefix(apiVersion, "constraints.gatekeeper.sh")
+	isGkObj := isGkConstraintTemplate || isGkConstraint
+
+	isPolicy := isOcmPolicy || isGkObj
 
 	if isPolicy {
 		// metadata.name is required on policy manifests
 		_, found, err = unstructured.NestedString(manifest, "metadata", "name")
 		if !found || err != nil {
-			return true, errors.New("invalid or not found metadata.name")
+			return isPolicy, isOcmPolicy, errors.New("invalid or not found metadata.name")
 		}
 	}
 
-	return isPolicy, nil
+	return isPolicy, isOcmPolicy, nil
 }
 
 // setNamespaceSelector sets the namespace selector, if set, on the input policy template.
