@@ -81,6 +81,8 @@ policyDefaults:
   # Optional. Determines whether to treat the policy as compliant when it is waiting for its dependencies to reach their
   # desired states. Defaults to false.
   ignorePending: false
+  # Deprecated: Set informGatekeeperPolicies to false to use Gatekeeper manifests directly without wrapping in a
+  # ConfigurationPolicy.
   # Optional. When the policy references a Gatekeeper policy manifest, this determines if an additional configuration
   # policy should be generated in order to receive policy violations in Open Cluster Management when the Gatekeeper
   # policy has been violated. This defaults to true.
@@ -281,6 +283,8 @@ policies:
     pruneObjectBehavior: ""
     # Optional. (See policyDefaults.ignorePending for description.)
     ignorePending: false
+    # Deprecated: Set informGatekeeperPolicies to false to use Gatekeeper manifests 
+    # directly without wrapping in a ConfigurationPolicy.
     # Optional. (See policyDefaults.informGatekeeperPolicies for description.)
     informGatekeeperPolicies: true
     # Optional. (See policyDefaults.informKyvernoPolicies for description.)

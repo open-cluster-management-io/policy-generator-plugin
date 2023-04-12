@@ -229,6 +229,8 @@ policies:
 
 	expectedNsSelector := types.NamespaceSelector{Exclude: nil, Include: nil}
 
+	assertEqual(t, p.PolicyDefaults.InformGatekeeperPolicies, true)
+	assertEqual(t, p.PolicyDefaults.InformKyvernoPolicies, true)
 	assertReflectEqual(t, p.PolicyDefaults.NamespaceSelector, expectedNsSelector)
 	assertEqual(t, p.PolicyDefaults.Placement.PlacementRulePath, "")
 	assertEqual(t, len(p.PolicyDefaults.Placement.ClusterSelectors), 0)
@@ -257,6 +259,8 @@ policies:
 	assertEqual(t, policy.RemediationAction, "inform")
 	assertEqual(t, policy.Severity, "low")
 	assertReflectEqual(t, policy.Standards, []string{"NIST SP 800-53"})
+	assertEqual(t, policy.InformGatekeeperPolicies, true)
+	assertEqual(t, policy.InformKyvernoPolicies, true)
 }
 
 func TestConfigNoNamespace(t *testing.T) {
