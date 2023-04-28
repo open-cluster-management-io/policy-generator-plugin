@@ -1190,7 +1190,11 @@ metadata:
 		},
 	}
 	p.Policies = append(p.Policies, policyConf)
-	p.applyDefaults(map[string]interface{}{})
+	p.applyDefaults(map[string]interface{}{
+		"policyDefaults": map[string]interface{}{
+			"informGatekeeperPolicies": false,
+		},
+	})
 
 	err = p.createPolicy(&p.Policies[0])
 	if err != nil {
@@ -1249,7 +1253,11 @@ metadata:
 		},
 	}
 	p.Policies = append(p.Policies, policyConf)
-	p.applyDefaults(map[string]interface{}{})
+	p.applyDefaults(map[string]interface{}{
+		"policyDefaults": map[string]interface{}{
+			"informGatekeeperPolicies": false,
+		},
+	})
 
 	err = p.createPolicy(&p.Policies[0])
 	if err != nil {
