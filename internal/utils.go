@@ -174,7 +174,8 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 		extraDeps := policyConf.Manifests[i].ExtraDependencies
 
 		for _, manifest := range manifestGroup {
-			isPolicyTypeManifest, isOcmPolicy, err := isPolicyTypeManifest(manifest)
+			isPolicyTypeManifest, isOcmPolicy, err := isPolicyTypeManifest(
+				manifest, policyConf.InformGatekeeperPolicies)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"%w in manifest path: %s",
@@ -289,7 +290,7 @@ func setTemplateOptions(tmpl map[string]interface{}, ignorePending bool, extraDe
 // - apiVersion and kind fields can't be determined
 // - the manifest is a root policy manifest
 // - the manifest is invalid because it is missing a name
-func isPolicyTypeManifest(manifest map[string]interface{}) (bool, bool, error) {
+func isPolicyTypeManifest(manifest map[string]interface{}, informGatekeeperPolicies bool) (bool, bool, error) {
 	apiVersion, found, err := unstructured.NestedString(manifest, "apiVersion")
 	if !found || err != nil {
 		return false, false, errors.New("invalid or not found apiVersion")
@@ -315,7 +316,7 @@ func isPolicyTypeManifest(manifest map[string]interface{}) (bool, bool, error) {
 	isGkConstraint := strings.HasPrefix(apiVersion, "constraints.gatekeeper.sh")
 	isGkObj := isGkConstraintTemplate || isGkConstraint
 
-	isPolicy := isOcmPolicy || isGkObj
+	isPolicy := isOcmPolicy || (isGkObj && !informGatekeeperPolicies)
 
 	if isPolicy {
 		// metadata.name is required on policy manifests

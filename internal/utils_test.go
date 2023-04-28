@@ -593,10 +593,11 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		manifest        map[string]interface{}
-		wantIsPolicy    bool
-		wantIsOcmPolicy bool
-		wantErr         string
+		manifest                 map[string]interface{}
+		informGatekeeperPolicies bool
+		wantIsPolicy             bool
+		wantIsOcmPolicy          bool
+		wantErr                  string
 	}{
 		"valid RandomPolicy": {
 			manifest: map[string]interface{}{
@@ -622,7 +623,33 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantIsOcmPolicy: true,
 			wantErr:         "",
 		},
-		"valid Gatekeeper Constraint": {
+		"valid Gatekeeper Constraint with expander": {
+			manifest: map[string]interface{}{
+				"apiVersion": "constraints.gatekeeper.sh",
+				"kind":       "Foo",
+				"metadata": map[string]interface{}{
+					"name": "foo",
+				},
+			},
+			informGatekeeperPolicies: true,
+			wantIsPolicy:             false,
+			wantIsOcmPolicy:          false,
+			wantErr:                  "",
+		},
+		"valid Gatekeeper ConstraintTemplate with expander": {
+			manifest: map[string]interface{}{
+				"apiVersion": "templates.gatekeeper.sh",
+				"kind":       "ConstraintTemplate",
+				"metadata": map[string]interface{}{
+					"name": "foo",
+				},
+			},
+			informGatekeeperPolicies: true,
+			wantIsPolicy:             false,
+			wantIsOcmPolicy:          false,
+			wantErr:                  "",
+		},
+		"valid Gatekeeper Constraint without expander": {
 			manifest: map[string]interface{}{
 				"apiVersion": "constraints.gatekeeper.sh",
 				"kind":       "Foo",
@@ -634,7 +661,7 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantIsOcmPolicy: false,
 			wantErr:         "",
 		},
-		"valid Gatekeeper ConstraintTemplate": {
+		"valid Gatekeeper ConstraintTemplate without expander": {
 			manifest: map[string]interface{}{
 				"apiVersion": "templates.gatekeeper.sh",
 				"kind":       "ConstraintTemplate",
@@ -738,7 +765,7 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			gotIsPolicy, gotIsOcmPolicy, gotErr := isPolicyTypeManifest(test.manifest)
+			gotIsPolicy, gotIsOcmPolicy, gotErr := isPolicyTypeManifest(test.manifest, test.informGatekeeperPolicies)
 			if gotErr != nil {
 				assertEqual(t, gotErr.Error(), test.wantErr)
 			}
