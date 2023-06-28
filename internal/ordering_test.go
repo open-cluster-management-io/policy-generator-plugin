@@ -296,6 +296,30 @@ policies:
 			wantFile: "testdata/ordering/ignore-pending-propagation.yaml",
 			wantErr:  "",
 		},
+		"policyDefaults.ignorePending is propagated with consolidated manifests": {
+			tmpDir: tmpDir,
+			generator: `
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: test
+policyDefaults:
+  consolidateManifests: true
+  ignorePending: true
+  namespace: my-policies
+policies:
+- name: one
+  manifests:
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+- name: two
+  ignorePending: false
+  manifests:
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+`,
+			wantFile: "testdata/ordering/ignore-pending-policy-consolidated.yaml",
+			wantErr:  "",
+		},
 		"policyDefaults.ignorePending can be overridden at policy level": {
 			tmpDir: tmpDir,
 			generator: `
@@ -543,6 +567,30 @@ policies:
   - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
 `,
 			wantFile: "testdata/ordering/default-extradeps-propagated.yaml",
+			wantErr:  "",
+		},
+		"policyDefaults.extraDependencies is propagated with consolidated manifests": {
+			tmpDir: tmpDir,
+			generator: `
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: test
+policyDefaults:
+  consolidateManifests: true
+  namespace: my-policies
+  extraDependencies:
+  - name: extrafoo
+policies:
+- name: one
+  manifests:
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+- name: two
+  manifests:
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+`,
+			wantFile: "testdata/ordering/default-extradeps-consolidated.yaml",
 			wantErr:  "",
 		},
 		"policy extraDependencies are propagated": {

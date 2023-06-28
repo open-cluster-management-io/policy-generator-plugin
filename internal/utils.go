@@ -241,6 +241,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 			objectTemplates,
 			&policyConf.ConfigurationPolicyOptions,
 		)
+		setTemplateOptions(policyTemplate, policyConf.IgnorePending, policyConf.ExtraDependencies)
 		policyTemplates = append(policyTemplates, policyTemplate)
 	}
 
