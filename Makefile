@@ -45,14 +45,24 @@ clean:
 ############################################################
 # build section
 ############################################################
+GIT_VERSION := $(shell git describe --dirty 2>/dev/null)
+ifndef GIT_VERSION
+  GIT_BRANCH := $(shell git branch --show-current)
+  ifdef GIT_BRANCH
+    GIT_VERSION := $(GIT_BRANCH)-$(shell git rev-parse --short HEAD)
+  else
+    GIT_VERSION := $(shell git rev-parse --short HEAD)-dev
+  endif
+endif
+GO_LDFLAGS ?= -X 'main.Version=$(GIT_VERSION)'
 
 .PHONY: build
 build: layout
-	go build -o $(API_PLUGIN_PATH)/ ./cmd/PolicyGenerator
+	go build -ldflags="$(GO_LDFLAGS)" -o $(API_PLUGIN_PATH)/ ./cmd/PolicyGenerator
 
 .PHONY: build-binary
 build-binary:
-	go build ./cmd/PolicyGenerator
+	go build -ldflags="$(GO_LDFLAGS)" ./cmd/PolicyGenerator
 
 .PHONY: build-release
 build-release:
@@ -62,9 +72,9 @@ build-release:
 			exit 1; \
 	fi
 	@mkdir -p build_output
-	GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/linux-amd64-PolicyGenerator ./cmd/PolicyGenerator
-	GOOS=darwin CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/darwin-amd64-PolicyGenerator ./cmd/PolicyGenerator
-	GOOS=windows CGO_ENABLED=0 GOARCH=amd64 go build -o build_output/windows-amd64-PolicyGenerator.exe ./cmd/PolicyGenerator
+	GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -ldflags="$(GO_LDFLAGS)" -o build_output/linux-amd64-PolicyGenerator ./cmd/PolicyGenerator
+	GOOS=darwin CGO_ENABLED=0 GOARCH=amd64 go build -ldflags="$(GO_LDFLAGS)" -o build_output/darwin-amd64-PolicyGenerator ./cmd/PolicyGenerator
+	GOOS=windows CGO_ENABLED=0 GOARCH=amd64 go build -ldflags="$(GO_LDFLAGS)" -o build_output/windows-amd64-PolicyGenerator.exe ./cmd/PolicyGenerator
 
 .PHONY: generate
 generate:
