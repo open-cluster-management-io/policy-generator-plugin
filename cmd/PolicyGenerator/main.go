@@ -4,17 +4,30 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/pflag"
 	"open-cluster-management.io/policy-generator-plugin/internal"
 )
+
+var Version string
 
 var debug = false
 
 func main() {
 	// Parse command input
 	debugFlag := pflag.Bool("debug", false, "Print the stack trace with error messages")
+	versionFlag := pflag.Bool("version", false, "Print the version of the generator")
 	pflag.Parse()
+
+	if *versionFlag {
+		if Version == "" {
+			Version = "Unversioned binary"
+		}
+		//nolint:forbidigo
+		fmt.Println(strings.TrimSpace(Version))
+		os.Exit(0)
+	}
 
 	debug = *debugFlag
 
