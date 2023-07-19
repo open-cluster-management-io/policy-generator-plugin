@@ -73,8 +73,7 @@ build-binary:
 
 .PHONY: build-release
 build-release:
-	@if [[ $(shell git status --porcelain | wc -l) -gt 0 ]]; \
-		then \
+	@if [ $(shell git status --porcelain | wc -l) -gt 0 ]; then \
 			echo "There are local modifications in the repo" > /dev/stderr; \
 			exit 1; \
 	fi
