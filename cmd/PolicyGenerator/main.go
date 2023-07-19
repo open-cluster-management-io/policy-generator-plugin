@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	runtimeDebug "runtime/debug"
 	"strings"
 
 	"github.com/spf13/pflag"
@@ -22,7 +23,14 @@ func main() {
 
 	if *versionFlag {
 		if Version == "" {
-			Version = "Unversioned binary"
+			// Gather the version from the build info
+			if info, ok := runtimeDebug.ReadBuildInfo(); ok {
+				Version = info.Main.Version
+			}
+
+			if Version == "" {
+				Version = "Unversioned binary"
+			}
 		}
 		//nolint:forbidigo
 		fmt.Println(strings.TrimSpace(Version))
