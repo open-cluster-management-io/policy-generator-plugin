@@ -45,13 +45,19 @@ clean:
 ############################################################
 # build section
 ############################################################
+# Parse the version using git, with fallbacks as follows:
+# - git describe (i.e. vX.Y.Z-<sha>)
+# - <branch>-<sha>
+# - <sha>-dev
+# - Unversioned binary
 GIT_VERSION := $(shell git describe --dirty 2>/dev/null)
 ifndef GIT_VERSION
   GIT_BRANCH := $(shell git branch --show-current)
+  GIT_SHA := $(shell git rev-parse --short HEAD)
   ifdef GIT_BRANCH
-    GIT_VERSION := $(GIT_BRANCH)-$(shell git rev-parse --short HEAD)
-  else
-    GIT_VERSION := $(shell git rev-parse --short HEAD)-dev
+    GIT_VERSION := $(GIT_BRANCH)-$(GIT_SHA)
+  else ifdef GIT_SHA
+    GIT_VERSION := $(GIT_SHA)-dev
   endif
 endif
 GO_LDFLAGS ?= -X 'main.Version=$(GIT_VERSION)'
