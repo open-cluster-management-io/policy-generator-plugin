@@ -28,7 +28,7 @@ func main() {
 				Version = info.Main.Version
 			}
 
-			if Version == "" {
+			if Version == "" || Version == "(devel)" {
 				Version = "Unversioned binary"
 			}
 		}
