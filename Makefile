@@ -46,9 +46,10 @@ clean:
 # build section
 ############################################################
 # Parse the version using git, with fallbacks as follows:
-# - git describe (i.e. vX.Y.Z-<sha>)
+# - git describe (i.e. vX.Y.Z-<extra_commits>-<sha>)
 # - <branch>-<sha>
 # - <sha>-dev
+# - Go BuildInfo version
 # - Unversioned binary
 GIT_VERSION := $(shell git describe --dirty 2>/dev/null)
 ifndef GIT_VERSION
