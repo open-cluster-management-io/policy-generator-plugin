@@ -189,7 +189,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 
 				// Only set dependency options if it's an OCM policy
 				if isOcmPolicy {
-					setTemplateOptions(manifest, ignorePending, extraDeps)
+					setTemplateOptions(policyTemplate, ignorePending, extraDeps)
 				}
 
 				policyTemplates = append(policyTemplates, policyTemplate)

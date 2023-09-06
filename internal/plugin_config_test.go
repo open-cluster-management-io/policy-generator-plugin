@@ -30,6 +30,35 @@ data:
 	}
 }
 
+func createConfigPolicyManifest(t *testing.T, tmpDir, filename string) {
+	t.Helper()
+
+	manifestsPath := path.Join(tmpDir, filename)
+	yamlContent := `
+apiVersion: policy.open-cluster-management.io/v1
+kind: ConfigurationPolicy
+metadata:
+  name: configpolicy-my-configmap
+spec:
+  object-templates:
+    - complianceType: musthave
+      objectDefinition:
+        apiVersion: v1
+        data:
+          game.properties: enemies=potato
+        kind: ConfigMap
+        metadata:
+          name: my-configmap
+  remediationAction: inform
+  severity: low
+`
+
+	err := os.WriteFile(manifestsPath, []byte(yamlContent), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestsPath)
+	}
+}
+
 func createIamPolicyManifest(t *testing.T, tmpDir, filename string) {
 	t.Helper()
 
