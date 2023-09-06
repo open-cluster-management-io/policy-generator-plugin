@@ -543,6 +543,7 @@ func TestExtraDependencies(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
+	createConfigPolicyManifest(t, tmpDir, "configpolicy.yaml")
 
 	tests := map[string]genOutTest{
 		"policyDefaults.extraDependencies are propagated to all manifests": {
@@ -639,6 +640,30 @@ policies:
   - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
 `,
 			wantFile: "testdata/ordering/manifest-extradeps.yaml",
+			wantErr:  "",
+		},
+		"manifest extraDependencies are handled with ConfigurationPolicy manifests": {
+			tmpDir: tmpDir,
+			generator: `
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: test
+policyDefaults:
+  consolidateManifests: false
+  namespace: my-policies
+policies:
+- name: one
+  manifests:
+  - path: {{printf "%v/%v" .Dir "configpolicy.yaml"}}
+    extraDependencies:
+    - name: manifestextra
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+- name: two
+  manifests:
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+`,
+			wantFile: "testdata/ordering/manifest-extradeps-configpolicy.yaml",
 			wantErr:  "",
 		},
 		"extraDependencies defaults can be overwritten": {
