@@ -783,20 +783,20 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 func applyDefaultDependencyFields(deps []types.PolicyDependency, namespace string) {
 	for i, dep := range deps {
-		if dep.Namespace == "" {
-			deps[i].Namespace = namespace
-		}
-
-		if dep.Compliance == "" {
-			deps[i].Compliance = "Compliant"
-		}
-
 		if dep.Kind == "" {
 			deps[i].Kind = policyKind
 		}
 
 		if dep.APIVersion == "" {
 			deps[i].APIVersion = policyAPIVersion
+		}
+
+		if dep.Namespace == "" && deps[i].Kind == policyKind {
+			deps[i].Namespace = namespace
+		}
+
+		if dep.Compliance == "" {
+			deps[i].Compliance = "Compliant"
 		}
 	}
 }

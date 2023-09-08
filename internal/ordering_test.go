@@ -657,7 +657,8 @@ policies:
   manifests:
   - path: {{printf "%v/%v" .Dir "configpolicy.yaml"}}
     extraDependencies:
-    - name: manifestextra
+    - kind: IamPolicy
+      name: manifestextra
   - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
 - name: two
   manifests:
