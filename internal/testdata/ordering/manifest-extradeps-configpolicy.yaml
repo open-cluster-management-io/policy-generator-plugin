@@ -14,9 +14,8 @@ spec:
     - extraDependencies:
       - apiVersion: policy.open-cluster-management.io/v1
         compliance: Compliant
-        kind: Policy
+        kind: IamPolicy
         name: manifestextra
-        namespace: my-policies
       objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
