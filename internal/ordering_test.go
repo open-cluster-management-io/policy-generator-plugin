@@ -492,7 +492,7 @@ policies:
 			wantFile: "",
 			wantErr:  "extraDependencies may not be set in policy one manifest[0] because orderManifests is set",
 		},
-		"orderManifests and consolidateManifests is false": {
+		"orderManifests is true in policyDefaults and consolidateManifests is unset": {
 			tmpDir: tmpDir,
 			generator: `
 apiVersion: policy.open-cluster-management.io/v1
@@ -509,10 +509,10 @@ policies:
   - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
   - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
 `,
-			wantFile: "",
-			wantErr:  "policyDefaults may not specify both consolidateManifests and orderManifests",
+			wantFile: "testdata/ordering/three-ordered-manifests.yaml",
+			wantErr:  "",
 		},
-		"orderManifests in policy and consolidateManifests is false": {
+		"orderManifests is true in policy and consolidateManifests is unset": {
 			tmpDir: tmpDir,
 			generator: `
 apiVersion: policy.open-cluster-management.io/v1
@@ -529,8 +529,8 @@ policies:
   - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
   - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
 `,
-			wantFile: "",
-			wantErr:  "policy one may not set orderManifests when consolidateManifests is true",
+			wantFile: "testdata/ordering/three-ordered-manifests.yaml",
+			wantErr:  "",
 		},
 	}
 
