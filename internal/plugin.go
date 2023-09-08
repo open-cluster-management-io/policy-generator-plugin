@@ -458,6 +458,8 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 	consolidatedValue, setConsolidated := getPolicyDefaultBool(unmarshaledConfig, "consolidateManifests")
 	if setConsolidated {
 		p.PolicyDefaults.ConsolidateManifests = consolidatedValue
+	} else if p.PolicyDefaults.OrderManifests {
+		p.PolicyDefaults.ConsolidateManifests = false
 	} else {
 		p.PolicyDefaults.ConsolidateManifests = true
 	}
@@ -608,9 +610,15 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.InformKyvernoPolicies = p.PolicyDefaults.InformKyvernoPolicies
 		}
 
+		if !isPolicyFieldSet(unmarshaledConfig, i, "orderManifests") {
+			policy.OrderManifests = p.PolicyDefaults.OrderManifests
+		}
+
 		consolidatedValue, setConsolidated := getPolicyBool(unmarshaledConfig, i, "consolidateManifests")
 		if setConsolidated {
 			policy.ConsolidateManifests = consolidatedValue
+		} else if policy.OrderManifests {
+			policy.ConsolidateManifests = false
 		} else {
 			policy.ConsolidateManifests = p.PolicyDefaults.ConsolidateManifests
 		}
@@ -639,10 +647,6 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			applyDefaultDependencyFields(policy.ExtraDependencies, p.PolicyDefaults.Namespace)
 		} else {
 			policy.ExtraDependencies = p.PolicyDefaults.ExtraDependencies
-		}
-
-		if !isPolicyFieldSet(unmarshaledConfig, i, "orderManifests") {
-			policy.OrderManifests = p.PolicyDefaults.OrderManifests
 		}
 
 		applyDefaultPlacementFields(&policy.Placement, p.PolicyDefaults.Placement)
