@@ -768,6 +768,8 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			gotIsPolicy, gotIsOcmPolicy, gotErr := isPolicyTypeManifest(test.manifest, test.informGatekeeperPolicies)
 			if gotErr != nil {
 				assertEqual(t, gotErr.Error(), test.wantErr)
+			} else if test.wantErr != "" {
+				t.Fatalf("expected the error `%s` but got none", test.wantErr)
 			}
 			assertEqual(t, gotIsPolicy, test.wantIsPolicy)
 			assertEqual(t, gotIsOcmPolicy, test.wantIsOcmPolicy)
