@@ -1183,6 +1183,7 @@ metadata:
 
 	p.PolicyDefaults.Namespace = "gatekeeper-policies"
 	p.PolicyDefaults.InformGatekeeperPolicies = false
+	p.PolicyDefaults.Severity = "critical"
 	policyConf := types.PolicyConfig{
 		Name: "policy-gatekeeper",
 		Manifests: []types.Manifest{
@@ -1220,6 +1221,8 @@ spec:
             apiVersion: templates.gatekeeper.sh/v1
             kind: ConstraintTemplate
             metadata:
+                annotations:
+                    policy.open-cluster-management.io/severity: critical
                 name: myconstrainingtemplate
 `
 	expected = strings.TrimPrefix(expected, "\n")
@@ -1283,6 +1286,8 @@ spec:
             apiVersion: constraints.gatekeeper.sh/v1
             kind: MyConstrainingTemplate
             metadata:
+                annotations:
+                    policy.open-cluster-management.io/severity: low
                 name: thisthingimconstraining
 `
 	expected = strings.TrimPrefix(expected, "\n")
