@@ -36,6 +36,7 @@ const (
 	maxObjectNameLength        = 63
 	dnsReference               = "https://kubernetes.io/docs/concepts/overview/working-with-objects/names/" +
 		"#dns-subdomain-names"
+	severityAnnotation = "policy.open-cluster-management.io/severity"
 )
 
 // Plugin is used to store the PolicyGenerator configuration and the methods to generate the

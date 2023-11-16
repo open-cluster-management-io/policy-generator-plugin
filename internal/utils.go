@@ -190,6 +190,17 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 				// Only set dependency options if it's an OCM policy
 				if isOcmPolicy {
 					setTemplateOptions(policyTemplate, ignorePending, extraDeps)
+				} else {
+					policyTemplateUnstructured := unstructured.Unstructured{Object: manifest}
+
+					annotations := policyTemplateUnstructured.GetAnnotations()
+					if annotations == nil {
+						annotations = make(map[string]string, 1)
+					}
+
+					annotations[severityAnnotation] = policyConf.Severity
+
+					policyTemplateUnstructured.SetAnnotations(annotations)
 				}
 
 				policyTemplates = append(policyTemplates, policyTemplate)
