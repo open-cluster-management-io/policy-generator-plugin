@@ -22,13 +22,6 @@ API_PLUGIN_PATH ?= $(KUSTOMIZE_PLUGIN_HOME)/policy.open-cluster-management.io/v1
 # Kustomize arguments
 SOURCE_DIR ?= examples/
 
-# go-get-tool will 'go install' any package $1 and install it to LOCAL_BIN.
-define go-get-tool
-@set -e ;\
-echo "Checking installation of $(1)" ;\
-GOBIN=$(LOCAL_BIN) go install $(1)
-endef
-
 include build/common/Makefile.common.mk
 
 ############################################################
@@ -96,23 +89,17 @@ layout:
 
 .PHONY: fmt
 fmt:
-	go fmt ./...
 
 ############################################################
 # lint section
 ############################################################
 
-.PHONY: lint-dependencies
-lint-dependencies:
-	$(call go-get-tool,github.com/golangci/golangci-lint/cmd/golangci-lint@v1.52.2)
-
 .PHONY: lint
-lint: lint-dependencies lint-all
+lint:
 
 ############################################################
 # test section
 ############################################################
-GOSEC = $(LOCAL_BIN)/gosec
 
 .PHONY: test
 test:
@@ -122,10 +109,5 @@ test:
 test-coverage: TESTARGS = -json -cover -covermode=atomic -coverprofile=coverage.out
 test-coverage: test
 
-.PHONY: gosec
-gosec:
-	$(call go-get-tool,github.com/securego/gosec/v2/cmd/gosec@v2.15.0)
-
 .PHONY: gosec-scan
-gosec-scan: gosec
-	$(GOSEC) -fmt sonarqube -out gosec.json -no-fail -exclude-dir=.go ./...
+gosec-scan:
