@@ -16,6 +16,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"open-cluster-management.io/policy-generator-plugin/internal/types"
 )
 
