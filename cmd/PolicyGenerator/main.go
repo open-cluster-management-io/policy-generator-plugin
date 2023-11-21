@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/spf13/pflag"
+
 	"open-cluster-management.io/policy-generator-plugin/internal"
 )
 

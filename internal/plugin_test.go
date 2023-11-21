@@ -13,6 +13,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"open-cluster-management.io/policy-generator-plugin/internal/types"
 )
 
