@@ -1,7 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
 generators:
 - ./policyGenerator.yaml
 - ./policyGenerator-kustomize.yaml
-patchesStrategicMerge:
-- input/patch.yaml
-commonLabels:
-  custom: myApp
+
+patches:
+- path: input/patch.yaml
+
+labels:
+- includeSelectors: true
+  pairs:
+    custom: myApp
