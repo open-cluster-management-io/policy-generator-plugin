@@ -10,12 +10,12 @@ policyDefaults:
   controls: 
     - PR.DS-1 Data-at-rest
   namespace: my-policies
-  # Use an existing placement rule so that placement bindings can be consolidated
+  # Use an existing placement so that placement bindings can be consolidated
   placement:
-    placementRulePath: input/placementrule.yaml
-  # Example of using clusterSelectors to generate a placement rule
+    placementPath: input/placement.yaml
+  # Example of using labelSelector to generate a placement
   # placement:
-  #   clusterSelector:
+  #   labelSelector:
   #     matchLabels:
   #       cloud: red hat
   remediationAction: inform
@@ -75,10 +75,10 @@ policySets:
   policies:
     - pre-exists-kyverno-policy
   placement:
-    placementRulePath: input/placementrule.yaml
+    placementPath: input/placement.yaml
 - name: policyset-gatekeeper
   description: this is a gatekeeper policy set.
   placement:
-    placementRulePath: input/placementrule.yaml
+    placementPath: input/placement.yaml
 - name: policyset-iam
   description: this is a iam policy set.

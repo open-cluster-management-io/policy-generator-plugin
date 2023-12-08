@@ -39,7 +39,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	p.PlacementBindingDefaults.Name = "my-placement-binding"
-	p.PolicyDefaults.Placement.Name = "my-placement-rule"
+	p.PolicyDefaults.Placement.Name = "my-placement"
 	p.PolicyDefaults.Namespace = "my-policies"
 	p.PolicyDefaults.MetadataComplianceType = "musthave"
 	p.PolicyDefaults.PruneObjectBehavior = "DeleteAll"
@@ -154,14 +154,16 @@ spec:
                 severity: low
     remediationAction: inform
 ---
-apiVersion: apps.open-cluster-management.io/v1
-kind: PlacementRule
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
 metadata:
-    name: my-placement-rule
+    name: my-placement
     namespace: my-policies
 spec:
-    clusterSelector:
-        matchExpressions: []
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions: []
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
@@ -169,9 +171,9 @@ metadata:
     name: my-placement-binding
     namespace: my-policies
 placementRef:
-    apiGroup: apps.open-cluster-management.io
-    kind: PlacementRule
-    name: my-placement-rule
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: my-placement
 subjects:
     - apiGroup: policy.open-cluster-management.io
       kind: Policy
@@ -747,23 +749,27 @@ spec:
                 severity: low
     remediationAction: inform
 ---
-apiVersion: apps.open-cluster-management.io/v1
-kind: PlacementRule
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
 metadata:
     name: placement-policy-app-config
     namespace: my-policies
 spec:
-    clusterSelector:
-        matchExpressions: []
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions: []
 ---
-apiVersion: apps.open-cluster-management.io/v1
-kind: PlacementRule
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
 metadata:
     name: placement-policy-app-config2
     namespace: my-policies
 spec:
-    clusterSelector:
-        matchExpressions: []
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions: []
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
@@ -771,8 +777,8 @@ metadata:
     name: binding-policy-app-config
     namespace: my-policies
 placementRef:
-    apiGroup: apps.open-cluster-management.io
-    kind: PlacementRule
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
     name: placement-policy-app-config
 subjects:
     - apiGroup: policy.open-cluster-management.io
@@ -785,8 +791,8 @@ metadata:
     name: binding-policy-app-config2
     namespace: my-policies
 placementRef:
-    apiGroup: apps.open-cluster-management.io
-    kind: PlacementRule
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
     name: placement-policy-app-config2
 subjects:
     - apiGroup: policy.open-cluster-management.io
@@ -1836,8 +1842,10 @@ kind: PlacementRule
 metadata:
     namespace: my-policies
 spec:
-    clusterSelector:
-        matchExpressions: []
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions: []
 `
 	p, plrPath := plPathHelper(t, plrYAML, true)
 
@@ -2387,7 +2395,7 @@ func TestGeneratePolicySetsWithPlacement(t *testing.T) {
 	}
 
 	p.PlacementBindingDefaults.Name = "my-placement-binding"
-	p.PolicyDefaults.Placement.Name = "my-placement-rule"
+	p.PolicyDefaults.Placement.Name = "my-placement"
 	p.PolicyDefaults.Namespace = "my-policies"
 
 	policyConf := types.PolicyConfig{
@@ -2452,14 +2460,16 @@ spec:
     policies:
         - policy-app-config
 ---
-apiVersion: apps.open-cluster-management.io/v1
-kind: PlacementRule
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
 metadata:
-    name: my-placement-rule
+    name: my-placement
     namespace: my-policies
 spec:
-    clusterSelector:
-        matchExpressions: []
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions: []
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
@@ -2467,9 +2477,9 @@ metadata:
     name: my-placement-binding
     namespace: my-policies
 placementRef:
-    apiGroup: apps.open-cluster-management.io
-    kind: PlacementRule
-    name: my-placement-rule
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: my-placement
 subjects:
     - apiGroup: policy.open-cluster-management.io
       kind: PolicySet
