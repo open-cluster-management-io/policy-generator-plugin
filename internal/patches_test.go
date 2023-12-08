@@ -288,7 +288,8 @@ func TestApplyPatchesInvalidPatch(t *testing.T) {
 	patcher := manifestPatcher{manifests: manifests, patches: patches}
 	_, err := patcher.ApplyPatches()
 
-	expected := "failed to apply the patch(es) to the manifest(s) using Kustomize: no matches " +
+	expected := "failed to apply the patch(es) to the manifest(s) using Kustomize: no resource " +
+		"matches strategic merge patch \"ToasterOven.v1.[noGrp]/configmap2.default\": no matches " +
 		"for Id ToasterOven.v1.[noGrp]/configmap2.default; failed to find unique target for patch " +
 		"ToasterOven.v1.[noGrp]/configmap2.default"
 	assertEqual(t, err.Error(), expected)

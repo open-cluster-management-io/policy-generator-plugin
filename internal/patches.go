@@ -175,8 +175,8 @@ func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
 	}
 
 	kustomizationYAMLFile := map[string][]interface{}{
-		"resources":             {},
-		"patchesStrategicMerge": {},
+		"resources": {},
+		"patches":   {},
 	}
 
 	options := []struct {
@@ -185,7 +185,7 @@ func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
 		objects      []map[string]interface{}
 	}{
 		{"manifest", "resources", m.manifests},
-		{"patch", "patchesStrategicMerge", m.patches},
+		{"patch", "patches", m.patches},
 	}
 	for _, option := range options {
 		for i, object := range option.objects {
@@ -205,9 +205,15 @@ func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
 				return nil, fmt.Errorf(errTemplate, option.optionType, err)
 			}
 
-			kustomizationYAMLFile[option.kustomizeKey] = append(
-				kustomizationYAMLFile[option.kustomizeKey], manifestFileName,
-			)
+			if option.kustomizeKey != "patches" {
+				kustomizationYAMLFile[option.kustomizeKey] = append(
+					kustomizationYAMLFile[option.kustomizeKey], manifestFileName,
+				)
+			} else {
+				kustomizationYAMLFile[option.kustomizeKey] = append(
+					kustomizationYAMLFile[option.kustomizeKey], map[string]interface{}{"path": manifestFileName},
+				)
+			}
 		}
 	}
 
