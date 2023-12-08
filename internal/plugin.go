@@ -1141,7 +1141,7 @@ func (p *Plugin) assertValidConfig() error {
 		)
 	}
 
-	p.usingPlR = plCount.plc == 0
+	p.usingPlR = plCount.plr != 0
 
 	return nil
 }
