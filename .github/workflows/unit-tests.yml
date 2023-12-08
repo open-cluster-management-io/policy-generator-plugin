@@ -24,6 +24,9 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version-file: go.mod
+    
+    - name: Unit tests
+      run: make test
 
     - name: Test Coverage and Report Generation
       run: |
