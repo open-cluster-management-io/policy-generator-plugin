@@ -74,14 +74,16 @@ spec:
           severity: low
   remediationAction: inform
 ---
-apiVersion: apps.open-cluster-management.io/v1
-kind: PlacementRule
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
 metadata:
   name: placement-one
   namespace: my-policies
 spec:
-  clusterSelector:
-    matchExpressions: []
+  predicates:
+  - requiredClusterSelector:
+      labelSelector:
+        matchExpressions: []
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
@@ -89,8 +91,8 @@ metadata:
   name: binding-one
   namespace: my-policies
 placementRef:
-  apiGroup: apps.open-cluster-management.io
-  kind: PlacementRule
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
   name: placement-one
 subjects:
   - apiGroup: policy.open-cluster-management.io

@@ -23,10 +23,10 @@ set `placement.name` along with `placement.clusterSelector`. When the PlacementB
 this way, `placementBindingDefaults.name` must be specified so that the generator can create unique
 names for the bindings.
 
-The PlacementRule kind in the `apps.open-cluster-management.io` API group is used by default if no
-placement is given. However, you can use the Placement kind in the
-`cluster.open-cluster-management.io` API group by specifying a Placement manifest in
-`placement.placementPath` or specifying labels in `placement.labelSelector`.
+The Placement kind in the `cluster.open-cluster-management.io` API group is used by default if no
+placement is given. However, you can use the deprecated PlacementRule kind in the
+`apps.open-cluster-management.io` API group by specifying a PlacementRule manifest in
+`placement.placementRulePath` or specifying labels in `placement.clusterSelector`.
 
 ## Policy expanders
 

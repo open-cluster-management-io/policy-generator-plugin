@@ -6,9 +6,6 @@ metadata:
   name: placement-red-hat-cloud
   namespace: my-policies
 spec:
-  clusterConditions:
-    - status: "True"
-      type: ManagedClusterConditionAvailable
   clusterSelector:
     matchExpressions:
       - key: cloud

@@ -8,7 +8,7 @@ policyDefaults:
   consolidateManifests: false
   # Use the name of an existing placement rule
   placement:
-    placementRuleName: placement-red-hat-cloud
+    placementName: placement-red-hat-cloud
 policies:
 - name: myapp
   manifests:
