@@ -716,7 +716,7 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 				manifest.PruneObjectBehavior = policy.PruneObjectBehavior
 			}
 
-			if manifest.Severity == "" && manifest.Severity != "" {
+			if manifest.Severity == "" && policy.Severity != "" {
 				manifest.Severity = policy.Severity
 			}
 
