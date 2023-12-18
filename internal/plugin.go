@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -673,6 +674,8 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		for j := range policy.Manifests {
 			manifest := &policy.Manifests[j]
 
+			// Only use the policy's ConfigurationPolicyOptions values when they're not explicitly set in
+			// the manifest.
 			if manifest.ComplianceType == "" {
 				manifest.ComplianceType = policy.ComplianceType
 			}
@@ -681,13 +684,6 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 				manifest.MetadataComplianceType = policy.MetadataComplianceType
 			}
 
-			// If the manifests are consolidated to a single ConfigurationPolicy object, don't set
-			// ConfigurationPolicy options per manifest.
-			if policy.ConsolidateManifests {
-				continue
-			}
-
-			// Only use the policy's ConfigurationPolicyOptions values when they're not explicitly set in the manifest.
 			if manifest.EvaluationInterval.Compliant == "" {
 				set := isEvaluationIntervalSetManifest(unmarshaledConfig, i, j, "compliant")
 				if !set {
@@ -1008,41 +1004,38 @@ func (p *Plugin) assertValidConfig() error {
 
 			evalInterval := manifest.EvaluationInterval
 
-			// Verify that consolidated manifests don't specify fields
-			// that can't be overridden at the objectTemplate level
+			// Verify that consolidated manifests fields match that of the policy configuration.
 			if policy.ConsolidateManifests {
 				errorMsgFmt := fmt.Sprintf(
 					"the policy %s has the %%s value set on manifest[%d] but consolidateManifests is true",
 					policy.Name, j,
 				)
 
-				if evalInterval.Compliant != "" || evalInterval.NonCompliant != "" {
+				if !reflect.DeepEqual(evalInterval, policy.EvaluationInterval) {
 					return fmt.Errorf(errorMsgFmt, "evaluationInterval")
 				}
 
-				selector := manifest.NamespaceSelector
-				if selector.Exclude != nil || selector.Include != nil ||
-					selector.MatchLabels != nil || selector.MatchExpressions != nil {
+				if !reflect.DeepEqual(manifest.NamespaceSelector, policy.NamespaceSelector) {
 					return fmt.Errorf(errorMsgFmt, "namespaceSelector")
 				}
 
-				if manifest.PruneObjectBehavior != "" {
+				if manifest.PruneObjectBehavior != policy.PruneObjectBehavior {
 					return fmt.Errorf(errorMsgFmt, "pruneObjectBehavior")
 				}
 
-				if manifest.RemediationAction != "" {
+				if manifest.RemediationAction != policy.RemediationAction {
 					return fmt.Errorf(errorMsgFmt, "remediationAction")
 				}
 
-				if manifest.Severity != "" {
+				if manifest.Severity != policy.Severity {
 					return fmt.Errorf(errorMsgFmt, "severity")
 				}
 
-				if len(manifest.ExtraDependencies) != 0 {
+				if !reflect.DeepEqual(manifest.ExtraDependencies, policy.ExtraDependencies) {
 					return fmt.Errorf(errorMsgFmt, "extraDependencies")
 				}
 
-				if manifest.IgnorePending {
+				if manifest.IgnorePending != policy.IgnorePending {
 					return fmt.Errorf(errorMsgFmt, "ignorePending")
 				}
 			}
