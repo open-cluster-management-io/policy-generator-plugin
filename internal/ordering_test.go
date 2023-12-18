@@ -667,6 +667,33 @@ policies:
 			wantFile: "testdata/ordering/manifest-extradeps-configpolicy.yaml",
 			wantErr:  "",
 		},
+		"manifest extraDependencies are handled with ConfigurationPolicy manifests when defaults are set": {
+			tmpDir: tmpDir,
+			generator: `
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: test
+policyDefaults:
+  namespace: my-policies
+  placement:
+    clusterSelector:
+      matchExpressions: []
+  extraDependencies:
+  - kind: IamPolicy
+    name: manifestextra
+policies:
+- name: one
+  manifests:
+  - path: {{printf "%v/%v" .Dir "configpolicy.yaml"}}
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+- name: two
+  manifests:
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+`,
+			wantFile: "testdata/ordering/manifest-extradeps-configpolicy-defaults.yaml",
+			wantErr:  "",
+		},
 		"extraDependencies defaults can be overwritten": {
 			tmpDir: tmpDir,
 			generator: `
