@@ -550,6 +550,10 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.Controls = p.PolicyDefaults.Controls
 		}
 
+		if policy.Description == "" {
+			policy.Description = p.PolicyDefaults.Description
+		}
+
 		if policy.ComplianceType == "" {
 			policy.ComplianceType = p.PolicyDefaults.ComplianceType
 		}
@@ -1305,6 +1309,7 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 	policyConf.PolicyAnnotations["policy.open-cluster-management.io/standards"] = strings.Join(
 		policyConf.Standards, ",",
 	)
+	policyConf.PolicyAnnotations["policy.open-cluster-management.io/description"] = policyConf.Description
 
 	spec := map[string]interface{}{
 		"disabled":         policyConf.Disabled,
