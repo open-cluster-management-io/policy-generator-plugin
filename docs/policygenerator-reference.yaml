@@ -49,6 +49,8 @@ policyDefaults:
       kind: "Policy"
       # Optional. The APIVersion of the object. Defaults to "policy.open-cluster-management.io/v1"
       apiVersion: "policy.open-cluster-management.io/v1"
+  # Optional. The description of the policy to create.
+  description: ""
   # Optional. Determines whether the policy is enabled or disabled. A disabled policy will not be propagated to any
   # managed clusters and will show no status as a result.
   disabled: false
@@ -272,6 +274,8 @@ policies:
     # Optional. (See policyDefaults.dependencies for description.)
     # Cannot be specified when policyDefaults.orderPolicies is set to true.
     dependencies: []
+    # Optional. (See policyDefaults.description for description.)
+    description: ""
     # Optional. (See policyDefaults.disabled for description.)
     disabled: false
     # Optional. (See policyDefaults.evaluationInterval for description.)

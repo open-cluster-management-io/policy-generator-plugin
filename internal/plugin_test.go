@@ -92,6 +92,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config
     namespace: my-policies
@@ -127,6 +128,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config2
     namespace: my-policies
@@ -341,6 +343,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config
     namespace: my-policies
@@ -432,6 +435,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config
     namespace: my-policies
@@ -510,6 +514,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config
     namespace: my-policies
@@ -602,6 +607,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config
     namespace: my-policies
@@ -693,6 +699,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config
     namespace: my-policies
@@ -724,6 +731,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config2
     namespace: my-policies
@@ -887,6 +895,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config
     namespace: my-policies
@@ -980,6 +989,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
         test-default-annotation: default
     name: policy-app-config
@@ -1028,6 +1038,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config
     namespace: my-policies
@@ -1075,6 +1086,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
         test-wave-annotation: "100"
     name: policy-app-config
@@ -1143,6 +1155,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: AC Access Control
         policy.open-cluster-management.io/controls: AC-3 Access Enforcement
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-limitclusteradmin
     namespace: Iam-policies
@@ -1218,6 +1231,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-gatekeeper
     namespace: gatekeeper-policies
@@ -1283,6 +1297,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-gatekeeper
     namespace: gatekeeper-policies
@@ -1352,6 +1367,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: AC Access Control
         policy.open-cluster-management.io/controls: AC-3 Access Enforcement
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-limitclusteradmin
     namespace: Iam-policies
@@ -1425,6 +1441,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config
     namespace: my-policies
@@ -2425,6 +2442,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config
     namespace: my-policies
@@ -2552,6 +2570,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config
     namespace: my-policies
@@ -2674,6 +2693,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config
     namespace: my-policies
@@ -2776,6 +2796,7 @@ metadata:
     annotations:
         policy.open-cluster-management.io/categories: CM Configuration Management
         policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
     name: policy-app-config
     namespace: my-policies

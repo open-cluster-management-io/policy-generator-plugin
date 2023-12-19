@@ -12,6 +12,7 @@ type PolicyOptions struct {
 	Controls                       []string           `json:"controls,omitempty" yaml:"controls,omitempty"`
 	CopyPolicyMetadata             bool               `json:"copyPolicyMetadata,omitempty" yaml:"copyPolicyMetadata,omitempty"`
 	Dependencies                   []PolicyDependency `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	Description                    string             `json:"description,omitempty" yaml:"description,omitempty"`
 	ExtraDependencies              []PolicyDependency `json:"extraDependencies,omitempty" yaml:"extraDependencies,omitempty"`
 	Placement                      PlacementConfig    `json:"placement,omitempty" yaml:"placement,omitempty"`
 	Standards                      []string           `json:"standards,omitempty" yaml:"standards,omitempty"`
