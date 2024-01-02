@@ -522,6 +522,15 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.PolicyAnnotations = annotations
 		}
 
+		if policy.PolicyLabels == nil {
+			labels := map[string]string{}
+			for k, v := range p.PolicyDefaults.PolicyLabels {
+				labels[k] = v
+			}
+
+			policy.PolicyLabels = labels
+		}
+
 		if policy.Categories == nil {
 			policy.Categories = p.PolicyDefaults.Categories
 		}
@@ -1300,6 +1309,10 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 		policyConf.PolicyAnnotations = map[string]string{}
 	}
 
+	if policyConf.PolicyLabels == nil {
+		policyConf.PolicyLabels = map[string]string{}
+	}
+
 	policyConf.PolicyAnnotations["policy.open-cluster-management.io/categories"] = strings.Join(
 		policyConf.Categories, ",",
 	)
@@ -1347,6 +1360,10 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 			"namespace":   p.PolicyDefaults.Namespace,
 		},
 		"spec": spec,
+	}
+
+	if len(policyConf.PolicyLabels) != 0 {
+		policy["metadata"].(map[string]interface{})["labels"] = policyConf.PolicyLabels
 	}
 
 	// set the root policy remediation action if all the remediation actions match

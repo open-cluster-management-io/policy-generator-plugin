@@ -26,6 +26,7 @@ type PolicyOptions struct {
 	GeneratePlacementWhenInSet     bool               `json:"generatePlacementWhenInSet,omitempty" yaml:"generatePlacementWhenInSet,omitempty"`
 	PolicySets                     []string           `json:"policySets,omitempty" yaml:"policySets,omitempty"`
 	PolicyAnnotations              map[string]string  `json:"policyAnnotations,omitempty" yaml:"policyAnnotations,omitempty"`
+	PolicyLabels                   map[string]string  `json:"policyLabels,omitempty" yaml:"policyLabels,omitempty"`
 	ConfigurationPolicyAnnotations map[string]string  `json:"configurationPolicyAnnotations,omitempty" yaml:"configurationPolicyAnnotations,omitempty"`
 }
 
