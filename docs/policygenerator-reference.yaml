@@ -184,6 +184,9 @@ policyDefaults:
   # Optional. Annotations that the policy will include under its metadata.annotations. It will be applied for all
   # policies unless specified in the policy.
   policyAnnotations: {}
+  # Optional. Labels that the policy will include under its metadata.labels. It will be applied for all
+  # policies unless specified in the policy.
+  policyLabels: {}
 
 # Optional. Defaults for policy set generation. Any default value listed here can be overridden under an entry in the
 # policySets array.
@@ -319,6 +322,8 @@ policies:
     # Optional. Annotations that the policy will include under its metadata.annotations. It will overwrite the
     # policyAnnotation defined in the policyDefaults.
     policyAnnotations: {}
+    # Optional. (See policyDefaults.policyLabels for description.)
+    policyLabels: {}
 
 # Optional. The list of policy sets to create. To include a policy in a policy set, use policies[*].policySets or
 # policyDefaults.policySets or policySets.policies.
