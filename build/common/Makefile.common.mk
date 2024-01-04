@@ -140,7 +140,7 @@ kind-ensure-sa:
 
 .PHONY: kind-controller-kubeconfig
 kind-controller-kubeconfig: install-resources
-	kubectl -n $(CONTROLLER_NAMESPACE) apply -f test/resources/e2e_controller_secret.yaml
+	kubectl -n $(CONTROLLER_NAMESPACE) apply -f test/resources/e2e_controller_secret.yaml --kubeconfig=$(PWD)/kubeconfig_$(CLUSTER_NAME)_e2e
 	-rm kubeconfig_$(CLUSTER_NAME)
 	@kubectl config set-cluster $(KIND_CLUSTER_NAME) --kubeconfig=$(PWD)/kubeconfig_$(CLUSTER_NAME) \
 		--server=$(shell kubectl config view --minify -o jsonpath='{.clusters[].cluster.server}' --kubeconfig=kubeconfig_$(CLUSTER_NAME)_e2e) \
