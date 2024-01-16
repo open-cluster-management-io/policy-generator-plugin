@@ -102,6 +102,9 @@ make build
    kustomize build --enable-alpha-plugins
    ```
 
+  **NOTE:** To enable Helm processing when passing a Kustomize directory into the generator, set
+  the environment variable `POLICY_GEN_ENABLE_HELM` to `"true"`.
+
 ### As a standalone binary
 
 In order to bypass Kustomize and run the generator binary directly, change to the directory of PolicyGenerator
@@ -119,7 +122,10 @@ cd examples
 ../PolicyGenerator policyGenerator.yaml
 ```
 
-**NOTE:** To print the trace in the case of an error, you can add the `--debug` flag to the arguments.
+**NOTE:** 
+- To print the trace in the case of an error, you can add the `--debug` flag to the arguments.
+- To enable Helm processing when passing a Kustomize directory into the generator, set
+  the environment variable `POLICY_GEN_ENABLE_HELM` to `"true"`.
 
 ## Additional Policy Generator references
 

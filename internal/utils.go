@@ -360,7 +360,14 @@ func setNamespaceSelector(
 
 // processKustomizeDir runs a provided directory through Kustomize in order to generate the manifests within it.
 func processKustomizeDir(path string) ([]map[string]interface{}, error) {
-	k := krusty.MakeKustomizer(krusty.MakeDefaultOptions())
+	kustomizeOpts := krusty.MakeDefaultOptions()
+
+	if os.Getenv("POLICY_GEN_ENABLE_HELM") == "true" {
+		kustomizeOpts.PluginConfig.HelmConfig.Enabled = true
+		kustomizeOpts.PluginConfig.HelmConfig.Command = "helm"
+	}
+
+	k := krusty.MakeKustomizer(kustomizeOpts)
 
 	resourceMap, err := k.Run(filesys.MakeFsOnDisk(), path)
 	if err != nil {
