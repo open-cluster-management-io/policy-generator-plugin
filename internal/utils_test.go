@@ -175,6 +175,7 @@ data:
 				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
 					ComplianceType:         "musthave",
 					MetadataComplianceType: "mustonlyhave",
+					RecordDiff:             "Log",
 				},
 				Path: manifestPath,
 			},
@@ -186,6 +187,7 @@ data:
 				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
 					ComplianceType:         "mustnothave",
 					MetadataComplianceType: "musthave",
+					RecordDiff:             "None",
 				},
 				Path: manifestPath,
 			},
@@ -202,25 +204,29 @@ data:
 	}
 
 	// Test both passing in individual files and a flat directory
-	tests := []struct {
+	tests := map[string]struct {
 		ExpectedComplianceType         string
 		ExpectedMetadataComplianceType string
+		ExpectedRecordDiff             string
 		Manifests                      []types.Manifest
 	}{
-		{
+		"musthave compType/mustonlyhave metaCompType/Log recDiff": {
 			ExpectedComplianceType:         "musthave",
 			ExpectedMetadataComplianceType: "mustonlyhave",
+			ExpectedRecordDiff:             "Log",
 			Manifests:                      manifestFiles,
 		},
-		{
+		"mustnothave compType/musthave metaCompType/None recDiff": {
 			ExpectedComplianceType:         "mustnothave",
 			ExpectedMetadataComplianceType: "musthave",
+			ExpectedRecordDiff:             "None",
 			Manifests:                      manifestFilesMustNotHave,
 		},
 		// The applyDefaults method would normally fill in ComplianceType on each manifest entry.
-		{
+		"musthave compType/empty metaCompType/empty recDiff": {
 			ExpectedComplianceType:         "musthave",
 			ExpectedMetadataComplianceType: "",
+			ExpectedRecordDiff:             "",
 			Manifests: []types.Manifest{{
 				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{ComplianceType: "musthave"},
 				Path:                       tmpDir,
@@ -230,74 +236,91 @@ data:
 	// test ConsolidateManifests = true (default case)
 	// policyTemplates will have only one policyTemplate
 	// and two objTemplate under this policyTemplate
-	for _, test := range tests {
-		policyConf := types.PolicyConfig{
-			PolicyOptions: types.PolicyOptions{
-				ConsolidateManifests: true,
-			},
-			ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
-				ComplianceType:    "musthave",
-				RemediationAction: "inform",
-				Severity:          "low",
-			},
-			Manifests: test.Manifests,
-			Name:      "policy-app-config",
-		}
+	for testName, test := range tests {
+		test := test
 
-		policyTemplates, err := getPolicyTemplates(&policyConf)
-		if err != nil {
-			t.Fatalf("Failed to get the policy templates: %v", err)
-		}
+		t.Run(testName, func(t *testing.T) {
+			t.Parallel()
+			policyConf := types.PolicyConfig{
+				PolicyOptions: types.PolicyOptions{
+					ConsolidateManifests: true,
+				},
+				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+					ComplianceType:    "musthave",
+					RemediationAction: "inform",
+					Severity:          "low",
+				},
+				Manifests: test.Manifests,
+				Name:      "policy-app-config",
+			}
 
-		assertEqual(t, len(policyTemplates), 1)
+			policyTemplates, err := getPolicyTemplates(&policyConf)
+			if err != nil {
+				t.Fatalf("Failed to get the policy templates: %v", err)
+			}
 
-		policyTemplate := policyTemplates[0]
-		objdef := policyTemplate["objectDefinition"].(map[string]interface{})
+			assertEqual(t, len(policyTemplates), 1)
 
-		assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
+			policyTemplate := policyTemplates[0]
+			objdef := policyTemplate["objectDefinition"].(map[string]interface{})
 
-		spec, ok := objdef["spec"].(map[string]interface{})
-		if !ok {
-			t.Fatal("The spec field is an invalid format")
-		}
+			assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
 
-		assertEqual(t, spec["remediationAction"], "inform")
-		assertEqual(t, spec["severity"], "low")
+			spec, ok := objdef["spec"].(map[string]interface{})
+			if !ok {
+				t.Fatal("The spec field is an invalid format")
+			}
 
-		objTemplates, ok := spec["object-templates"].([]map[string]interface{})
-		if !ok {
-			t.Fatal("The object-templates field is an invalid format")
-		}
+			assertEqual(t, spec["remediationAction"], "inform")
+			assertEqual(t, spec["severity"], "low")
 
-		assertEqual(t, len(objTemplates), 2)
-		assertEqual(t, objTemplates[0]["complianceType"], test.ExpectedComplianceType)
+			objTemplates, ok := spec["object-templates"].([]map[string]interface{})
+			if !ok {
+				t.Fatal("The object-templates field is an invalid format")
+			}
 
-		if test.ExpectedMetadataComplianceType != "" {
-			assertEqual(t, objTemplates[0]["metadataComplianceType"], test.ExpectedMetadataComplianceType)
-		} else {
-			assertEqual(t, objTemplates[0]["metadataComplianceType"], nil)
-		}
+			assertEqual(t, len(objTemplates), 2)
+			assertEqual(t, objTemplates[0]["complianceType"], test.ExpectedComplianceType)
 
-		kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
-		if !ok {
-			t.Fatal("The objectDefinition field is an invalid format")
-		}
+			if test.ExpectedMetadataComplianceType != "" {
+				assertEqual(t, objTemplates[0]["metadataComplianceType"], test.ExpectedMetadataComplianceType)
+			} else {
+				assertEqual(t, objTemplates[0]["metadataComplianceType"], nil)
+			}
 
-		assertEqual(t, kind1, "ConfigMap")
-		assertEqual(t, objTemplates[1]["complianceType"], test.ExpectedComplianceType)
+			if test.ExpectedRecordDiff != "" {
+				assertEqual(t, objTemplates[0]["recordDiff"], test.ExpectedRecordDiff)
+			} else {
+				assertEqual(t, objTemplates[0]["recordDiff"], nil)
+			}
 
-		if test.ExpectedMetadataComplianceType != "" {
-			assertEqual(t, objTemplates[0]["metadataComplianceType"], test.ExpectedMetadataComplianceType)
-		} else {
-			assertEqual(t, objTemplates[0]["metadataComplianceType"], nil)
-		}
+			kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
+			if !ok {
+				t.Fatal("The objectDefinition field is an invalid format")
+			}
 
-		kind2, ok := objTemplates[1]["objectDefinition"].(map[string]interface{})["kind"]
-		if !ok {
-			t.Fatal("The objectDefinition field is an invalid format")
-		}
+			assertEqual(t, kind1, "ConfigMap")
+			assertEqual(t, objTemplates[1]["complianceType"], test.ExpectedComplianceType)
 
-		assertEqual(t, kind2, "ConfigMap")
+			if test.ExpectedMetadataComplianceType != "" {
+				assertEqual(t, objTemplates[1]["metadataComplianceType"], test.ExpectedMetadataComplianceType)
+			} else {
+				assertEqual(t, objTemplates[1]["metadataComplianceType"], nil)
+			}
+
+			if test.ExpectedRecordDiff != "" {
+				assertEqual(t, objTemplates[1]["recordDiff"], test.ExpectedRecordDiff)
+			} else {
+				assertEqual(t, objTemplates[1]["recordDiff"], nil)
+			}
+
+			kind2, ok := objTemplates[1]["objectDefinition"].(map[string]interface{})["kind"]
+			if !ok {
+				t.Fatal("The objectDefinition field is an invalid format")
+			}
+
+			assertEqual(t, kind2, "ConfigMap")
+		})
 	}
 }
 

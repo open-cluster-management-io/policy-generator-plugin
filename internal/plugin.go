@@ -563,11 +563,15 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.Description = p.PolicyDefaults.Description
 		}
 
+		if policy.RecordDiff == "" {
+			policy.RecordDiff = p.PolicyDefaults.RecordDiff
+		}
+
 		if policy.ComplianceType == "" {
 			policy.ComplianceType = p.PolicyDefaults.ComplianceType
 		}
 
-		if policy.MetadataComplianceType == "" && p.PolicyDefaults.MetadataComplianceType != "" {
+		if policy.MetadataComplianceType == "" {
 			policy.MetadataComplianceType = p.PolicyDefaults.MetadataComplianceType
 		}
 
@@ -693,7 +697,7 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 				manifest.ComplianceType = policy.ComplianceType
 			}
 
-			if manifest.MetadataComplianceType == "" && policy.MetadataComplianceType != "" {
+			if manifest.MetadataComplianceType == "" {
 				manifest.MetadataComplianceType = policy.MetadataComplianceType
 			}
 
@@ -727,6 +731,10 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 			if manifest.Severity == "" && policy.Severity != "" {
 				manifest.Severity = policy.Severity
+			}
+
+			if manifest.RecordDiff == "" {
+				manifest.RecordDiff = policy.RecordDiff
 			}
 
 			if isManifestFieldSet(unmarshaledConfig, i, j, "extraDependencies") {

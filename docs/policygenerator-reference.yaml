@@ -160,6 +160,9 @@ policyDefaults:
     # the responsibility of the administrator to ensure the placement rule exists. Use of this setting will prevent a
     # placement rule from being generated, but the placement binding will still be created.
     placementRuleName: ""
+  # Optional. Whether (and where) to record the diff between the policy and objects on the cluster. Defaults to an empty
+  # string, which is equivalent to "None".
+  recordDiff: ""
   # Optional. The remediation action ("inform" or "enforce") for each configuration policy. This defaults to "inform".
   remediationAction: "inform"
   # Optional. The severity of the policy violation. This defaults to "low".
@@ -238,6 +241,8 @@ policies:
         # Optional. (See policyDefaults.remediationAction for description.)
         # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         remediationAction: ""
+        # Optional. (See policyDefaults.recordDiff for description.)
+        recordDiff: ""
         # Optional. (See policyDefaults.severity for description.)
         # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         severity: "low"
@@ -308,6 +313,8 @@ policies:
     placement: {}
     # Optional. (See policyDefaults.remediationAction for description.)
     remediationAction: ""
+    # Optional. (See policyDefaults.recordDiff for description.)
+    recordDiff: ""
     # Optional. (See policyDefaults.severity for description.)
     severity: "low"
     # Optional. (See policyDefaults.standards for description.)

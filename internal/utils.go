@@ -171,6 +171,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 	for i, manifestGroup := range manifestGroups {
 		complianceType := policyConf.Manifests[i].ComplianceType
 		metadataComplianceType := policyConf.Manifests[i].MetadataComplianceType
+		recordDiff := policyConf.Manifests[i].RecordDiff
 		ignorePending := policyConf.Manifests[i].IgnorePending
 		extraDeps := policyConf.Manifests[i].ExtraDependencies
 
@@ -216,6 +217,10 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 
 			if metadataComplianceType != "" {
 				objTemplate["metadataComplianceType"] = metadataComplianceType
+			}
+
+			if recordDiff != "" {
+				objTemplate["recordDiff"] = recordDiff
 			}
 
 			if policyConf.ConsolidateManifests {
