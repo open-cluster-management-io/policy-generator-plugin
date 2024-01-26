@@ -43,6 +43,7 @@ type ConfigurationPolicyOptions struct {
 	EvaluationInterval     EvaluationInterval `json:"evaluationInterval,omitempty" yaml:"evaluationInterval,omitempty"`
 	NamespaceSelector      NamespaceSelector  `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
 	PruneObjectBehavior    string             `json:"pruneObjectBehavior,omitempty" yaml:"pruneObjectBehavior,omitempty"`
+	RecordDiff             string             `json:"recordDiff,omitempty" yaml:"recordDiff,omitempty"`
 }
 
 type Manifest struct {
