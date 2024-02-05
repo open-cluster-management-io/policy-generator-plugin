@@ -1,6 +1,24 @@
 # Copyright (c) 2022 Red Hat, Inc.
 # Copyright Contributors to the Open Cluster Management project
 
+## CLI versions (with links to the latest releases)
+# https://github.com/kubernetes-sigs/controller-tools/releases/latest
+CONTROLLER_GEN_VERSION := v0.6.1
+# https://github.com/kubernetes-sigs/kustomize/releases/latest
+KUSTOMIZE_VERSION := v5.3.0
+# https://github.com/golangci/golangci-lint/releases/latest
+GOLANGCI_VERSION := v1.52.2
+# https://github.com/mvdan/gofumpt/releases/latest
+GOFUMPT_VERSION := v0.6.0
+# https://github.com/daixiang0/gci/releases/latest
+GCI_VERSION := v0.12.1
+# https://github.com/securego/gosec/releases/latest
+GOSEC_VERSION := v2.18.2
+# https://github.com/kubernetes-sigs/kubebuilder/releases/latest
+KBVERSION := 3.12.0
+# https://github.com/kubernetes/kubernetes/releases/latest
+ENVTEST_K8S_VERSION := 1.26.x
+
 LOCAL_BIN ?= $(error LOCAL_BIN is not set.)
 ifneq ($(findstring $(LOCAL_BIN), $(PATH)), $(LOCAL_BIN))
   $(error LOCAL_BIN is not in PATH.)
@@ -35,11 +53,11 @@ KUSTOMIZE = $(LOCAL_BIN)/kustomize
 
 .PHONY: controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.1)
+	$(call go-get-tool,sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION))
 
 .PHONY: kustomize
 kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,sigs.k8s.io/kustomize/kustomize/v5@v5.0.1)
+	$(call go-get-tool,sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION))
 
 ############################################################
 #  Lint
@@ -53,7 +71,7 @@ lint: lint-dependencies lint-yaml lint-go
 
 .PHONY: lint-dependencies
 lint-dependencies:
-	$(call go-get-tool,github.com/golangci/golangci-lint/cmd/golangci-lint@v1.52.2)
+	$(call go-get-tool,github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_VERSION))
 
 .PHONY: lint-yaml
 lint-yaml:
@@ -67,8 +85,8 @@ lint-go:
 
 .PHONY: fmt-dependencies
 fmt-dependencies:
-	$(call go-get-tool,github.com/daixiang0/gci@v0.10.1)
-	$(call go-get-tool,mvdan.cc/gofumpt@v0.5.0)
+	$(call go-get-tool,github.com/daixiang0/gci@$(GCI_VERSION))
+	$(call go-get-tool,mvdan.cc/gofumpt@$(GOFUMPT_VERSION))
 
 .PHONY: fmt
 fmt: fmt-dependencies
@@ -82,8 +100,6 @@ fmt: fmt-dependencies
 GOSEC = $(LOCAL_BIN)/gosec
 KUBEBUILDER = $(LOCAL_BIN)/kubebuilder
 ENVTEST = $(LOCAL_BIN)/setup-envtest
-KBVERSION = 3.12.0
-ENVTEST_K8S_VERSION = 1.26.x
 
 .PHONY: kubebuilder
 kubebuilder:
@@ -99,7 +115,7 @@ envtest:
 
 .PHONY: gosec
 gosec:
-	$(call go-get-tool,github.com/securego/gosec/v2/cmd/gosec@v2.15.0)
+	$(call go-get-tool,github.com/securego/gosec/v2/cmd/gosec@$(GOSEC_VERSION))
 
 .PHONY: gosec-scan
 gosec-scan: gosec
