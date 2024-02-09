@@ -170,6 +170,9 @@ spec:
         - requiredClusterSelector:
             labelSelector:
                 matchExpressions: []
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
@@ -771,6 +774,9 @@ spec:
         - requiredClusterSelector:
             labelSelector:
                 matchExpressions: []
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 ---
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
@@ -782,6 +788,9 @@ spec:
         - requiredClusterSelector:
             labelSelector:
                 matchExpressions: []
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
@@ -1746,6 +1755,9 @@ spec:
         - requiredClusterSelector:
             labelSelector:
                 matchExpressions: []
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
@@ -1788,6 +1800,9 @@ spec:
         - requiredClusterSelector:
             labelSelector:
                 matchExpressions: []
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
@@ -1885,6 +1900,9 @@ spec:
                       operator: In
                       values:
                         - pacman
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
@@ -2029,6 +2047,9 @@ spec:
         - requiredClusterSelector:
             labelSelector:
                 matchExpressions: []
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 `
 	p, plrPath := plPathHelper(t, plrYAML, true)
 
@@ -2137,6 +2158,9 @@ spec:
                       operator: In
                       values:
                         - pacman
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 `
 	plrYAML = strings.TrimPrefix(plrYAML, "\n")
 	p, _ := plPathHelper(t, plrYAML, false)
@@ -2192,6 +2216,9 @@ spec:
         - requiredClusterSelector:
             labelSelector:
                 matchExpressions: []
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 `
 	p, plrPath := plPathHelper(t, plrYAML, false)
 
@@ -2218,6 +2245,9 @@ spec:
         - requiredClusterSelector:
             labelSelector:
                 matchExpressions: []
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 `
 	p, plrPath := plPathHelper(t, plrYAML, false)
 
@@ -2245,6 +2275,9 @@ spec:
         - requiredClusterSelector:
             labelSelector:
                 matchExpressions: []
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 `
 	p, plrPath := plPathHelper(t, plrYAML, false)
 
@@ -2654,6 +2687,9 @@ spec:
         - requiredClusterSelector:
             labelSelector:
                 matchExpressions: []
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
@@ -2786,6 +2822,9 @@ spec:
                       operator: In
                       values:
                         - my-cluster
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
@@ -3816,6 +3855,9 @@ spec:
             labelSelector:
                 matchLabels:
                     cloud: red hat
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
@@ -3866,6 +3908,9 @@ spec:
                       values:
                         - red hat
                         - test
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
@@ -3950,6 +3995,9 @@ spec:
                         - red hat
                 matchLabels:
                     cloud: red hat
+    tolerations:
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
