@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
         # Ref: https://github.com/actions/checkout/issues/290
       - name: Fetch annotated tag
@@ -21,7 +21,7 @@ jobs:
           git fetch origin ${{ github.ref }}:${{ github.ref }} --tags --force
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
