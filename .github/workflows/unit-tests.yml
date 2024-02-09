@@ -16,12 +16,12 @@ jobs:
     name: Unit Tests
     steps:
     - name: Checkout the repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0 # Fetch all history for all tags and branches
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
         go-version-file: go.mod
     
@@ -45,7 +45,7 @@ jobs:
     - name: Upload artifacts for the sonarcloud workflow
       if: |
         github.repository_owner == 'stolostron'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: artifacts
         path: |
