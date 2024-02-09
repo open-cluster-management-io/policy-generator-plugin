@@ -93,6 +93,7 @@ fmt: fmt-dependencies
 	find . -not \( -path "./.go" -prune \) -name "*.go" | xargs gofmt -s -w
 	find . -not \( -path "./.go" -prune \) -name "*.go" | xargs gofumpt -l -w
 	find . -not \( -path "./.go" -prune \) -name "*.go" | xargs gci write --skip-generated -s standard -s default -s "prefix($(shell cat go.mod | head -1 | cut -d " " -f 2))"
+	go mod tidy
 
 ############################################################
 #  Unit Test
