@@ -135,7 +135,7 @@ KIND_VERSION ?= latest
 # Set the Kind version tag
 ifdef KIND_VERSION
   ifeq ($(KIND_VERSION), minimum)
-    KIND_ARGS = --image kindest/node:v1.19.16
+    KIND_ARGS = --image kindest/node:v1.25.16
   else ifneq ($(KIND_VERSION), latest)
     KIND_ARGS = --image kindest/node:$(KIND_VERSION)
   endif
@@ -159,9 +159,11 @@ kind-ensure-sa:
 kind-controller-kubeconfig: install-resources
 	kubectl -n $(CONTROLLER_NAMESPACE) apply -f test/resources/e2e_controller_secret.yaml --kubeconfig=$(PWD)/kubeconfig_$(CLUSTER_NAME)_e2e
 	-rm kubeconfig_$(CLUSTER_NAME)
+	@kubectl config view --minify -o jsonpath='{.clusters[].cluster.certificate-authority-data}' --kubeconfig=kubeconfig_$(CLUSTER_NAME)_e2e --raw | base64 -d > temp-ca.crt
 	@kubectl config set-cluster $(KIND_CLUSTER_NAME) --kubeconfig=$(PWD)/kubeconfig_$(CLUSTER_NAME) \
 		--server=$(shell kubectl config view --minify -o jsonpath='{.clusters[].cluster.server}' --kubeconfig=kubeconfig_$(CLUSTER_NAME)_e2e) \
-		--insecure-skip-tls-verify=true
+		--certificate-authority=temp-ca.crt --embed-certs=true
+	@rm -f temp-ca.crt
 	@kubectl config set-credentials $(KIND_CLUSTER_NAME) --kubeconfig=$(PWD)/kubeconfig_$(CLUSTER_NAME) \
 		--token=$$(kubectl get secret -n $(CONTROLLER_NAMESPACE) $(CONTROLLER_NAME) -o jsonpath='{.data.token}' --kubeconfig=$(PWD)/kubeconfig_$(CLUSTER_NAME)_e2e | $(BASE64) --decode)
 	@kubectl config set-context $(KIND_CLUSTER_NAME) --kubeconfig=$(PWD)/kubeconfig_$(CLUSTER_NAME) \
