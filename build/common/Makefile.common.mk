@@ -3,7 +3,7 @@
 
 ## CLI versions (with links to the latest releases)
 # https://github.com/kubernetes-sigs/controller-tools/releases/latest
-CONTROLLER_GEN_VERSION := v0.6.1
+CONTROLLER_GEN_VERSION := v0.14.0
 # https://github.com/kubernetes-sigs/kustomize/releases/latest
 KUSTOMIZE_VERSION := v5.3.0
 # https://github.com/golangci/golangci-lint/releases/latest
@@ -11,13 +11,13 @@ GOLANGCI_VERSION := v1.52.2
 # https://github.com/mvdan/gofumpt/releases/latest
 GOFUMPT_VERSION := v0.6.0
 # https://github.com/daixiang0/gci/releases/latest
-GCI_VERSION := v0.12.1
+GCI_VERSION := v0.12.3
 # https://github.com/securego/gosec/releases/latest
-GOSEC_VERSION := v2.18.2
+GOSEC_VERSION := v2.19.0
 # https://github.com/kubernetes-sigs/kubebuilder/releases/latest
-KBVERSION := 3.12.0
+KBVERSION := 3.14.0
 # https://github.com/kubernetes/kubernetes/releases/latest
-ENVTEST_K8S_VERSION := 1.26.x
+ENVTEST_K8S_VERSION := 1.29.x
 
 LOCAL_BIN ?= $(error LOCAL_BIN is not set.)
 ifneq ($(findstring $(LOCAL_BIN), $(PATH)), $(LOCAL_BIN))
