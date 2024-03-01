@@ -171,6 +171,8 @@ spec:
             labelSelector:
                 matchExpressions: []
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 ---
@@ -775,6 +777,8 @@ spec:
             labelSelector:
                 matchExpressions: []
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 ---
@@ -789,6 +793,8 @@ spec:
             labelSelector:
                 matchExpressions: []
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 ---
@@ -1756,6 +1762,8 @@ spec:
             labelSelector:
                 matchExpressions: []
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 `
@@ -1801,6 +1809,8 @@ spec:
             labelSelector:
                 matchExpressions: []
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 `
@@ -1901,6 +1911,8 @@ spec:
                       values:
                         - pacman
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 `
@@ -2048,6 +2060,8 @@ spec:
             labelSelector:
                 matchExpressions: []
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 `
@@ -2159,6 +2173,8 @@ spec:
                       values:
                         - pacman
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 `
@@ -2217,6 +2233,8 @@ spec:
             labelSelector:
                 matchExpressions: []
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 `
@@ -2246,6 +2264,8 @@ spec:
             labelSelector:
                 matchExpressions: []
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 `
@@ -2276,6 +2296,8 @@ spec:
             labelSelector:
                 matchExpressions: []
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 `
@@ -2688,6 +2710,8 @@ spec:
             labelSelector:
                 matchExpressions: []
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 ---
@@ -2823,6 +2847,8 @@ spec:
                       values:
                         - my-cluster
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 ---
@@ -3856,6 +3882,8 @@ spec:
                 matchLabels:
                     cloud: red hat
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 `
@@ -3909,6 +3937,8 @@ spec:
                         - red hat
                         - test
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 `
@@ -3996,6 +4026,8 @@ spec:
                 matchLabels:
                     cloud: red hat
     tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 `
