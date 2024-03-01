@@ -94,6 +94,8 @@ spec:
       labelSelector:
         matchExpressions: []
   tolerations:
+    - key: cluster.open-cluster-management.io/unavailable
+      operator: Exists
     - key: cluster.open-cluster-management.io/unreachable
       operator: Exists
 ---
@@ -108,6 +110,8 @@ spec:
       labelSelector:
         matchExpressions: []
   tolerations:
+    - key: cluster.open-cluster-management.io/unavailable
+      operator: Exists
     - key: cluster.open-cluster-management.io/unreachable
       operator: Exists
 ---

@@ -1654,6 +1654,10 @@ func (p *Plugin) createPlacement(
 					},
 					"tolerations": []map[string]interface{}{
 						{
+							"key":      "cluster.open-cluster-management.io/unavailable",
+							"operator": "Exists",
+						},
+						{
 							"key":      "cluster.open-cluster-management.io/unreachable",
 							"operator": "Exists",
 						},
