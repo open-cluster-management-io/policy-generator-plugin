@@ -1627,4 +1627,12 @@ func TestGetRootRemediationAction(t *testing.T) {
 	objDef["spec"].(map[string]interface{})["remediationAction"] = "enforce"
 	expected = getRootRemediationAction(policyTemplates)
 	assertEqual(t, "enforce", expected)
+
+	objDef["spec"].(map[string]interface{})["remediationAction"] = "InformOnly"
+	expected = getRootRemediationAction(policyTemplates)
+	assertEqual(t, "inform", expected)
+
+	objDef["spec"].(map[string]interface{})["remediationAction"] = "iNfOrMoNlY"
+	expected = getRootRemediationAction(policyTemplates)
+	assertEqual(t, "inform", expected)
 }
