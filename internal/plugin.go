@@ -834,28 +834,32 @@ func applyDefaultPlacementFields(placement *types.PlacementConfig, defaultPlacem
 		len(defaultPlacement.ClusterSelector) != 0 ||
 		defaultPlacement.PlacementRulePath != "" ||
 		defaultPlacement.PlacementRuleName != ""
+	policyPlcUnset := len(placement.LabelSelector) == 0 &&
+		placement.PlacementPath == "" &&
+		placement.PlacementName == ""
+	policyPlrUnset := len(placement.ClusterSelectors) == 0 &&
+		len(placement.ClusterSelector) == 0 &&
+		placement.PlacementRulePath == "" &&
+		placement.PlacementRuleName == ""
 
 	// If both cluster label selectors and placement path/name aren't set, then use the defaults with a
 	// priority on placement path followed by placement name.
-	if len(placement.LabelSelector) == 0 &&
-		placement.PlacementPath == "" &&
-		placement.PlacementName == "" &&
-		plcDefaultSet {
-		if defaultPlacement.PlacementPath != "" {
+	if policyPlcUnset && plcDefaultSet {
+		if !policyPlrUnset {
+			return
+		} else if defaultPlacement.PlacementPath != "" {
 			placement.PlacementPath = defaultPlacement.PlacementPath
 		} else if defaultPlacement.PlacementName != "" {
 			placement.PlacementName = defaultPlacement.PlacementName
 		} else if len(defaultPlacement.LabelSelector) > 0 {
 			placement.LabelSelector = defaultPlacement.LabelSelector
 		}
-	} else if len(placement.ClusterSelectors) == 0 &&
+	} else if policyPlrUnset && plrDefaultSet {
 		// Else if both cluster selectors and placement rule path/name aren't set, then use the defaults with a
 		// priority on placement rule path followed by placement rule name.
-		len(placement.ClusterSelector) == 0 &&
-		placement.PlacementRulePath == "" &&
-		placement.PlacementRuleName == "" &&
-		plrDefaultSet {
-		if defaultPlacement.PlacementRulePath != "" {
+		if !policyPlcUnset {
+			return
+		} else if defaultPlacement.PlacementRulePath != "" {
 			placement.PlacementRulePath = defaultPlacement.PlacementRulePath
 		} else if defaultPlacement.PlacementRuleName != "" {
 			placement.PlacementRuleName = defaultPlacement.PlacementRuleName
