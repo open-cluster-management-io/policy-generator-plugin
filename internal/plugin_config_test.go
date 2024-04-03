@@ -788,13 +788,9 @@ policies:
 	p := Plugin{}
 
 	err = p.Config([]byte(config), tmpDir)
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
+	if err != nil {
+		t.Fatal(err.Error())
 	}
-
-	expected := "policy policy-app-config must specify only one of " +
-		"placement selector, placement path, or placement name"
-	assertEqual(t, err.Error(), expected)
 }
 
 func TestConfigMultipleDefaultAndPolicyPlacementNames(t *testing.T) {
@@ -824,13 +820,9 @@ policies:
 	p := Plugin{}
 
 	err := p.Config([]byte(config), tmpDir)
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
+	if err != nil {
+		t.Fatal(err.Error())
 	}
-
-	expected := "policy policy-app-config must specify only one of " +
-		"placement selector, placement path, or placement name"
-	assertEqual(t, err.Error(), expected)
 }
 
 func TestConfigPlacementInvalidMixture(t *testing.T) {
