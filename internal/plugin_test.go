@@ -1556,6 +1556,73 @@ spec:
 	assertEqual(t, output, expected)
 }
 
+func TestCreatePolicyFromObjectTemplatesRawManifest(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createObjectTemplatesRawManifest(t, tmpDir, "objectTemplatesRawPluginTest.yaml")
+
+	p := Plugin{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := types.PolicyConfig{
+		PolicyOptions: types.PolicyOptions{
+			Categories: []string{"AC Access Control"},
+			Controls:   []string{"AC-3 Access Enforcement"},
+			Standards:  []string{"NIST SP 800-53"},
+		},
+		Name: "policy-app-config",
+		Manifests: []types.Manifest{
+			{Path: path.Join(tmpDir, "objectTemplatesRawPluginTest.yaml")},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf)
+	p.applyDefaults(map[string]interface{}{})
+
+	err := p.createPolicy(&p.Policies[0])
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output := p.outputBuffer.String()
+
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: AC Access Control
+        policy.open-cluster-management.io/controls: AC-3 Access Enforcement
+        policy.open-cluster-management.io/description: ""
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                object-templates-raw: |-
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        kind: ConfigMap
+                        metadata:
+                          name: example
+                          namespace: default
+                        data:
+                          extraData: data
+                remediationAction: inform
+                severity: low
+    remediationAction: inform
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+}
+
 func TestCreatePolicyWithGkConstraintTemplate(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -3420,6 +3487,7 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
+	createObjectTemplatesRawManifest(t, tmpDir, "object-templates-raw.yaml")
 
 	p := Plugin{}
 	var err error
@@ -3481,7 +3549,14 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 			{Path: path.Join(tmpDir, "configmap.yaml")},
 		},
 	}
-	p.Policies = append(p.Policies, policyConf, policyConf2, policyConf3)
+	// Test that the policy defaults get inherited with object-templates-raw.
+	policyConf4 := types.PolicyConfig{
+		Name: "policy-app-config4",
+		Manifests: []types.Manifest{
+			{Path: path.Join(tmpDir, "object-templates-raw.yaml")},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf, policyConf2, policyConf3, policyConf4)
 	p.applyDefaults(
 		map[string]interface{}{
 			"policies": []interface{}{
@@ -3523,7 +3598,7 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	assertEqual(t, len(generatedManifests), 9)
+	assertEqual(t, len(generatedManifests), 12)
 
 	for _, manifest := range generatedManifests {
 		kind, _ := manifest["kind"].(string)
@@ -3559,6 +3634,11 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 			assertEqual(t, len(policyTemplates), 1)
 			evaluationInterval := getYAMLEvaluationInterval(t, policyTemplates[0], true)
 			assertEqual(t, len(evaluationInterval), 0)
+		} else if name == "policy-app-config4" {
+			assertEqual(t, len(policyTemplates), 1)
+			evaluationInterval := getYAMLEvaluationInterval(t, policyTemplates[0], false)
+			assertEqual(t, evaluationInterval["compliant"], "never")
+			assertEqual(t, evaluationInterval["noncompliant"], "15s")
 		}
 	}
 }

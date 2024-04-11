@@ -216,7 +216,10 @@ policies:
       #   1) Non-root policy type manifests such as IamPolicy, CertificatePolicy, and ConfigurationPolicy that have a
       #      "Policy" suffix. These are not modified except for patches and are directly added as a Policy's
       #      policy-templates entry.
-      #   2) For everything else, ConfigurationPolicy objects are generated to wrap these manifests. The resulting
+      #   2) Manifests containing only an `object-templates-raw` key. The corresponding value will be used directly in
+      #      a generated ConfigurationPolicy without modification, which will then be added as a Policy's 
+      #      policy-templates entry.
+      #   3) For everything else, ConfigurationPolicy objects are generated to wrap these manifests. The resulting
       #      ConfigurationPolicy is added as a Policy's policy-templates entry.
       - path: ""
         # Optional. (See policyDefaults.complianceType for description.)

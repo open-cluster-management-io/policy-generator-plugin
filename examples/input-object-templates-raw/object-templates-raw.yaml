@@ -1,0 +1,13 @@
+  object-templates-raw: |
+    - complianceType: musthave
+      objectDefinition:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: game-config-aliens
+          namespace: default
+        data:
+          game.properties: |
+            enemies=aliens
+          ui.properties: |
+            color.good=purple

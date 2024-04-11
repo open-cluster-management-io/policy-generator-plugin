@@ -187,7 +187,19 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 			}
 
 			if isPolicyTypeManifest {
-				policyTemplate := map[string]interface{}{"objectDefinition": manifest}
+				var policyTemplate map[string]interface{}
+
+				_, found, _ := unstructured.NestedString(manifest, "object-templates-raw")
+				if found {
+					policyTemplate = buildPolicyTemplate(
+						policyConf,
+						len(policyTemplates)+1,
+						manifest["object-templates-raw"],
+						&policyConf.Manifests[i].ConfigurationPolicyOptions,
+					)
+				} else {
+					policyTemplate = map[string]interface{}{"objectDefinition": manifest}
+				}
 
 				// Only set dependency options if it's an OCM policy
 				if isOcmPolicy {
@@ -309,6 +321,13 @@ func setTemplateOptions(tmpl map[string]interface{}, ignorePending bool, extraDe
 // - the manifest is a root policy manifest
 // - the manifest is invalid because it is missing a name
 func isPolicyTypeManifest(manifest map[string]interface{}, informGatekeeperPolicies bool) (bool, bool, error) {
+	// check for object-templates-raw separate from policies since they have separate requirements
+	_, found, _ := unstructured.NestedString(manifest, "object-templates-raw")
+	if found {
+		// return true for isPolicyType, since object-templates-raw is in a ConfigurationPolicy
+		return true, true, nil
+	}
+
 	apiVersion, found, err := unstructured.NestedString(manifest, "apiVersion")
 	if !found || err != nil {
 		return false, false, errors.New("invalid or not found apiVersion")
@@ -398,7 +417,7 @@ func processKustomizeDir(path string) ([]map[string]interface{}, error) {
 func buildPolicyTemplate(
 	policyConf *types.PolicyConfig,
 	policyNum int,
-	objectTemplates []map[string]interface{},
+	objectTemplates interface{},
 	configPolicyOptionsOverrides *types.ConfigurationPolicyOptions,
 ) map[string]interface{} {
 	var name string
@@ -408,6 +427,18 @@ func buildPolicyTemplate(
 		name = policyConf.Name
 	}
 
+	policySpec := map[string]interface{}{
+		"remediationAction": policyConf.RemediationAction,
+		"severity":          policyConf.Severity,
+	}
+
+	switch objectTemplates.(type) {
+	case string:
+		policySpec["object-templates-raw"] = objectTemplates
+	case []map[string]interface{}:
+		policySpec["object-templates"] = objectTemplates
+	}
+
 	policyTemplate := map[string]interface{}{
 		"objectDefinition": map[string]interface{}{
 			"apiVersion": policyAPIVersion,
@@ -415,11 +446,7 @@ func buildPolicyTemplate(
 			"metadata": map[string]interface{}{
 				"name": name,
 			},
-			"spec": map[string]interface{}{
-				"object-templates":  objectTemplates,
-				"remediationAction": policyConf.RemediationAction,
-				"severity":          policyConf.Severity,
-			},
+			"spec": policySpec,
 		},
 	}
 

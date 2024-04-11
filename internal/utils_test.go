@@ -1262,6 +1262,78 @@ func TestGetPolicyTemplateInvalidManifest(t *testing.T) {
 	assertEqual(t, err.Error(), expected)
 }
 
+func TestGetPolicyTemplateObjectTemplatesRaw(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestPath := path.Join(tmpDir, "object-templates-raw.yaml")
+	manifestYAMLMultiple := `
+object-templates-raw: |
+  content1
+---
+object-templates-raw: |
+  content2
+`
+	manifestYAMLContent1 := `content1
+`
+	manifestYAMLContent2 := `content2
+`
+
+	err := os.WriteFile(manifestPath, []byte(manifestYAMLMultiple), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestPath)
+	}
+
+	policyConf := types.PolicyConfig{
+		PolicyOptions: types.PolicyOptions{
+			ConsolidateManifests: true,
+		},
+		ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+			ComplianceType:    "musthave",
+			RemediationAction: "enforce",
+			Severity:          "low",
+		},
+		Manifests: []types.Manifest{{Path: manifestPath}},
+		Name:      "configpolicy-object-templates-raw-config",
+	}
+
+	policyTemplates, err := getPolicyTemplates(&policyConf)
+	if err != nil {
+		t.Fatalf("Failed to get the policy templates: %v", err)
+	}
+
+	assertEqual(t, len(policyTemplates), 2)
+
+	policyTemplate1 := policyTemplates[0]
+	objdef := policyTemplate1["objectDefinition"].(map[string]interface{})
+
+	spec, ok := objdef["spec"].(map[string]interface{})
+	if !ok {
+		t.Fatal("The spec field is an invalid format")
+	}
+
+	objectTemplatesRaw, ok := spec["object-templates-raw"].(string)
+	if !ok {
+		t.Fatal("The object-templates-raw field is an invalid format")
+	}
+
+	assertEqual(t, objectTemplatesRaw, manifestYAMLContent1)
+
+	policyTemplate2 := policyTemplates[1]
+	objdef = policyTemplate2["objectDefinition"].(map[string]interface{})
+
+	spec, ok = objdef["spec"].(map[string]interface{})
+	if !ok {
+		t.Fatal("The spec field is an invalid format")
+	}
+
+	objectTemplatesRaw, ok = spec["object-templates-raw"].(string)
+	if !ok {
+		t.Fatal("The object-templates-raw field is an invalid format")
+	}
+
+	assertEqual(t, objectTemplatesRaw, manifestYAMLContent2)
+}
+
 func TestUnmarshalManifestFile(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
