@@ -53,6 +53,11 @@ policies:
     - path: input-kyverno/
   policySets:
     - policyset-kyverno
+- name: policy-object-templates-raw
+  disabled: true
+  manifests:
+    - path: input-object-templates-raw/
+  remediationAction: enforce
 - name: policy-require-ns-labels
   manifests:
     - path: input-gatekeeper/

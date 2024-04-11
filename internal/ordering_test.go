@@ -271,6 +271,7 @@ func TestIgnorePending(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
+	createObjectTemplatesRawManifest(t, tmpDir, "object-templates-raw.yaml")
 
 	tests := map[string]genOutTest{
 		"policyDefaults.ignorePending is propagated to all manifests": {
@@ -366,6 +367,30 @@ policies:
   - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
 `,
 			wantFile: "testdata/ordering/ignore-pending-manifest-override.yaml",
+			wantErr:  "",
+		},
+		"policyDefaults.ignorePending is propagated with object-templates-raw": {
+			tmpDir: tmpDir,
+			generator: `
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: test
+policyDefaults:
+  consolidateManifests: false
+  ignorePending: true
+  namespace: my-policies
+policies:
+- name: one
+  manifests:
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
+- name: two
+  manifests:
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
+`,
+			wantFile: "testdata/ordering/ignore-pending-object-templates-raw.yaml",
 			wantErr:  "",
 		},
 	}
@@ -544,6 +569,7 @@ func TestExtraDependencies(t *testing.T) {
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
 	createConfigPolicyManifest(t, tmpDir, "configpolicy.yaml")
+	createObjectTemplatesRawManifest(t, tmpDir, "object-templates-raw.yaml")
 
 	tests := map[string]genOutTest{
 		"policyDefaults.extraDependencies are propagated to all manifests": {
@@ -744,6 +770,31 @@ policies:
   - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
 `,
 			wantFile: "testdata/ordering/extradeps-overrides.yaml",
+			wantErr:  "",
+		},
+		"policyDefaults.extraDependencies are propagated with object-templates-raw": {
+			tmpDir: tmpDir,
+			generator: `
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: test
+policyDefaults:
+  consolidateManifests: false
+  namespace: my-policies
+  extraDependencies:
+  - name: extrafoo
+policies:
+- name: one
+  manifests:
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
+- name: two
+  manifests:
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
+`,
+			wantFile: "testdata/ordering/default-extradeps-object-templates-raw.yaml",
 			wantErr:  "",
 		},
 	}
