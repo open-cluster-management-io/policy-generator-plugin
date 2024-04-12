@@ -123,7 +123,7 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 		}
 
 		if len(manifest.Patches) > 0 {
-			patcher := manifestPatcher{manifests: manifestFiles, patches: manifest.Patches}
+			patcher := manifestPatcher{manifests: manifestFiles, patches: manifest.Patches, openAPI: manifest.OpenAPI}
 			const errTemplate = `failed to process the manifest at "%s": %w`
 
 			err = patcher.Validate()

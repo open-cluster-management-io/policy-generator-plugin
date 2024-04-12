@@ -279,6 +279,10 @@ policies:
               # An example modification to the manifest
               annotations:
                 friends-character: Chandler Bing
+        # The OpenAPI schema used to merge patches (useful for non Kubernetes CRs that containt list of items)
+        openapi:
+          # The path to the OpenAPI schema to use when applying patches defined in patches 
+          path: ""
     # Optional. (See policyDefaults.categories for description.)
     categories:
       - "CM Configuration Management"
