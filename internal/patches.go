@@ -4,12 +4,21 @@ package internal
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
 
 	yaml "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
+
+	"open-cluster-management.io/policy-generator-plugin/internal/types"
+)
+
+const (
+	localSchemaFileName = "schema.json"
+	kustomizeDir        = "kustomize"
 )
 
 type manifestPatcher struct {
@@ -18,6 +27,7 @@ type manifestPatcher struct {
 	// The Kustomize patches to apply on the manifests. Note that modifications are made
 	// to the input maps. If this is an issue, provide a deep copy of the patches.
 	patches []map[string]interface{}
+	openAPI types.OpenAPI
 }
 
 // validateManifestInfo verifies that the apiVersion, kind, metadata.name fields from a manifest
@@ -169,14 +179,14 @@ func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
 	// Create the file system in memory with the Kustomize YAML files
 	fSys := filesys.MakeFsInMemory()
 
-	err := fSys.Mkdir(kustomizeDir)
+	err := InitializeInMemoryKustomizeDir(fSys, m.openAPI.Path)
 	if err != nil {
-		return nil, fmt.Errorf("an unexpected error occurred when configuring Kustomize: %w", err)
+		return nil, fmt.Errorf("failed to initialize Kustomize dir, err: %w", err)
 	}
 
-	kustomizationYAMLFile := map[string][]interface{}{
-		"resources": {},
-		"patches":   {},
+	kustomizationYAMLFile := types.KustomizeJSON{}
+	if m.openAPI.Path != "" {
+		kustomizationYAMLFile.OpenAPI.Path = localSchemaFileName
 	}
 
 	options := []struct {
@@ -206,13 +216,10 @@ func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
 			}
 
 			if option.kustomizeKey != "patches" {
-				kustomizationYAMLFile[option.kustomizeKey] = append(
-					kustomizationYAMLFile[option.kustomizeKey], manifestFileName,
-				)
+				kustomizationYAMLFile.Resources = append(kustomizationYAMLFile.Resources, manifestFileName)
 			} else {
-				kustomizationYAMLFile[option.kustomizeKey] = append(
-					kustomizationYAMLFile[option.kustomizeKey], map[string]interface{}{"path": manifestFileName},
-				)
+				kustomizationYAMLFile.Patches = append(kustomizationYAMLFile.Patches,
+					types.Patch{Path: manifestFileName})
 			}
 		}
 	}
@@ -252,4 +259,28 @@ func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
 	}
 
 	return manifests, nil
+}
+
+// Initializes the in-memory file system with base directory and open API schema
+func InitializeInMemoryKustomizeDir(fSys filesys.FileSystem, schema string) (err error) {
+	err = fSys.Mkdir(kustomizeDir)
+	if err != nil {
+		return fmt.Errorf("an unexpected error occurred when configuring Kustomize: %w", err)
+	}
+
+	if schema != "" {
+		schema = filepath.Clean(schema)
+
+		schemaJSON, err := os.ReadFile(schema)
+		if err != nil {
+			return fmt.Errorf("unable to open file: %s, err: %w ", schema, err)
+		}
+
+		err = fSys.WriteFile(path.Join(kustomizeDir, localSchemaFileName), schemaJSON)
+		if err != nil {
+			return fmt.Errorf("error writing schema, err: %w", err)
+		}
+	}
+
+	return nil
 }

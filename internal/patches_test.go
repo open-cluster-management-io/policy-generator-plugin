@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"open-cluster-management.io/policy-generator-plugin/internal/types"
 )
 
 func createExConfigMap(name string) *map[string]interface{} {
@@ -45,7 +47,9 @@ func TestValidate(t *testing.T) {
 		},
 	}
 
-	patcher := manifestPatcher{manifests: manifests, patches: patches}
+	openAPIConfig := types.OpenAPI{Path: ""}
+
+	patcher := manifestPatcher{manifests: manifests, patches: patches, openAPI: openAPIConfig}
 	err := patcher.Validate()
 
 	assertEqual(t, err, nil)
