@@ -1,0 +1,57 @@
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+    name: group-du-sno-v4.14
+placementBindingDefaults:
+    name: group-du-sno-v4.14-placement-binding
+policyDefaults:
+    namespace: ztp-group
+    placement:
+        labelSelector:
+            matchExpressions:
+                - key: du-profile
+                  operator: In
+                  values:
+                    - v4.14
+                - key: group-du-sno
+                  operator: Exists
+    remediationAction: inform
+    severity: low
+    namespaceSelector:
+        exclude:
+            - kube-*
+        include:
+            - '*'
+    evaluationInterval:
+        compliant: 10m
+        noncompliant: 10s
+policies:
+    - name: group-du-sno-v4.14-config-policy
+      policyAnnotations:
+        ran.openshift.io/ztp-deploy-wave: "10"
+      manifests:
+        - path: cr-files/PtpConfigGmWpc.yaml
+          patches:
+            - metadata:
+                annotations:
+                    ran.openshift.io/ztp-deploy-wave: "10"
+                name: grandmaster
+                namespace: openshift-ptp
+              spec:
+                profile:
+                    - name: grandmaster
+                      phc2sysOpts: -r -u 0 -m -O -37 -N 8 -R 16 -s $iface_master -n 24
+                      plugins:
+                        e810:
+                            enableDefaultConfig: false
+                            pins: $e810_pins
+                            settings:
+                                LocalHoldoverTimeout: 14401
+                recommend:
+                    - match:
+                        - nodeLabel: node-role.kubernetes.io/master
+                      priority: 4
+                      profile: grandmaster
+          openapi:
+            path: /home/deliedit/dev/cnf-features-deploy/ztp/tools/pgt2acm/test/newptpconfig-schema.json

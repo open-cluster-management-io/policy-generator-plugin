@@ -3,10 +3,13 @@ package internal
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/kustomize/kyaml/filesys"
 
 	"open-cluster-management.io/policy-generator-plugin/internal/types"
 )
@@ -297,4 +300,46 @@ func TestApplyPatchesInvalidPatch(t *testing.T) {
 		"for Id ToasterOven.v1.[noGrp]/configmap2.default; failed to find unique target for patch " +
 		"ToasterOven.v1.[noGrp]/configmap2.default"
 	assertEqual(t, err.Error(), expected)
+}
+
+func TestInitializeInMemoryKustomizeDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	testSchemaPath := filepath.Join(tmpDir, "myschema.json")
+
+	// Create test in memory file system
+	afSys := filesys.MakeFsInMemory()
+	f, err := os.Create(testSchemaPath)
+	assertEqual(t, err, nil)
+
+	defer f.Close()
+
+	type args struct {
+		fSys   filesys.FileSystem
+		schema string
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name:    "ok",
+			args:    args{fSys: afSys, schema: testSchemaPath},
+			wantErr: false,
+		},
+		{
+			name:    "schema file not present",
+			args:    args{fSys: afSys, schema: "myotherschema.json"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := InitializeInMemoryKustomizeDir(tt.args.fSys, tt.args.schema); (err != nil) != tt.wantErr {
+				t.Errorf("InitializeInMemoryKustomizeDir() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }
