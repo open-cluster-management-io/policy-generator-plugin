@@ -1,0 +1,18 @@
+# The profile1 profile is provided for testing only
+# It is not installed on production clusters
+apiVersion: myapp.myorg.io/v1
+kind: MyCr
+metadata:
+  name: profile1
+  namespace: mynamespace
+spec:
+  listOfStuff:
+  - name: "profile1"
+    plugins:
+      e810:
+        enableDefaultConfig: false
+        settings:
+          LocalMaxHoldoverOffSet: 1500
+          LocalHoldoverTimeout: 14400
+          MaxInSpecOffset: 100
+ 

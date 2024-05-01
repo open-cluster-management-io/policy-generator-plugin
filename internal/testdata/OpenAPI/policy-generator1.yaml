@@ -9,7 +9,7 @@ policyDefaults:
   placement:
     labelSelector:
       group-du-sno: ""
-      du-profile: "latest"
+      du-listOfStuff: "latest"
   remediationAction: inform
   severity: low
   namespaceSelector:
@@ -22,19 +22,12 @@ policyDefaults:
     noncompliant: 10s
 policies:
 - name: group-du-sno-latest-config-policy
-  policyAnnotations:
-    ran.openshift.io/ztp-deploy-wave: "10"
   manifests:
-    - path: OpenAPI/cr-files/PtpConfigSlave.yaml 
+    - path: OpenAPI/cr-files/cr1.yaml 
       patches:
       - metadata:
-          name: "du-ptp-slave"
+          name: "profile1"
         spec:
-          recommend:
-          - match:
-            - nodeLabel: node-role.kubernetes.io/master
-            priority: 4
-            profile: slave
-          profile:
-          - name: "slave"
-            interface: "ens5f1"
+          listOfStuff:
+          - name: "profile1"
+            myattribute: "ens5f1"

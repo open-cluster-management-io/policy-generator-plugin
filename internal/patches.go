@@ -21,13 +21,22 @@ const (
 	kustomizeDir        = "kustomize"
 )
 
+type KustomizeJSON struct {
+	types.Filepath `json:"openapi,omitempty" yaml:"openapi,omitempty"`
+	Patches        []Patch  `json:"patches" yaml:"patches"`
+	Resources      []string `json:"resources" yaml:"resources"`
+}
+
+type Patch struct {
+	Path string `yaml:"path,omitempty" json:"path,omitempty"`
+}
 type manifestPatcher struct {
 	// The manifests to patch.
 	manifests []map[string]interface{}
 	// The Kustomize patches to apply on the manifests. Note that modifications are made
 	// to the input maps. If this is an issue, provide a deep copy of the patches.
 	patches []map[string]interface{}
-	openAPI types.OpenAPI
+	openAPI types.Filepath
 }
 
 // validateManifestInfo verifies that the apiVersion, kind, metadata.name fields from a manifest
@@ -181,12 +190,12 @@ func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
 
 	err := InitializeInMemoryKustomizeDir(fSys, m.openAPI.Path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize Kustomize dir, err: %w", err)
+		return nil, fmt.Errorf("failed to initialize Kustomize dir: %w", err)
 	}
 
-	kustomizationYAMLFile := types.KustomizeJSON{}
+	kustomizationYAMLFile := KustomizeJSON{}
 	if m.openAPI.Path != "" {
-		kustomizationYAMLFile.OpenAPI.Path = localSchemaFileName
+		kustomizationYAMLFile.Filepath.Path = localSchemaFileName
 	}
 
 	options := []struct {
@@ -219,7 +228,7 @@ func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
 				kustomizationYAMLFile.Resources = append(kustomizationYAMLFile.Resources, manifestFileName)
 			} else {
 				kustomizationYAMLFile.Patches = append(kustomizationYAMLFile.Patches,
-					types.Patch{Path: manifestFileName})
+					Patch{Path: manifestFileName})
 			}
 		}
 	}
