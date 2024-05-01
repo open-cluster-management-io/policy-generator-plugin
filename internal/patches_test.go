@@ -50,7 +50,7 @@ func TestValidate(t *testing.T) {
 		},
 	}
 
-	openAPIConfig := types.OpenAPI{Path: ""}
+	openAPIConfig := types.Filepath{Path: ""}
 
 	patcher := manifestPatcher{manifests: manifests, patches: patches, openAPI: openAPIConfig}
 	err := patcher.Validate()

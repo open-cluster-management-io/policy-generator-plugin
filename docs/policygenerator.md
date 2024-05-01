@@ -75,50 +75,46 @@ DIRECTORY TREE              PACKAGE                 DESCRIPTION
     ├── typohelper.go       internal                Helpers for identifying manifest typos
     ├── utils.go            internal                Helper/utility functions
 ```
-## Openapi schema support 
-policy-genenerator-plugin supports openapi schemas as defined in  https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/openapi by Kustomize. The goal of this feature is to support patching non kubernetest CR objects that contain list of objects.
-The openapi object in this project has the same format of the openapi object in the kustomize project. The Path indicates the relative path of the schema json file relative to the kustomization.yaml file
-``` yaml
+
+## OpenAPI schema support
+The Policy Generator supports OpenAPI schemas as defined in
+https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/openapi by Kustomize. The goal of this feature is
+to support patching non-Kubernetes custom resource objects that contain list of objects. The OpenAPI object in this
+project has the same format of the OpenAPI object in the Kustomize project. The path indicates the relative path of the
+schema JSON file relative to the `kustomization.yaml` file:
+```yaml
 openapi:
-   path: schema.json
+  path: schema.json
 ```
-The openapi object is part of the manifest object in the plugin file:
-``` yaml
+The OpenAPI object is included with the manifest object in the plugin file:
+```yaml
 apiVersion: policy.open-cluster-management.io/v1
 kind: PolicyGenerator
-...
+. . .
 policies:
-- name: myapp
-  manifests:
-    - path: input-kustomize/
-      patches:
-      openapi:
-        path: schema.json
+  - name: myapp
+    manifests:
+      - path: input-kustomize/
+        patches: []
+        openapi:
+          path: schema.json
 ```
 ### How to create a Kustomize schema manually
-Ideally the openapi schema should be provided by the developper of the Custom Resource (CR).  
-To retrieve a schema from a running kubernetes cluster manually, do the following:
-
-``` default
+Ideally the OpenAPI schema is provided by the developper of the Custom Resource (CR). To retrieve a schema from a
+running Kubernetes cluster manually, do the following:
+```shell
 kustomize openapi fetch
 ```
-
 Then cut and paste the subset containing the resources that need to be patched.
-
-Next, identify the list objects in the schema and select a key from the fields
-of the object that would be use to index the list, for instance a name. After
-the definition of the list, add the following text:
-
-``` default
-              "x-kubernetes-patch-merge-key": "name",
-              "x-kubernetes-patch-strategy": "merge"
+Next, identify the list objects in the schema and select a key from the fields of the object that would be use to index
+the list, for instance a name. After the definition of the list, add the following text:
+```yaml
+"x-kubernetes-patch-merge-key": "name",
+"x-kubernetes-patch-strategy": "merge"
 ```
-
-`x-kubernetes-patch-merge-key` indicates the field in the object that is used to
-uniquely identify it in the list in this case the `name` field
-`x-kubernetes-patch-strategy` indicates the patch strategy. Merge would merge
-fields, replace would replace the object identified by the key with patch
-content.  
+`x-kubernetes-patch-merge-key` indicates the field in the object that is used to uniquely identify it in the list in
+this case the `name` field. `x-kubernetes-patch-strategy` indicates the patch strategy. Merge would merge fields,
+replace would replace the object identified by the key with patch content.  
 `Note:` The "key" selected in this step is used in patches to uniquely identify a list object.
-  
-An example of schema for the ptp-operator PtpConfig CR is shown at [link](internal/testdata/OpenAPI/newptpconfig-schema.json)
+An example of schema is shown at
+[link](internal/testdata/OpenAPI/openapi-schema.json)openapi-schema.json)

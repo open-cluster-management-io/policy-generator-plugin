@@ -4390,26 +4390,26 @@ func TestCreatePolicyWithCopyPolicyMetadata(t *testing.T) {
 	}
 }
 
-// Test Patching a CR object, "PtpConfig", containing a list of profile objects.
+// Test Patching a CR object, "MyCr", containing a list of profile objects.
 // Patching profile interface name and (not profile) recommend
 // - metadata:
-// name: "du-ptp-slave"
+// name: "profile1"
 // spec:
 // recommend:
 // - match:
 //   - nodeLabel: node-role.kubernetes.io/master
 //     priority: 4
-//     profile: slave
+//     listOfStuff: profile1
 //
-// profile:
-//   - name: "slave"
+// listOfStuff:
+//   - name: "profile1"
 //     interface: "ens5f1"
 //
 // The profile name is used to locate the right profile entry in the patch
 func TestOpenAPIListPatch(t *testing.T) {
 	const (
-		crFilename      = "PtpConfigSlave.yaml"
-		openAPIFilename = "newptpconfig-schema.json"
+		crFilename      = "cr1.yaml"
+		openAPIFilename = "openapi-schema.json"
 	)
 
 	t.Parallel()
@@ -4419,11 +4419,11 @@ func TestOpenAPIListPatch(t *testing.T) {
 	// Relative path to the openAPI schema
 	openAPIRelativePath := filepath.Join(tmpDir, openAPIFilename)
 	// Loading plugin file, CR file, and shema file to memory
-	pluginFileContent, err := os.ReadFile("testdata/OpenAPI/ptp_policy_generator1.yaml")
+	pluginFileContent, err := os.ReadFile("testdata/OpenAPI/policy-generator1.yaml")
 	assertEqual(t, err, nil)
 	crFileContent, err := os.ReadFile("testdata/OpenAPI/cr-files/" + crFilename)
 	assertEqual(t, err, nil)
-	openAPIFileContent, err := os.ReadFile("testdata/OpenAPI/newptpconfig-schema.json")
+	openAPIFileContent, err := os.ReadFile("testdata/OpenAPI/openapi-schema.json")
 	assertEqual(t, err, nil)
 
 	// Writing CR file and shema file to temporary directory
@@ -4445,7 +4445,7 @@ func TestOpenAPIListPatch(t *testing.T) {
 
 	// Set CR file path and OpenAPI path with temporary directory
 	p.Policies[0].Manifests[0].Path = crRelativePath
-	p.Policies[0].Manifests[0].OpenAPI.Path = openAPIRelativePath
+	p.Policies[0].Manifests[0].Filepath.Path = openAPIRelativePath
 
 	// Check configuration
 	if err := p.assertValidConfig(); err != nil {
@@ -4462,7 +4462,6 @@ metadata:
         policy.open-cluster-management.io/controls: ""
         policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: ""
-        ran.openshift.io/ztp-deploy-wave: "10"
     name: group-du-sno-latest-config-policy
     namespace: ztp-group
 spec:
@@ -4478,130 +4477,15 @@ spec:
                 object-templates:
                     - complianceType: ""
                       objectDefinition:
-                        apiVersion: ptp.openshift.io/v1
-                        kind: PtpConfig
+                        apiVersion: myapp.myorg.io/v1
+                        kind: MyCr
                         metadata:
-                            annotations:
-                                ran.openshift.io/ztp-deploy-wave: "10"
-                            name: du-ptp-slave
-                            namespace: openshift-ptp
+                            name: profile1
+                            namespace: mynamespace
                         spec:
-                            profile:
-                                - interface: ens5f1
-                                  name: slave
-                                  phc2sysOpts: -a -r -n 24
-                                  ptp4lConf: |
-                                    [global]
-                                    #
-                                    # Default Data Set
-                                    #
-                                    twoStepFlag 1
-                                    slaveOnly 1
-                                    priority1 128
-                                    priority2 128
-                                    domainNumber 24
-                                    #utc_offset 37
-                                    clockClass 255
-                                    clockAccuracy 0xFE
-                                    offsetScaledLogVariance 0xFFFF
-                                    free_running 0
-                                    freq_est_interval 1
-                                    dscp_event 0
-                                    dscp_general 0
-                                    dataset_comparison G.8275.x
-                                    G.8275.defaultDS.localPriority 128
-                                    #
-                                    # Port Data Set
-                                    #
-                                    logAnnounceInterval -3
-                                    logSyncInterval -4
-                                    logMinDelayReqInterval -4
-                                    logMinPdelayReqInterval -4
-                                    announceReceiptTimeout 3
-                                    syncReceiptTimeout 0
-                                    delayAsymmetry 0
-                                    fault_reset_interval -4
-                                    neighborPropDelayThresh 20000000
-                                    masterOnly 0
-                                    G.8275.portDS.localPriority 128
-                                    #
-                                    # Run time options
-                                    #
-                                    assume_two_step 0
-                                    logging_level 6
-                                    path_trace_enabled 0
-                                    follow_up_info 0
-                                    hybrid_e2e 0
-                                    inhibit_multicast_service 0
-                                    net_sync_monitor 0
-                                    tc_spanning_tree 0
-                                    tx_timestamp_timeout 50
-                                    unicast_listen 0
-                                    unicast_master_table 0
-                                    unicast_req_duration 3600
-                                    use_syslog 1
-                                    verbose 0
-                                    summary_interval 0
-                                    kernel_leap 1
-                                    check_fup_sync 0
-                                    clock_class_threshold 7
-                                    #
-                                    # Servo Options
-                                    #
-                                    pi_proportional_const 0.0
-                                    pi_integral_const 0.0
-                                    pi_proportional_scale 0.0
-                                    pi_proportional_exponent -0.3
-                                    pi_proportional_norm_max 0.7
-                                    pi_integral_scale 0.0
-                                    pi_integral_exponent 0.4
-                                    pi_integral_norm_max 0.3
-                                    step_threshold 2.0
-                                    first_step_threshold 0.00002
-                                    max_frequency 900000000
-                                    clock_servo pi
-                                    sanity_freq_limit 200000000
-                                    ntpshm_segment 0
-                                    #
-                                    # Transport options
-                                    #
-                                    transportSpecific 0x0
-                                    ptp_dst_mac 01:1B:19:00:00:00
-                                    p2p_dst_mac 01:80:C2:00:00:0E
-                                    udp_ttl 1
-                                    udp6_scope 0x0E
-                                    uds_address /var/run/ptp4l
-                                    #
-                                    # Default interface options
-                                    #
-                                    clock_type OC
-                                    network_transport L2
-                                    delay_mechanism E2E
-                                    time_stamping hardware
-                                    tsproc_mode filter
-                                    delay_filter moving_median
-                                    delay_filter_length 10
-                                    egressLatency 0
-                                    ingressLatency 0
-                                    boundary_clock_jbod 0
-                                    #
-                                    # Clock description
-                                    #
-                                    productDescription ;;
-                                    revisionData ;;
-                                    manufacturerIdentity 00:00:00
-                                    userDescription ;
-                                    timeSource 0xA0
-                                  ptp4lOpts: -2 -s
-                                  ptpSchedulingPolicy: SCHED_FIFO
-                                  ptpSchedulingPriority: 10
-                                  ptpSettings:
-                                    logReduce: "true"
-                            recommend:
-                                - match:
-                                    - nodeLabel: node-role.kubernetes.io/master
-                                  priority: 4
-                                  profile: slave
+                            listOfStuff:
+                                - myattribute: ens5f1
+                                  name: profile1
                 remediationAction: ""
                 severity: ""
 `
@@ -4615,7 +4499,7 @@ spec:
 	assertEqual(t, string(output), expected)
 }
 
-// Test patching unknown fields in the ptpconfig CR.
+// Test patching unknown fields in the MyCr CR.
 // The "plugins" object is a generic object (part of the profile list) not defined by the schema
 // Patching :
 // LocalHoldoverTimeout: 14400
@@ -4623,8 +4507,8 @@ spec:
 // LocalHoldoverTimeout: 14401
 func TestOpenAPIListUnkownFieldsPatch(t *testing.T) {
 	const (
-		crFilename      = "PtpConfigGmWpc.yaml"
-		openAPIFilename = "newptpconfig-schema.json"
+		crFilename      = "cr2.yaml"
+		openAPIFilename = "openapi-schema.json"
 	)
 
 	t.Parallel()
@@ -4634,11 +4518,11 @@ func TestOpenAPIListUnkownFieldsPatch(t *testing.T) {
 	// Relative path to the openAPI schema
 	openAPIRelativePath := filepath.Join(tmpDir, openAPIFilename)
 	// Loading plugin file, CR file, and shema file to memory
-	pluginFileContent, err := os.ReadFile("testdata/OpenAPI/ptp_policy_generator2.yaml")
+	pluginFileContent, err := os.ReadFile("testdata/OpenAPI/policy-generator2.yaml")
 	assertEqual(t, err, nil)
 	crFileContent, err := os.ReadFile("testdata/OpenAPI/cr-files/" + crFilename)
 	assertEqual(t, err, nil)
-	openAPIFileContent, err := os.ReadFile("testdata/OpenAPI/newptpconfig-schema.json")
+	openAPIFileContent, err := os.ReadFile("testdata/OpenAPI/openapi-schema.json")
 	assertEqual(t, err, nil)
 
 	// Writing CR file and shema file to temporary directory
@@ -4660,7 +4544,7 @@ func TestOpenAPIListUnkownFieldsPatch(t *testing.T) {
 
 	// Set CR file path and OpenAPI path with temporary directory
 	p.Policies[0].Manifests[0].Path = crRelativePath
-	p.Policies[0].Manifests[0].OpenAPI.Path = openAPIRelativePath
+	p.Policies[0].Manifests[0].Filepath.Path = openAPIRelativePath
 
 	// Check configuration
 	if err := p.assertValidConfig(); err != nil {
@@ -4677,7 +4561,6 @@ metadata:
         policy.open-cluster-management.io/controls: ""
         policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: ""
-        ran.openshift.io/ztp-deploy-wave: "10"
     name: group-du-sno-v4.14-config-policy
     namespace: ztp-group
 spec:
@@ -4693,17 +4576,14 @@ spec:
                 object-templates:
                     - complianceType: ""
                       objectDefinition:
-                        apiVersion: ptp.openshift.io/v1
-                        kind: PtpConfig
+                        apiVersion: myapp.myorg.io/v1
+                        kind: MyCr
                         metadata:
-                            annotations:
-                                ran.openshift.io/ztp-deploy-wave: "10"
-                            name: grandmaster
-                            namespace: openshift-ptp
+                            name: profile1
+                            namespace: mynamespace
                         spec:
-                            profile:
-                                - name: grandmaster
-                                  phc2sysOpts: -r -u 0 -m -O -37 -N 8 -R 16 -s $iface_master -n 24
+                            listOfStuff:
+                                - name: profile1
                                   plugins:
                                     e810:
                                         enableDefaultConfig: false
@@ -4712,194 +4592,6 @@ spec:
                                             LocalHoldoverTimeout: 14401
                                             LocalMaxHoldoverOffSet: 1500
                                             MaxInSpecOffset: 100
-                                        ublxCmds:
-                                            - args:
-                                                - -P
-                                                - "29.20"
-                                                - -z
-                                                - CFG-HW-ANT_CFG_VOLTCTRL,1
-                                              reportOutput: false
-                                            - args:
-                                                - -P
-                                                - "29.20"
-                                                - -e
-                                                - GPS
-                                              reportOutput: false
-                                            - args:
-                                                - -P
-                                                - "29.20"
-                                                - -d
-                                                - Galileo
-                                              reportOutput: false
-                                            - args:
-                                                - -P
-                                                - "29.20"
-                                                - -d
-                                                - GLONASS
-                                              reportOutput: false
-                                            - args:
-                                                - -P
-                                                - "29.20"
-                                                - -d
-                                                - BeiDou
-                                              reportOutput: false
-                                            - args:
-                                                - -P
-                                                - "29.20"
-                                                - -d
-                                                - SBAS
-                                              reportOutput: false
-                                            - args:
-                                                - -P
-                                                - "29.20"
-                                                - -t
-                                                - -w
-                                                - "5"
-                                                - -v
-                                                - "1"
-                                                - -e
-                                                - SURVEYIN,600,50000
-                                              reportOutput: true
-                                            - args:
-                                                - -P
-                                                - "29.20"
-                                                - -p
-                                                - MON-HW
-                                              reportOutput: true
-                                  ptp4lConf: |
-                                    [$iface_master]
-                                    masterOnly 1
-                                    [$iface_master_1]
-                                    masterOnly 1
-                                    [$iface_master_2]
-                                    masterOnly 1
-                                    [$iface_master_3]
-                                    masterOnly 1
-                                    [global]
-                                    #
-                                    # Default Data Set
-                                    #
-                                    twoStepFlag 1
-                                    priority1 128
-                                    priority2 128
-                                    domainNumber 24
-                                    #utc_offset 37
-                                    clockClass 6
-                                    clockAccuracy 0x27
-                                    offsetScaledLogVariance 0xFFFF
-                                    free_running 0
-                                    freq_est_interval 1
-                                    dscp_event 0
-                                    dscp_general 0
-                                    dataset_comparison G.8275.x
-                                    G.8275.defaultDS.localPriority 128
-                                    #
-                                    # Port Data Set
-                                    #
-                                    logAnnounceInterval -3
-                                    logSyncInterval -4
-                                    logMinDelayReqInterval -4
-                                    logMinPdelayReqInterval 0
-                                    announceReceiptTimeout 3
-                                    syncReceiptTimeout 0
-                                    delayAsymmetry 0
-                                    fault_reset_interval -4
-                                    neighborPropDelayThresh 20000000
-                                    masterOnly 0
-                                    G.8275.portDS.localPriority 128
-                                    #
-                                    # Run time options
-                                    #
-                                    assume_two_step 0
-                                    logging_level 6
-                                    path_trace_enabled 0
-                                    follow_up_info 0
-                                    hybrid_e2e 0
-                                    inhibit_multicast_service 0
-                                    net_sync_monitor 0
-                                    tc_spanning_tree 0
-                                    tx_timestamp_timeout 50
-                                    unicast_listen 0
-                                    unicast_master_table 0
-                                    unicast_req_duration 3600
-                                    use_syslog 1
-                                    verbose 0
-                                    summary_interval -4
-                                    kernel_leap 1
-                                    check_fup_sync 0
-                                    clock_class_threshold 7
-                                    #
-                                    # Servo Options
-                                    #
-                                    pi_proportional_const 0.0
-                                    pi_integral_const 0.0
-                                    pi_proportional_scale 0.0
-                                    pi_proportional_exponent -0.3
-                                    pi_proportional_norm_max 0.7
-                                    pi_integral_scale 0.0
-                                    pi_integral_exponent 0.4
-                                    pi_integral_norm_max 0.3
-                                    step_threshold 2.0
-                                    first_step_threshold 0.00002
-                                    clock_servo pi
-                                    sanity_freq_limit  200000000
-                                    ntpshm_segment 0
-                                    #
-                                    # Transport options
-                                    #
-                                    transportSpecific 0x0
-                                    ptp_dst_mac 01:1B:19:00:00:00
-                                    p2p_dst_mac 01:80:C2:00:00:0E
-                                    udp_ttl 1
-                                    udp6_scope 0x0E
-                                    uds_address /var/run/ptp4l
-                                    #
-                                    # Default interface options
-                                    #
-                                    clock_type BC
-                                    network_transport L2
-                                    delay_mechanism E2E
-                                    time_stamping hardware
-                                    tsproc_mode filter
-                                    delay_filter moving_median
-                                    delay_filter_length 10
-                                    egressLatency 0
-                                    ingressLatency 0
-                                    boundary_clock_jbod 0
-                                    #
-                                    # Clock description
-                                    #
-                                    productDescription ;;
-                                    revisionData ;;
-                                    manufacturerIdentity 00:00:00
-                                    userDescription ;
-                                    timeSource 0x20
-                                  ptp4lOpts: -2 --summary_interval -4
-                                  ptpSchedulingPolicy: SCHED_FIFO
-                                  ptpSchedulingPriority: 10
-                                  ptpSettings:
-                                    logReduce: "true"
-                                  ts2phcConf: |
-                                    [nmea]
-                                    ts2phc.master 1
-                                    [global]
-                                    use_syslog  0
-                                    verbose 1
-                                    logging_level 7
-                                    ts2phc.pulsewidth 100000000
-                                    #cat /dev/GNSS to find available serial port
-                                    #example value of gnss_serialport is /dev/ttyGNSS_1700_0
-                                    ts2phc.nmea_serialport $gnss_serialport
-                                    leapfile  /usr/share/zoneinfo/leap-seconds.list
-                                    [$iface_master]
-                                    ts2phc.extts_polarity rising
-                                    ts2phc.extts_correction 0
-                                  ts2phcOpts: ' '
-                            recommend:
-                                - match:
-                                    - nodeLabel: node-role.kubernetes.io/master
-                                  priority: 4
-                                  profile: grandmaster
                 remediationAction: ""
                 severity: ""
 `

@@ -1,0 +1,10 @@
+apiVersion: myapp.myorg.io/v1
+kind: MyCr
+metadata:
+  name: profile1
+  namespace: mynamespace
+spec:
+  listOfStuff:
+  - name: "profile1"
+    myattribute: ens3f0
+

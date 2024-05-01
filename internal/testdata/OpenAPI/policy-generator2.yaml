@@ -28,30 +28,20 @@ policyDefaults:
         noncompliant: 10s
 policies:
     - name: group-du-sno-v4.14-config-policy
-      policyAnnotations:
-        ran.openshift.io/ztp-deploy-wave: "10"
       manifests:
-        - path: cr-files/PtpConfigGmWpc.yaml
+        - path: cr-files/cr2.yaml
           patches:
             - metadata:
-                annotations:
-                    ran.openshift.io/ztp-deploy-wave: "10"
-                name: grandmaster
-                namespace: openshift-ptp
+                name: profile1
+                namespace: mynamespace
               spec:
-                profile:
-                    - name: grandmaster
-                      phc2sysOpts: -r -u 0 -m -O -37 -N 8 -R 16 -s $iface_master -n 24
+                listOfStuff:
+                    - name: profile1
                       plugins:
                         e810:
                             enableDefaultConfig: false
                             pins: $e810_pins
                             settings:
                                 LocalHoldoverTimeout: 14401
-                recommend:
-                    - match:
-                        - nodeLabel: node-role.kubernetes.io/master
-                      priority: 4
-                      profile: grandmaster
           openapi:
-            path: /home/deliedit/dev/cnf-features-deploy/ztp/tools/pgt2acm/test/newptpconfig-schema.json
+            path: /home/deliedit/dev/cnf-features-deploy/ztp/tools/pgt2acm/test/openapi-schema.json
