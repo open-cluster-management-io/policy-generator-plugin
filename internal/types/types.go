@@ -44,6 +44,7 @@ type ConfigurationPolicyOptions struct {
 	NamespaceSelector      NamespaceSelector  `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
 	PruneObjectBehavior    string             `json:"pruneObjectBehavior,omitempty" yaml:"pruneObjectBehavior,omitempty"`
 	RecordDiff             string             `json:"recordDiff,omitempty" yaml:"recordDiff,omitempty"`
+	RecreateOption         string             `json:"recreateOption,omitempty" yaml:"recreateOption,omitempty"`
 }
 
 type Manifest struct {

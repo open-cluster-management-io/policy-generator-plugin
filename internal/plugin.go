@@ -563,6 +563,10 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.Description = p.PolicyDefaults.Description
 		}
 
+		if policy.RecreateOption == "" {
+			policy.RecreateOption = p.PolicyDefaults.RecreateOption
+		}
+
 		if policy.RecordDiff == "" {
 			policy.RecordDiff = p.PolicyDefaults.RecordDiff
 		}
@@ -731,6 +735,10 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 			if manifest.Severity == "" && policy.Severity != "" {
 				manifest.Severity = policy.Severity
+			}
+
+			if manifest.RecreateOption == "" {
+				manifest.RecreateOption = policy.RecreateOption
 			}
 
 			if manifest.RecordDiff == "" {
