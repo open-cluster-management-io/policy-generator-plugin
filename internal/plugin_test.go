@@ -43,6 +43,7 @@ func TestGenerate(t *testing.T) {
 	p.PolicyDefaults.Namespace = "my-policies"
 	p.PolicyDefaults.MetadataComplianceType = "musthave"
 	p.PolicyDefaults.RecordDiff = "Log"
+	p.PolicyDefaults.RecreateOption = "IfRequired"
 	p.PolicyDefaults.PruneObjectBehavior = "DeleteAll"
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
@@ -70,6 +71,7 @@ func TestGenerate(t *testing.T) {
 				ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
 					MetadataComplianceType: "mustonlyhave",
 					RecordDiff:             "None",
+					RecreateOption:         "None",
 				},
 				Path: path.Join(tmpDir, "configmap.yaml"),
 			},
@@ -120,6 +122,7 @@ spec:
                                 chandler: bing
                             name: my-configmap
                       recordDiff: Log
+                      recreateOption: IfRequired
                 pruneObjectBehavior: None
                 remediationAction: inform
                 severity: low
@@ -155,6 +158,7 @@ spec:
                         metadata:
                             name: my-configmap
                       recordDiff: None
+                      recreateOption: None
                 pruneObjectBehavior: DeleteAll
                 remediationAction: inform
                 severity: low
