@@ -165,8 +165,12 @@ policyDefaults:
   # is detected. `RecreateOption` has no effect when the `remediationAction` is `inform`. `IfRequired` has no effect
   # on clusters without dry run update support. The default value is `None`.
   recreateOption: ""
-  # Optional. Whether (and where) to record the diff between the policy and objects on the cluster. Defaults to an empty
-  # string, which is equivalent to "None".
+  # Optional. recordDiff specifies whether and where to log the difference between the object on the cluster
+  # and the `objectDefinition` parameter in the policy. The supported options are `InStatus` to record the
+  # difference in the policy status field, `Log` to log the difference in the `config-policy-controller` pod, and
+  # `None` to not log the difference. The default value is `None` for object kinds that include sensitive data such as
+  # `ConfigMap`, `OAuthAccessToken`, `OAuthAuthorizeTokens`, `Route`, and `Secret`, or when a templated
+  # `objectDefinition` references sensitive data. For all other kinds, the default value is `InStatus`.
   recordDiff: ""
   # Optional. The remediation action ("inform" or "enforce") for each configuration policy. This defaults to "inform".
   remediationAction: "inform"
