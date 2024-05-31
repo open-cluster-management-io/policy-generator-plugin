@@ -1030,9 +1030,16 @@ func (p *Plugin) assertValidConfig() error {
 				)
 			}
 
-			err = verifyManifestPath(p.baseDirectory, manifest.Path)
+			err = verifyFilePath(p.baseDirectory, manifest.Path, "manifest")
 			if err != nil {
 				return err
+			}
+
+			if manifest.OpenAPI.Path != "" {
+				err = verifyFilePath(p.baseDirectory, manifest.OpenAPI.Path, "openapi")
+				if err != nil {
+					return err
+				}
 			}
 
 			evalInterval := manifest.EvaluationInterval
