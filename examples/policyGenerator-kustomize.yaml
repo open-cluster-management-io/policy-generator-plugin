@@ -13,8 +13,3 @@ policies:
 - name: myapp
   manifests:
     - path: input-kustomize/
-      patches:
-      - metadata:
-          name: "myname"
-      openapi:
-        path: schema.json
