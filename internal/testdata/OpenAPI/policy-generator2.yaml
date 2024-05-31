@@ -43,5 +43,3 @@ policies:
                             pins: $e810_pins
                             settings:
                                 LocalHoldoverTimeout: 14401
-          openapi:
-            path: /home/deliedit/dev/cnf-features-deploy/ztp/tools/pgt2acm/test/openapi-schema.json

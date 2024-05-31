@@ -16,15 +16,10 @@ import (
 	"open-cluster-management.io/policy-generator-plugin/internal/types"
 )
 
-const (
-	localSchemaFileName = "schema.json"
-	kustomizeDir        = "kustomize"
-)
-
-type KustomizeJSON struct {
-	types.Filepath `json:"openapi,omitempty" yaml:"openapi,omitempty"`
-	Patches        []Patch  `json:"patches" yaml:"patches"`
-	Resources      []string `json:"resources" yaml:"resources"`
+type kustomizeFile struct {
+	OpenAPI   types.Filepath `json:"openapi,omitempty" yaml:"openapi,omitempty"`
+	Patches   []Patch        `json:"patches" yaml:"patches"`
+	Resources []string       `json:"resources" yaml:"resources"`
 }
 
 type Patch struct {
@@ -183,19 +178,22 @@ func setPatchDefaults(
 // the patched manifests. An error is returned if the patches can't be applied. This should be
 // run after the Validate method.
 func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
-	kustomizeDir := "kustomize"
+	const (
+		localSchemaFileName = "schema.json"
+		kustomizeDir        = "kustomize"
+	)
 
 	// Create the file system in memory with the Kustomize YAML files
 	fSys := filesys.MakeFsInMemory()
 
-	err := InitializeInMemoryKustomizeDir(fSys, m.openAPI.Path)
+	err := initializeInMemoryKustomizeDir(fSys, m.openAPI.Path, kustomizeDir, localSchemaFileName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize Kustomize dir: %w", err)
 	}
 
-	kustomizationYAMLFile := KustomizeJSON{}
+	kustomizationYAMLFile := kustomizeFile{}
 	if m.openAPI.Path != "" {
-		kustomizationYAMLFile.Filepath.Path = localSchemaFileName
+		kustomizationYAMLFile.OpenAPI.Path = localSchemaFileName
 	}
 
 	options := []struct {
@@ -271,7 +269,9 @@ func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
 }
 
 // Initializes the in-memory file system with base directory and open API schema
-func InitializeInMemoryKustomizeDir(fSys filesys.FileSystem, schema string) (err error) {
+func initializeInMemoryKustomizeDir(fSys filesys.FileSystem, schema,
+	kustomizeDir, localSchemaFileName string,
+) (err error) {
 	err = fSys.Mkdir(kustomizeDir)
 	if err != nil {
 		return fmt.Errorf("an unexpected error occurred when configuring Kustomize: %w", err)
@@ -282,12 +282,12 @@ func InitializeInMemoryKustomizeDir(fSys filesys.FileSystem, schema string) (err
 
 		schemaJSON, err := os.ReadFile(schema)
 		if err != nil {
-			return fmt.Errorf("unable to open file: %s, err: %w ", schema, err)
+			return fmt.Errorf("error reading file %s: %w ", schema, err)
 		}
 
 		err = fSys.WriteFile(path.Join(kustomizeDir, localSchemaFileName), schemaJSON)
 		if err != nil {
-			return fmt.Errorf("error writing schema, err: %w", err)
+			return fmt.Errorf("error writing schema: %w", err)
 		}
 	}
 

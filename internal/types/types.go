@@ -53,21 +53,19 @@ type Manifest struct {
 	Path                       string                   `json:"path,omitempty" yaml:"path,omitempty"`
 	ExtraDependencies          []PolicyDependency       `json:"extraDependencies,omitempty" yaml:"extraDependencies,omitempty"`
 	IgnorePending              bool                     `json:"ignorePending,omitempty" yaml:"ignorePending,omitempty"`
-	Filepath                   `json:"openapi,omitempty" yaml:"openapi,omitempty"`
+	OpenAPI                    Filepath                 `json:"openapi,omitempty" yaml:"openapi,omitempty"`
 }
 
 type Filepath struct {
-	Path string `json:"path" yaml:"path"`
+	Path string `json:"path,omitempty" yaml:"path,omitempty"`
 }
 
-type (
-	NamespaceSelector struct {
-		Exclude          []string                           `json:"exclude,omitempty" yaml:"exclude,omitempty"`
-		Include          []string                           `json:"include,omitempty" yaml:"include,omitempty"`
-		MatchLabels      *map[string]string                 `json:"matchLabels,omitempty" yaml:"matchLabels,omitempty"`
-		MatchExpressions *[]metav1.LabelSelectorRequirement `json:"matchExpressions,omitempty" yaml:"matchExpressions,omitempty"`
-	}
-)
+type NamespaceSelector struct {
+	Exclude          []string                           `json:"exclude,omitempty" yaml:"exclude,omitempty"`
+	Include          []string                           `json:"include,omitempty" yaml:"include,omitempty"`
+	MatchLabels      *map[string]string                 `json:"matchLabels,omitempty" yaml:"matchLabels,omitempty"`
+	MatchExpressions *[]metav1.LabelSelectorRequirement `json:"matchExpressions,omitempty" yaml:"matchExpressions,omitempty"`
+}
 
 // Define String() so that the LabelSelector is dereferenced in the logs
 func (t NamespaceSelector) String() string {

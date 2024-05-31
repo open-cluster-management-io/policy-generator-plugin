@@ -4445,7 +4445,7 @@ func TestOpenAPIListPatch(t *testing.T) {
 
 	// Set CR file path and OpenAPI path with temporary directory
 	p.Policies[0].Manifests[0].Path = crRelativePath
-	p.Policies[0].Manifests[0].Filepath.Path = openAPIRelativePath
+	p.Policies[0].Manifests[0].OpenAPI.Path = openAPIRelativePath
 
 	// Check configuration
 	if err := p.assertValidConfig(); err != nil {
@@ -4544,7 +4544,7 @@ func TestOpenAPIListUnkownFieldsPatch(t *testing.T) {
 
 	// Set CR file path and OpenAPI path with temporary directory
 	p.Policies[0].Manifests[0].Path = crRelativePath
-	p.Policies[0].Manifests[0].Filepath.Path = openAPIRelativePath
+	p.Policies[0].Manifests[0].OpenAPI.Path = openAPIRelativePath
 
 	// Check configuration
 	if err := p.assertValidConfig(); err != nil {

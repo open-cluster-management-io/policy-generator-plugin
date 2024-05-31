@@ -1604,7 +1604,7 @@ func TestVerifyManifestPath(t *testing.T) {
 		t.Run(
 			"manifestPath="+test.ManifestPath,
 			func(t *testing.T) {
-				err := verifyManifestPath(workingDir, test.ManifestPath)
+				err := verifyFilePath(workingDir, test.ManifestPath, "manifest")
 				if err == nil {
 					assertEqual(t, "", test.ExpectedErrMsg)
 				} else {

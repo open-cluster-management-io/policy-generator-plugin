@@ -303,6 +303,11 @@ func TestApplyPatchesInvalidPatch(t *testing.T) {
 }
 
 func TestInitializeInMemoryKustomizeDir(t *testing.T) {
+	const (
+		localSchemaFileName = "schema.json"
+		kustomizeDir        = "kustomize"
+	)
+
 	tmpDir := t.TempDir()
 	testSchemaPath := filepath.Join(tmpDir, "myschema.json")
 
@@ -337,7 +342,8 @@ func TestInitializeInMemoryKustomizeDir(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := InitializeInMemoryKustomizeDir(tt.args.fSys, tt.args.schema); (err != nil) != tt.wantErr {
+			if err := initializeInMemoryKustomizeDir(tt.args.fSys, tt.args.schema,
+				kustomizeDir, localSchemaFileName); (err != nil) != tt.wantErr {
 				t.Errorf("InitializeInMemoryKustomizeDir() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
