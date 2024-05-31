@@ -123,7 +123,7 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 		}
 
 		if len(manifest.Patches) > 0 {
-			patcher := manifestPatcher{manifests: manifestFiles, patches: manifest.Patches, openAPI: manifest.Filepath}
+			patcher := manifestPatcher{manifests: manifestFiles, patches: manifest.Patches, openAPI: manifest.OpenAPI}
 			const errTemplate = `failed to process the manifest at "%s": %w`
 
 			err = patcher.Validate()
@@ -574,39 +574,39 @@ func unmarshalManifestBytes(manifestBytes []byte) ([]map[string]interface{}, err
 	return yamlDocs, nil
 }
 
-// verifyManifestPath verifies that the manifest path is in the directory tree under baseDirectory.
+// verifyFilePath verifies that the file path is in the directory tree under baseDirectory.
 // An error is returned if it is not or the paths couldn't be properly resolved.
-func verifyManifestPath(baseDirectory string, manifestPath string) error {
-	absPath, err := filepath.Abs(manifestPath)
+func verifyFilePath(baseDirectory string, filePath, fileType string) error {
+	absPath, err := filepath.Abs(filePath)
 	if err != nil {
-		return fmt.Errorf("could not resolve the manifest path %s to an absolute path", manifestPath)
+		return fmt.Errorf("could not resolve the %s path %s to an absolute path", fileType, filePath)
 	}
 
 	absPath, err = filepath.EvalSymlinks(absPath)
 	if err != nil {
-		return fmt.Errorf("could not resolve symlinks to the manifest path %s", manifestPath)
+		return fmt.Errorf("could not resolve symlinks to the %s path %s", fileType, filePath)
 	}
 
 	relPath, err := filepath.Rel(baseDirectory, absPath)
 	if err != nil {
 		return fmt.Errorf(
-			"could not resolve the manifest path %s to a relative path from the kustomization.yaml file",
-			manifestPath,
+			"could not resolve the %s path %s to a relative path from the kustomization.yaml file",
+			fileType, filePath,
 		)
 	}
 
 	if relPath == "." {
 		return fmt.Errorf(
-			"the manifest path %s may not refer to the same directory as the kustomization.yaml file",
-			manifestPath,
+			"the %s path %s may not refer to the same directory as the kustomization.yaml file",
+			fileType, filePath,
 		)
 	}
 
 	parDir := ".." + string(filepath.Separator)
 	if strings.HasPrefix(relPath, parDir) || relPath == ".." {
 		return fmt.Errorf(
-			"the manifest path %s is not in the same directory tree as the kustomization.yaml file",
-			manifestPath,
+			"the %s path %s is not in the same directory tree as the kustomization.yaml file",
+			fileType, filePath,
 		)
 	}
 

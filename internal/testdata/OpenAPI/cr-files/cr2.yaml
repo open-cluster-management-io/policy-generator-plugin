@@ -15,4 +15,3 @@ spec:
           LocalMaxHoldoverOffSet: 1500
           LocalHoldoverTimeout: 14400
           MaxInSpecOffset: 100
- 
