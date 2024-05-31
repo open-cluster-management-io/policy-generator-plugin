@@ -17,14 +17,11 @@ import (
 )
 
 type kustomizeFile struct {
-	OpenAPI   types.Filepath `json:"openapi,omitempty" yaml:"openapi,omitempty"`
-	Patches   []Patch        `json:"patches" yaml:"patches"`
-	Resources []string       `json:"resources" yaml:"resources"`
+	OpenAPI   types.Filepath   `json:"openapi,omitempty" yaml:"openapi,omitempty"`
+	Patches   []types.Filepath `json:"patches" yaml:"patches"`
+	Resources []string         `json:"resources" yaml:"resources"`
 }
 
-type Patch struct {
-	Path string `yaml:"path,omitempty" json:"path,omitempty"`
-}
 type manifestPatcher struct {
 	// The manifests to patch.
 	manifests []map[string]interface{}
@@ -226,7 +223,7 @@ func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
 				kustomizationYAMLFile.Resources = append(kustomizationYAMLFile.Resources, manifestFileName)
 			} else {
 				kustomizationYAMLFile.Patches = append(kustomizationYAMLFile.Patches,
-					Patch{Path: manifestFileName})
+					types.Filepath{Path: manifestFileName})
 			}
 		}
 	}
