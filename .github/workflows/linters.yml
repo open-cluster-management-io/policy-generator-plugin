@@ -37,3 +37,10 @@ jobs:
       run: |
         make fmt
         git diff --exit-code
+    
+    - name: Verify binary and examples
+      run: |
+        make build
+        echo "::group::Generate example"
+        make generate
+        echo "::endgroup::"
