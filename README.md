@@ -103,7 +103,8 @@ make build
    ```
 
   **NOTE:** To enable Helm processing when passing a Kustomize directory into the generator, set
-  the environment variable `POLICY_GEN_ENABLE_HELM` to `"true"`.
+  the environment variable `POLICY_GEN_ENABLE_HELM` to `"true"`. If the Helm directory is outside of the Kustomize path,
+  you may set the environment variable `POLICY_GEN_DISABLE_LOAD_RESTRICTORS` to `"true"`.
 
 ### As a standalone binary
 
@@ -125,7 +126,8 @@ cd examples
 **NOTE:** 
 - To print the trace in the case of an error, you can add the `--debug` flag to the arguments.
 - To enable Helm processing when passing a Kustomize directory into the generator, set
-  the environment variable `POLICY_GEN_ENABLE_HELM` to `"true"`.
+  the environment variable `POLICY_GEN_ENABLE_HELM` to `"true"`. If the Helm directory is outside of the Kustomize path,
+  you may set the environment variable `POLICY_GEN_DISABLE_LOAD_RESTRICTORS` to `"true"`.
 
 ## Additional Policy Generator references
 
