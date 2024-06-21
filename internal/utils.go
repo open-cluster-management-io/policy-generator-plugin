@@ -14,6 +14,7 @@ import (
 	yaml "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/kustomize/api/krusty"
+	kustomizetypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 
 	"open-cluster-management.io/policy-generator-plugin/internal/expanders"
@@ -394,6 +395,10 @@ func processKustomizeDir(path string) ([]map[string]interface{}, error) {
 	if os.Getenv("POLICY_GEN_ENABLE_HELM") == "true" {
 		kustomizeOpts.PluginConfig.HelmConfig.Enabled = true
 		kustomizeOpts.PluginConfig.HelmConfig.Command = "helm"
+	}
+
+	if os.Getenv("POLICY_GEN_DISABLE_LOAD_RESTRICTORS") == "true" {
+		kustomizeOpts.LoadRestrictions = kustomizetypes.LoadRestrictionsNone
 	}
 
 	k := krusty.MakeKustomizer(kustomizeOpts)
