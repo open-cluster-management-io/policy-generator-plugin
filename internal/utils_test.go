@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -478,6 +479,73 @@ resources:
 
 		assertEqual(t, kind2, "ConfigMap")
 	}
+}
+
+func TestGetPolicyTemplateKustomizeLocalHelm(t *testing.T) {
+	kustomizeDir := t.TempDir()
+
+	helmDir, err := filepath.Abs("testdata")
+	if err != nil {
+		t.Fatalf("Failed to get an absolute path for testadata/helm: %v", err)
+	}
+
+	kustomizeYAML := fmt.Sprintf(`
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+helmGlobals:
+  chartHome: %s
+helmCharts:
+  - name: helm
+`, helmDir)
+
+	err = os.WriteFile(path.Join(kustomizeDir, "kustomization.yaml"), []byte(kustomizeYAML), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write kustomization.yaml: %v", err)
+	}
+
+	policyConf := types.PolicyConfig{
+		Manifests: []types.Manifest{{
+			Path: kustomizeDir,
+		}},
+		Name: "policy-kustomize-helm",
+	}
+
+	_, err = getPolicyTemplates(&policyConf)
+	if err == nil {
+		t.Fatal("Expected this to fail without POLICY_GEN_ENABLE_HELM=true")
+	}
+
+	if !strings.Contains(err.Error(), "must specify --enable-helm") {
+		t.Fatalf("Expected the error to mention 'must specify --enable-helm': %v", err)
+	}
+
+	t.Setenv("POLICY_GEN_ENABLE_HELM", "true")
+
+	defer func() {
+		_ = os.Unsetenv("POLICY_GEN_ENABLE_HELM")
+	}()
+
+	_, err = getPolicyTemplates(&policyConf)
+	if err == nil {
+		t.Fatal("Expected this to fail without POLICY_GEN_DISABLE_LOAD_RESTRICTORS=true")
+	}
+
+	if !strings.Contains(err.Error(), fmt.Sprintf("is not in or below '%s'", kustomizeDir)) {
+		t.Fatalf("Expected this to fail due a load restrictor: %v", err)
+	}
+
+	t.Setenv("POLICY_GEN_DISABLE_LOAD_RESTRICTORS", "true")
+
+	defer func() {
+		_ = os.Unsetenv("POLICY_GEN_DISABLE_LOAD_RESTRICTORS")
+	}()
+
+	policyTemplates, err := getPolicyTemplates(&policyConf)
+	if err != nil {
+		t.Fatalf("Expected one manifest from rendering the Helm chart, but got: %v", err)
+	}
+
+	assertEqual(t, len(policyTemplates), 1)
 }
 
 func TestGetPolicyTemplateNoConsolidate(t *testing.T) {
