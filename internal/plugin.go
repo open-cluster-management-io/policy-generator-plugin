@@ -579,6 +579,10 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.MetadataComplianceType = p.PolicyDefaults.MetadataComplianceType
 		}
 
+		if policy.GatekeeperEnforcementAction == "" {
+			policy.GatekeeperEnforcementAction = p.PolicyDefaults.GatekeeperEnforcementAction
+		}
+
 		// Only use the policyDefault evaluationInterval value when it's not explicitly set on the policy.
 		if policy.EvaluationInterval.Compliant == "" {
 			set := isEvaluationIntervalSet(unmarshaledConfig, i, "compliant")
@@ -743,6 +747,10 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 			if manifest.RecordDiff == "" {
 				manifest.RecordDiff = policy.RecordDiff
+			}
+
+			if manifest.GatekeeperEnforcementAction == "" {
+				manifest.GatekeeperEnforcementAction = policy.GatekeeperEnforcementAction
 			}
 
 			if isManifestFieldSet(unmarshaledConfig, i, j, "extraDependencies") {
