@@ -178,6 +178,13 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 		extraDeps := policyConf.Manifests[i].ExtraDependencies
 
 		for _, manifest := range manifestGroup {
+			err := setGatekeeperEnforcementAction(manifest,
+				policyConf.Manifests[i].GatekeeperEnforcementAction)
+			if err != nil {
+				return nil, fmt.Errorf("err in setting constraint.spec.enforcementAction has "+
+					"an error %w in manifest index: %v", err, i)
+			}
+
 			isPolicyTypeManifest, isOcmPolicy, err := isPolicyTypeManifest(
 				manifest, policyConf.InformGatekeeperPolicies)
 			if err != nil {
@@ -308,6 +315,24 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 	}
 
 	return policyTemplates, nil
+}
+
+// setGatekeeperEnforcementAction function override gatekeeper.constraint.enforcementAction
+func setGatekeeperEnforcementAction(manifest map[string]interface{}, enforcementAction string) error {
+	if enforcementAction == "" {
+		return nil
+	}
+
+	apiVersion, _, _ := unstructured.NestedString(manifest, "apiVersion")
+
+	if strings.HasPrefix(apiVersion, "constraints.gatekeeper.sh") {
+		err := unstructured.SetNestedField(manifest, enforcementAction, "spec", "enforcementAction")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func setTemplateOptions(tmpl map[string]interface{}, ignorePending bool, extraDeps []types.PolicyDependency) {

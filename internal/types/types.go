@@ -47,8 +47,13 @@ type ConfigurationPolicyOptions struct {
 	RecreateOption         string             `json:"recreateOption,omitempty" yaml:"recreateOption,omitempty"`
 }
 
+type GatekeeperOptions struct {
+	GatekeeperEnforcementAction string `json:"gatekeeperEnforcementAction,omitempty" yaml:"gatekeeperEnforcementAction,omitempty"`
+}
+
 type Manifest struct {
 	ConfigurationPolicyOptions `json:",inline" yaml:",inline"`
+	GatekeeperOptions          `json:",inline" yaml:",inline"`
 	Patches                    []map[string]interface{} `json:"patches,omitempty" yaml:"patches,omitempty"`
 	Path                       string                   `json:"path,omitempty" yaml:"path,omitempty"`
 	ExtraDependencies          []PolicyDependency       `json:"extraDependencies,omitempty" yaml:"extraDependencies,omitempty"`
@@ -105,6 +110,7 @@ type EvaluationInterval struct {
 type PolicyConfig struct {
 	PolicyOptions              `json:",inline" yaml:",inline"`
 	ConfigurationPolicyOptions `json:",inline" yaml:",inline"`
+	GatekeeperOptions          `json:",inline" yaml:",inline"`
 	Name                       string `json:"name,omitempty" yaml:"name,omitempty"`
 	// This a slice of structs to allow additional configuration related to a manifest such as
 	// accepting patches.
@@ -114,6 +120,7 @@ type PolicyConfig struct {
 type PolicyDefaults struct {
 	PolicyOptions              `json:",inline" yaml:",inline"`
 	ConfigurationPolicyOptions `json:",inline" yaml:",inline"`
+	GatekeeperOptions          `json:",inline" yaml:",inline"`
 	Namespace                  string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	OrderPolicies              bool   `json:"orderPolicies,omitempty" yaml:"orderPolicies,omitempty"`
 }

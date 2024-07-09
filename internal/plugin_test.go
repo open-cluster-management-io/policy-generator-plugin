@@ -261,6 +261,7 @@ metadata:
 policyDefaults:
   namespace: my-policies
   consolidateManifests: false
+  gatekeeperEnforcementAction: deny
   %s: %s
 policies:
 - name: policy-app
@@ -281,6 +282,7 @@ policies:
 					t.Fatal("Unexpected error", err)
 				}
 
+				assertEqual(t, p.PolicyDefaults.GatekeeperEnforcementAction, "deny")
 				assertEqual(t, p.Policies[0].ConsolidateManifests, false)
 
 				output, err := p.Generate()
@@ -1758,6 +1760,147 @@ spec:
 `
 	expected = strings.TrimPrefix(expected, "\n")
 	assertEqual(t, output, expected)
+}
+
+func TestOverrideConstraintEnforcementAction(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	gatekeeperPath := path.Join(tmpDir, "gatekeeper.yaml")
+	yamlContent := `
+apiVersion: constraints.gatekeeper.sh/v1
+kind: MyConstrainingTemplate
+metadata:
+  name: thisthingimconstraining
+`
+
+	common := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-gatekeeper
+    namespace: gatekeeper-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: constraints.gatekeeper.sh/v1
+            kind: MyConstrainingTemplate
+            metadata:
+                annotations:
+                    policy.open-cluster-management.io/severity: low
+                name: thisthingimconstraining
+            spec:
+                enforcementAction: `
+
+	err := os.WriteFile(gatekeeperPath, []byte(yamlContent), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", gatekeeperPath)
+	}
+
+	tests := []struct {
+		policyConf      types.PolicyConfig
+		policyDefaultEA string
+		expectedEA      string
+	}{
+		{
+			policyConf: types.PolicyConfig{
+				Name: "policy-gatekeeper",
+				Manifests: []types.Manifest{
+					{
+						Path:              gatekeeperPath,
+						GatekeeperOptions: types.GatekeeperOptions{GatekeeperEnforcementAction: "deny"},
+					},
+				},
+			},
+			policyDefaultEA: "",
+			expectedEA:      "deny",
+		},
+		{
+			policyConf: types.PolicyConfig{
+				Name: "policy-gatekeeper",
+				Manifests: []types.Manifest{
+					{
+						Path:              gatekeeperPath,
+						GatekeeperOptions: types.GatekeeperOptions{GatekeeperEnforcementAction: "warn"},
+					},
+				},
+			},
+			policyDefaultEA: "",
+			expectedEA:      "warn",
+		},
+		{
+			policyConf: types.PolicyConfig{
+				Name: "policy-gatekeeper",
+				Manifests: []types.Manifest{
+					{
+						Path: gatekeeperPath,
+					},
+				},
+			},
+			policyDefaultEA: "deny",
+			expectedEA:      "deny",
+		},
+		{
+			policyConf: types.PolicyConfig{
+				Name: "policy-gatekeeper",
+				Manifests: []types.Manifest{
+					{
+						Path:              gatekeeperPath,
+						GatekeeperOptions: types.GatekeeperOptions{GatekeeperEnforcementAction: "dryrun"},
+					},
+				},
+			},
+			policyDefaultEA: "deny",
+			expectedEA:      "dryrun",
+		},
+		{
+			policyConf: types.PolicyConfig{
+				Name:              "policy-gatekeeper",
+				GatekeeperOptions: types.GatekeeperOptions{GatekeeperEnforcementAction: "dryrun"},
+				Manifests: []types.Manifest{
+					{
+						Path: gatekeeperPath,
+					},
+				},
+			},
+			policyDefaultEA: "deny",
+			expectedEA:      "dryrun",
+		},
+	}
+
+	for _, tc := range tests {
+		p := Plugin{}
+
+		p.PolicyDefaults.Namespace = "gatekeeper-policies"
+		p.PolicyDefaults.InformGatekeeperPolicies = false
+
+		p.PolicyDefaults.GatekeeperEnforcementAction = tc.policyDefaultEA
+
+		p.Policies = append(p.Policies, tc.policyConf)
+
+		p.applyDefaults(map[string]interface{}{
+			"policyDefaults": map[string]interface{}{
+				"informGatekeeperPolicies": false,
+			},
+		})
+
+		err = p.createPolicy(&p.Policies[0])
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		output := p.outputBuffer.String()
+
+		expected := strings.TrimPrefix(common+tc.expectedEA+"\n", "\n")
+
+		assertEqual(t, output, expected)
+	}
 }
 
 func TestCreatePolicyWithDifferentRemediationAction(t *testing.T) {

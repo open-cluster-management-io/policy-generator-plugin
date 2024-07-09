@@ -199,7 +199,10 @@ policyDefaults:
   # Optional. Labels that the policy will include under its metadata.labels. It will be applied for all
   # policies unless specified in the policy.
   policyLabels: {}
-
+  # Optional. Overrides the spec.enforcementAction field of a Gatekeeper constraint. 
+  # This only applies to Gatekeeper constraints and is ignored by other manifests. 
+  # If not set, the spec.enforcementAction field is not changed.
+  gatekeeperEnforcementAction: "deny"
 # Optional. Defaults for policy set generation. Any default value listed here can be overridden under an entry in the
 # policySets array.
 policySetDefaults:
@@ -260,6 +263,8 @@ policies:
         # Optional. (See policyDefaults.severity for description.)
         # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         severity: "low"
+        # Optional. (See policyDefaults.gatekeeperEnforcementAction for description.)
+        gatekeeperEnforcementAction: "warn"
         # (Note: a path to a directory containing a Kustomize manifest is a supported alternative.) Optional. A
         # Kustomize patch to apply to the manifest(s) at the path. If there are multiple manifests, the patch requires
         # the apiVersion, kind, metadata.name, and metadata.namespace (if applicable) fields to be set so Kustomize can
@@ -351,6 +356,8 @@ policies:
     policyAnnotations: {}
     # Optional. (See policyDefaults.policyLabels for description.)
     policyLabels: {}
+    # Optional. (See policyDefaults.gatekeeperEnforcementAction for description.)
+    gatekeeperEnforcementAction: "dryrun"
 
 # Optional. The list of policy sets to create. To include a policy in a policy set, use policies[*].policySets or
 # policyDefaults.policySets or policySets.policies.
