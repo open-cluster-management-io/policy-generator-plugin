@@ -59,6 +59,7 @@ type Manifest struct {
 	ExtraDependencies          []PolicyDependency       `json:"extraDependencies,omitempty" yaml:"extraDependencies,omitempty"`
 	IgnorePending              bool                     `json:"ignorePending,omitempty" yaml:"ignorePending,omitempty"`
 	OpenAPI                    Filepath                 `json:"openapi,omitempty" yaml:"openapi,omitempty"`
+	Name                       string                   `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 type Filepath struct {

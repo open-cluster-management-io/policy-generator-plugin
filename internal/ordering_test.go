@@ -3,6 +3,8 @@ package internal
 import (
 	"bytes"
 	"embed"
+	"os"
+	"path"
 	"testing"
 	"text/template"
 )
@@ -156,6 +158,150 @@ policies:
 `,
 			wantFile: "",
 			wantErr:  "dependencies may not be set in policy one when policyDefaults.orderPolicies is true",
+		},
+	}
+
+	for name := range tests {
+		t.Run(name, tests[name].run)
+	}
+}
+
+func TestSetNameManifestLevel(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestsPath := path.Join(tmpDir, "configmap.yaml")
+	yamlContent := `
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-configmap
+data:
+  game.properties: enemies=potato
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-2
+data:
+  game.properties: enemies=cabbage
+`
+	rawPath := path.Join(tmpDir, "object-templates-raw.yaml")
+	rawYamlContent := `
+object-templates-raw: |-
+  - complianceType: musthave
+    objectDefinition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: example
+        namespace: default
+      data:
+        extraData: data
+---
+object-templates-raw: |-
+  - complianceType: musthave
+    objectDefinition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: example
+        namespace: default
+      data:
+        extraData: data
+`
+
+	err := os.WriteFile(manifestsPath, []byte(yamlContent), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestsPath)
+	}
+
+	err = os.WriteFile(rawPath, []byte(rawYamlContent), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestsPath)
+	}
+
+	tests := map[string]genOutTest{
+		"complicated policies": {
+			tmpDir: tmpDir,
+			generator: `
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: test
+policyDefaults:
+  orderPolicies: true
+  namespace: my-policies
+  consolidateManifests: false
+policies:
+- name: one
+  manifests:
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+    name: lion
+    extraDependencies:
+    - name: elephant
+      kind: ConfigurationPolicy
+      compliance: "Compliant"
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+    name: tiger
+    extraDependencies:
+    - name: lion
+      kind: ConfigurationPolicy
+      compliance: "Compliant"
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+    remediationAction: inform
+    name: bird
+    extraDependencies:
+      - name: tiger2
+        kind: ConfigurationPolicy
+        compliance: "Compliant"
+      - name: lion2
+        kind: ConfigurationPolicy
+        compliance: "Compliant"
+`,
+			wantFile: "testdata/ordering/manifest-level-name.yaml",
+			wantErr:  "",
+		},
+		"complicated raw policies with consolidateManifests false": {
+			tmpDir: tmpDir,
+			generator: `
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: test
+policyDefaults:
+  orderPolicies: true
+  namespace: my-policies
+  consolidateManifests: false
+policies:
+- name: one
+  manifests:
+  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
+  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
+    name: tiger
+`,
+			wantFile: "testdata/ordering/manifest-level-name-raw-consolidate-false.yaml",
+			wantErr:  "",
+		},
+		"complicated raw policies with consolidateManifests true": {
+			tmpDir: tmpDir,
+			generator: `
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: test
+policyDefaults:
+  orderPolicies: true
+  namespace: my-policies
+  consolidateManifests: false
+policies:
+- name: one
+  manifests:
+  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
+  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
+`,
+			wantFile: "testdata/ordering/manifest-level-name-raw-consolidate-true.yaml",
+			wantErr:  "",
 		},
 	}
 
