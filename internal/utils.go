@@ -177,7 +177,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 		ignorePending := policyConf.Manifests[i].IgnorePending
 		extraDeps := policyConf.Manifests[i].ExtraDependencies
 
-		for _, manifest := range manifestGroup {
+		for j, manifest := range manifestGroup {
 			err := setGatekeeperEnforcementAction(manifest,
 				policyConf.Manifests[i].GatekeeperEnforcementAction)
 			if err != nil {
@@ -202,9 +202,10 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 				if found {
 					policyTemplate = buildPolicyTemplate(
 						policyConf,
-						len(policyTemplates)+1,
 						manifest["object-templates-raw"],
 						&policyConf.Manifests[i].ConfigurationPolicyOptions,
+						getConfigurationPolicyName(policyConf, i, len(policyTemplates),
+							j, !policyConf.ConsolidateManifests),
 					)
 				} else {
 					policyTemplate = map[string]interface{}{"objectDefinition": manifest}
@@ -259,9 +260,10 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 				// build policyTemplate for each objectTemplates
 				policyTemplate := buildPolicyTemplate(
 					policyConf,
-					len(policyTemplates)+1,
 					[]map[string]interface{}{objTemplate},
 					&policyConf.Manifests[i].ConfigurationPolicyOptions,
+					getConfigurationPolicyName(policyConf, i, len(policyTemplates),
+						j, !policyConf.ConsolidateManifests),
 				)
 
 				setTemplateOptions(policyTemplate, ignorePending, extraDeps)
@@ -282,9 +284,9 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 	if policyConf.ConsolidateManifests && len(objectTemplates) > 0 {
 		policyTemplate := buildPolicyTemplate(
 			policyConf,
-			1,
 			objectTemplates,
 			&policyConf.ConfigurationPolicyOptions,
+			getConfigurationPolicyName(policyConf, 0, 0, 0, false),
 		)
 		setTemplateOptions(policyTemplate, policyConf.IgnorePending, policyConf.ExtraDependencies)
 		policyTemplates = append(policyTemplates, policyTemplate)
@@ -318,6 +320,32 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 	}
 
 	return policyTemplates, nil
+}
+
+// This function returns configurationPolicyName with Index+1 based on the provided PolicyConfig.
+// When index is 0, it won't attach any number. When useManifestName is true,
+// it returns the policyConf.Manifests[manifestGroupIndex].Name otherwise,
+// It returns policyConf.Name + index
+func getConfigurationPolicyName(policyConf *types.PolicyConfig, manifestGroupIndex, policyNum,
+	manifestIndex int, useManifestName bool,
+) string {
+	// Do not append a number to configName when it is used for the first time.
+	configName := policyConf.Manifests[manifestGroupIndex].Name
+
+	if useManifestName && configName != "" {
+		if manifestIndex > 0 {
+			return fmt.Sprintf("%s%d", configName, manifestIndex+1)
+		}
+
+		return configName
+	}
+
+	configName = policyConf.Name
+	if policyNum > 0 {
+		return fmt.Sprintf("%s%d", configName, policyNum+1)
+	}
+
+	return configName
 }
 
 // setGatekeeperEnforcementAction function override gatekeeper.constraint.enforcementAction
@@ -454,17 +482,10 @@ func processKustomizeDir(path string) ([]map[string]interface{}, error) {
 // one then the configuration policy name will have policyNum appended to it.
 func buildPolicyTemplate(
 	policyConf *types.PolicyConfig,
-	policyNum int,
 	objectTemplates interface{},
 	configPolicyOptionsOverrides *types.ConfigurationPolicyOptions,
+	configPolicyName string,
 ) map[string]interface{} {
-	var name string
-	if policyNum > 1 {
-		name = fmt.Sprintf("%s%d", policyConf.Name, policyNum)
-	} else {
-		name = policyConf.Name
-	}
-
 	policySpec := map[string]interface{}{
 		"remediationAction": policyConf.RemediationAction,
 		"severity":          policyConf.Severity,
@@ -482,7 +503,7 @@ func buildPolicyTemplate(
 			"apiVersion": policyAPIVersion,
 			"kind":       configPolicyKind,
 			"metadata": map[string]interface{}{
-				"name": name,
+				"name": configPolicyName,
 			},
 			"spec": policySpec,
 		},

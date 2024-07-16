@@ -234,6 +234,9 @@ policies:
       #   3) For everything else, ConfigurationPolicy objects are generated to wrap these manifests. The resulting
       #      ConfigurationPolicy is added as a Policy's policy-templates entry.
       - path: ""
+        # Optional. This name is used when ConsolidateManifests is set to false and will serve as the ConfigurationPolicy name.
+        # If multiple manifests are present in the path, an index number will be appended.
+        name: "my-config-name"
         # Optional. (See policyDefaults.complianceType for description.)
         complianceType: "musthave"
         # Optional. (See policyDefaults.metadataComplianceType for description.)
