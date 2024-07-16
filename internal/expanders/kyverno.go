@@ -14,7 +14,7 @@ type KyvernoPolicyExpander struct{}
 const (
 	kyvernoAPIVersion             = "kyverno.io/v1"
 	kyvernoClusterKind            = "ClusterPolicy"
-	kyvernoPolicyReportAPIVersion = "wgpolicyk8s.io/v1beta1"
+	kyvernoPolicyReportAPIVersion = "wgpolicyk8s.io/v1alpha2"
 	kyvernoNamespacedKind         = "Policy"
 )
 
