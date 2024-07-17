@@ -922,6 +922,8 @@ func TestGetPolicyTemplateFromPolicyTypeManifest(t *testing.T) {
 		// kind will not be overridden by "ConfigurationPolicy".
 		assertEqual(t, CertObjdef["kind"], "CertificatePolicy")
 		assertEqual(t, CertObjdef["metadata"].(map[string]interface{})["name"], "certpolicy-minduration")
+		// The namespace is removed
+		assertEqual(t, CertObjdef["metadata"].(map[string]interface{})["namespace"], nil)
 
 		CertSpec, ok := CertObjdef["spec"].(map[string]interface{})
 		if !ok {

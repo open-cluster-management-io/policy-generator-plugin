@@ -212,6 +212,9 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 
 				// Only set dependency options if it's an OCM policy
 				if isOcmPolicy {
+					// Remove any namespace specified in the OCM policy since that would be invalid
+					unstructured.RemoveNestedField(manifest, "metadata", "namespace")
+
 					setTemplateOptions(policyTemplate, ignorePending, extraDeps)
 				} else {
 					policyTemplateUnstructured := unstructured.Unstructured{Object: manifest}
