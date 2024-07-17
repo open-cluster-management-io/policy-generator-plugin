@@ -59,22 +59,22 @@ spec:
 	}
 }
 
-func createIamPolicyManifest(t *testing.T, tmpDir, filename string) {
+func createCertPolicyManifest(t *testing.T, tmpDir, filename string) {
 	t.Helper()
 
 	manifestsPath := path.Join(tmpDir, filename)
 	yamlContent := `
 apiVersion: policy.open-cluster-management.io/v1
-kind: IamPolicy
+kind: CertificatePolicy
 metadata:
-  name: policy-limitclusteradmin-example
+  name: certpolicy-minduration
 spec:
   severity: medium
   namespaceSelector:
     include: ["*"]
     exclude: ["kube-*", "openshift-*"]
   remediationAction: enforce
-  maxClusterRoleBindingUsers: 5
+  minimumDuration: 720h
 `
 
 	err := os.WriteFile(manifestsPath, []byte(yamlContent), 0o666)

@@ -71,9 +71,9 @@ policies:
   standards:
     - NIST SP 800-53 
   manifests:
-    - path: input-policy-type/iam.yaml
+    - path: input-policy-type/certpolicy.yaml
   policySets:
-    - policyset-iam
+    - policyset-certpolicy
 policySets:
 - name: policyset-kyverno
   description: this is a kyverno policy set.
@@ -85,5 +85,5 @@ policySets:
   description: this is a gatekeeper policy set.
   placement:
     placementPath: input/placement.yaml
-- name: policyset-iam
-  description: this is a iam policy set.
+- name: policyset-certpolicy
+  description: this is a cert policy set.

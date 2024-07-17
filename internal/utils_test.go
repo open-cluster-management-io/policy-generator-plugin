@@ -530,7 +530,14 @@ helmCharts:
 		t.Fatal("Expected this to fail without POLICY_GEN_DISABLE_LOAD_RESTRICTORS=true")
 	}
 
-	if !strings.Contains(err.Error(), fmt.Sprintf("is not in or below '%s'", kustomizeDir)) {
+	if !strings.Contains(
+		err.Error(),
+		fmt.Sprintf("is not in or below '%s'", kustomizeDir),
+	) &&
+		!strings.Contains(
+			err.Error(), // Handle MacOS, which appends the /private root directory to /var
+			fmt.Sprintf("is not in or below '%s'", path.Join("/", "private", kustomizeDir)),
+		) {
 		t.Fatalf("Expected this to fail due a load restrictor: %v", err)
 	}
 
@@ -874,12 +881,12 @@ func TestGetPolicyTemplateFromPolicyTypeManifest(t *testing.T) {
 	tmpDir := t.TempDir()
 	manifestFiles := []types.Manifest{}
 
-	createIamPolicyManifest(t, tmpDir, "iamKindManifest.yaml")
-	// Test manifest is non-root IAM policy type.
-	IamManifestPath := path.Join(tmpDir, "iamKindManifest.yaml")
+	createCertPolicyManifest(t, tmpDir, "certKindManifest.yaml")
+	// Test manifest is non-root Cert policy type.
+	CertManifestPath := path.Join(tmpDir, "certKindManifest.yaml")
 
 	manifestFiles = append(
-		manifestFiles, types.Manifest{Path: IamManifestPath},
+		manifestFiles, types.Manifest{Path: CertManifestPath},
 	)
 
 	// Test both passing in individual files and a flat directory.
@@ -895,7 +902,7 @@ func TestGetPolicyTemplateFromPolicyTypeManifest(t *testing.T) {
 	for _, test := range tests {
 		policyConf := types.PolicyConfig{
 			Manifests: test.Manifests,
-			Name:      "policy-limitclusteradmin",
+			Name:      "certpolicy-minduration",
 			ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
 				RemediationAction: "inform",
 				Severity:          "low",
@@ -909,25 +916,25 @@ func TestGetPolicyTemplateFromPolicyTypeManifest(t *testing.T) {
 
 		assertEqual(t, len(policyTemplates), 1)
 
-		IamPolicyTemplate := policyTemplates[0]
-		IamObjdef := IamPolicyTemplate["objectDefinition"].(map[string]interface{})
-		assertEqual(t, IamObjdef["apiVersion"], "policy.open-cluster-management.io/v1")
+		CertificatePolicyTemplate := policyTemplates[0]
+		CertObjdef := CertificatePolicyTemplate["objectDefinition"].(map[string]interface{})
+		assertEqual(t, CertObjdef["apiVersion"], "policy.open-cluster-management.io/v1")
 		// kind will not be overridden by "ConfigurationPolicy".
-		assertEqual(t, IamObjdef["kind"], "IamPolicy")
-		assertEqual(t, IamObjdef["metadata"].(map[string]interface{})["name"], "policy-limitclusteradmin-example")
+		assertEqual(t, CertObjdef["kind"], "CertificatePolicy")
+		assertEqual(t, CertObjdef["metadata"].(map[string]interface{})["name"], "certpolicy-minduration")
 
-		IamSpec, ok := IamObjdef["spec"].(map[string]interface{})
+		CertSpec, ok := CertObjdef["spec"].(map[string]interface{})
 		if !ok {
 			t.Fatal("The spec field is an invalid format")
 		}
 
 		// remediationAction will not be overridden by policyConf.
-		assertEqual(t, IamSpec["remediationAction"], "enforce")
+		assertEqual(t, CertSpec["remediationAction"], "enforce")
 		// severity will not be overridden by policyConf.
-		assertEqual(t, IamSpec["severity"], "medium")
-		assertEqual(t, IamSpec["maxClusterRoleBindingUsers"], 5)
+		assertEqual(t, CertSpec["severity"], "medium")
+		assertEqual(t, CertSpec["minimumDuration"], "720h")
 
-		namespaceSelector, ok := IamSpec["namespaceSelector"].(map[string]interface{})
+		namespaceSelector, ok := CertSpec["namespaceSelector"].(map[string]interface{})
 		if !ok {
 			t.Fatal("The namespaceSelector field is an invalid format")
 		}

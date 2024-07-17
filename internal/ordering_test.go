@@ -683,7 +683,7 @@ policies:
   manifests:
   - path: {{printf "%v/%v" .Dir "configpolicy.yaml"}}
     extraDependencies:
-    - kind: IamPolicy
+    - kind: CertificatePolicy
       name: manifestextra
   - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
 - name: two
@@ -706,7 +706,7 @@ policyDefaults:
     clusterSelector:
       matchExpressions: []
   extraDependencies:
-  - kind: IamPolicy
+  - kind: CertificatePolicy
     name: manifestextra
 policies:
 - name: one
