@@ -15,7 +15,7 @@ spec:
     - extraDependencies:
       - apiVersion: policy.open-cluster-management.io/v1
         compliance: Compliant
-        kind: IamPolicy
+        kind: CertificatePolicy
         name: manifestextra
       objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
@@ -37,7 +37,7 @@ spec:
     - extraDependencies:
       - apiVersion: policy.open-cluster-management.io/v1
         compliance: Compliant
-        kind: IamPolicy
+        kind: CertificatePolicy
         name: manifestextra
       objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
@@ -74,7 +74,7 @@ spec:
     - extraDependencies:
       - apiVersion: policy.open-cluster-management.io/v1
         compliance: Compliant
-        kind: IamPolicy
+        kind: CertificatePolicy
         name: manifestextra
       objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1
