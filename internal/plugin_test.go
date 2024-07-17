@@ -1496,22 +1496,22 @@ spec:
 	assertEqual(t, output, expected)
 }
 
-func TestCreatePolicyFromIamPolicyTypeManifest(t *testing.T) {
+func TestCreatePolicyFromCertificatePolicyTypeManifest(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
-	createIamPolicyManifest(t, tmpDir, "iamKindManifestPluginTest.yaml")
+	createCertPolicyManifest(t, tmpDir, "certKindManifestPluginTest.yaml")
 
 	p := Plugin{}
-	p.PolicyDefaults.Namespace = "Iam-policies"
+	p.PolicyDefaults.Namespace = "cert-policies"
 	policyConf := types.PolicyConfig{
 		PolicyOptions: types.PolicyOptions{
 			Categories: []string{"AC Access Control"},
 			Controls:   []string{"AC-3 Access Enforcement"},
 			Standards:  []string{"NIST SP 800-53"},
 		},
-		Name: "policy-limitclusteradmin",
+		Name: "certpolicy-minduration",
 		Manifests: []types.Manifest{
-			{Path: path.Join(tmpDir, "iamKindManifestPluginTest.yaml")},
+			{Path: path.Join(tmpDir, "certKindManifestPluginTest.yaml")},
 		},
 	}
 	p.Policies = append(p.Policies, policyConf)
@@ -1523,9 +1523,9 @@ func TestCreatePolicyFromIamPolicyTypeManifest(t *testing.T) {
 	}
 
 	output := p.outputBuffer.String()
-	// expected Iam policy generated from
-	// non-root IAM policy type manifest
-	// in createIamPolicyTypeConfigMap()
+	// expected Cert policy generated from
+	// non-root Cert policy type manifest
+	// in createCertPolicyTypeConfigMap()
 	expected := `
 ---
 apiVersion: policy.open-cluster-management.io/v1
@@ -1536,18 +1536,18 @@ metadata:
         policy.open-cluster-management.io/controls: AC-3 Access Enforcement
         policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
-    name: policy-limitclusteradmin
-    namespace: Iam-policies
+    name: certpolicy-minduration
+    namespace: cert-policies
 spec:
     disabled: false
     policy-templates:
         - objectDefinition:
             apiVersion: policy.open-cluster-management.io/v1
-            kind: IamPolicy
+            kind: CertificatePolicy
             metadata:
-                name: policy-limitclusteradmin-example
+                name: certpolicy-minduration
             spec:
-                maxClusterRoleBindingUsers: 5
+                minimumDuration: 720h
                 namespaceSelector:
                     exclude:
                         - kube-*
@@ -1906,11 +1906,11 @@ spec:
 func TestCreatePolicyWithDifferentRemediationAction(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
-	createIamPolicyManifest(t, tmpDir, "iamKindManifestPluginTest.yaml")
-	createIamPolicyManifest(t, tmpDir, "iamKindManifestPluginTest2.yaml")
+	createCertPolicyManifest(t, tmpDir, "certKindManifestPluginTest.yaml")
+	createCertPolicyManifest(t, tmpDir, "certKindManifestPluginTest2.yaml")
 
 	p := Plugin{}
-	p.PolicyDefaults.Namespace = "Iam-policies"
+	p.PolicyDefaults.Namespace = "cert-policies"
 
 	patches := []map[string]interface{}{
 		{
@@ -1925,11 +1925,11 @@ func TestCreatePolicyWithDifferentRemediationAction(t *testing.T) {
 			Controls:   []string{"AC-3 Access Enforcement"},
 			Standards:  []string{"NIST SP 800-53"},
 		},
-		Name: "policy-limitclusteradmin",
+		Name: "certpolicy-minduration",
 		Manifests: []types.Manifest{
-			{Path: path.Join(tmpDir, "iamKindManifestPluginTest.yaml")},
+			{Path: path.Join(tmpDir, "certKindManifestPluginTest.yaml")},
 			{
-				Path:    path.Join(tmpDir, "iamKindManifestPluginTest2.yaml"),
+				Path:    path.Join(tmpDir, "certKindManifestPluginTest2.yaml"),
 				Patches: patches,
 			},
 		},
@@ -1943,9 +1943,9 @@ func TestCreatePolicyWithDifferentRemediationAction(t *testing.T) {
 	}
 
 	output := p.outputBuffer.String()
-	// expected Iam policy generated from
-	// non-root IAM policy type manifest
-	// in createIamPolicyTypeConfigMap()
+	// expected Cert policy generated from
+	// non-root Cert policy type manifest
+	// in createCertificatePolicyTypeConfigMap()
 	expected := `
 ---
 apiVersion: policy.open-cluster-management.io/v1
@@ -1956,18 +1956,18 @@ metadata:
         policy.open-cluster-management.io/controls: AC-3 Access Enforcement
         policy.open-cluster-management.io/description: ""
         policy.open-cluster-management.io/standards: NIST SP 800-53
-    name: policy-limitclusteradmin
-    namespace: Iam-policies
+    name: certpolicy-minduration
+    namespace: cert-policies
 spec:
     disabled: false
     policy-templates:
         - objectDefinition:
             apiVersion: policy.open-cluster-management.io/v1
-            kind: IamPolicy
+            kind: CertificatePolicy
             metadata:
-                name: policy-limitclusteradmin-example
+                name: certpolicy-minduration
             spec:
-                maxClusterRoleBindingUsers: 5
+                minimumDuration: 720h
                 namespaceSelector:
                     exclude:
                         - kube-*
@@ -1978,11 +1978,11 @@ spec:
                 severity: medium
         - objectDefinition:
             apiVersion: policy.open-cluster-management.io/v1
-            kind: IamPolicy
+            kind: CertificatePolicy
             metadata:
-                name: policy-limitclusteradmin-example
+                name: certpolicy-minduration
             spec:
-                maxClusterRoleBindingUsers: 5
+                minimumDuration: 720h
                 namespaceSelector:
                     exclude:
                         - kube-*
@@ -2107,10 +2107,10 @@ func TestCreatePolicyInvalidAPIOrKind(t *testing.T) {
 	yamlContent := `
 apiVersion: policy.open-cluster-management.io/v1
 kind:
-  - IamPolicy
+  - ConfigurationPolicy
   - CertificatePolicy
 metadata:
-  name: policy-limitclusteradmin-example
+  name: certpolicy-minduration-example
 `
 
 	err := os.WriteFile(manifestPath, []byte(yamlContent), 0o666)
@@ -2121,7 +2121,7 @@ metadata:
 	p := Plugin{}
 	p.PolicyDefaults.Namespace = "my-policies"
 	policyConf := types.PolicyConfig{
-		Name:      "policy-limitclusteradmin",
+		Name:      "certpolicy-minduration",
 		Manifests: []types.Manifest{{Path: manifestPath}},
 	}
 	p.Policies = append(p.Policies, policyConf)

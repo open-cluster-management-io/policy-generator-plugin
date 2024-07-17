@@ -225,7 +225,7 @@ policies:
       # directory of the kustomization.yaml file are allowed. Kustomization subdirectories are also supported and will
       # not process any YAML files in the subdirectory if a kustomization.yaml file is found.
       # Supported manifests:
-      #   1) Non-root policy type manifests such as IamPolicy, CertificatePolicy, and ConfigurationPolicy that have a
+      #   1) Non-root policy type manifests such as CertificatePolicy and ConfigurationPolicy that have a
       #      "Policy" suffix. These are not modified except for patches and are directly added as a Policy's
       #      policy-templates entry.
       #   2) Manifests containing only an `object-templates-raw` key. The corresponding value will be used directly in

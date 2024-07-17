@@ -1,11 +1,11 @@
 apiVersion: policy.open-cluster-management.io/v1
-kind: IamPolicy
+kind: CertificatePolicy
 metadata:
-  name: policy-limitclusteradmin-example
+  name: certpolicy-minduration-example
 spec:
-  severity: medium
+  severity: high
   namespaceSelector:
     include: ["*"]
     exclude: ["kube-*", "openshift-*"]
   remediationAction: inform
-  maxClusterRoleBindingUsers: 5
+  minimumDuration: 720h
