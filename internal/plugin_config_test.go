@@ -68,6 +68,7 @@ apiVersion: policy.open-cluster-management.io/v1
 kind: CertificatePolicy
 metadata:
   name: certpolicy-minduration
+  namespace: test
 spec:
   severity: medium
   namespaceSelector:
