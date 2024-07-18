@@ -63,7 +63,7 @@ policies:
     - path: input-gatekeeper/
   policySets:
     - policyset-gatekeeper
-- name: policy-limitclusteradmin
+- name: policy-min-cert-duration
   categories:
     - AC Access Control
   controls:
