@@ -293,10 +293,16 @@ metadata:
 policyDefaults:
   orderPolicies: true
   namespace: my-policies
-  consolidateManifests: false
+  consolidateManifests: true
 policies:
 - name: one
   manifests:
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+    name: tiger
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+    name: rabbit
+  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
+    name: bird
   - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
   - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
 `,
