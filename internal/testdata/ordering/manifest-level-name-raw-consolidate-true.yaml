@@ -16,6 +16,42 @@ spec:
             apiVersion: policy.open-cluster-management.io/v1
             kind: ConfigurationPolicy
             metadata:
+                name: bird
+            spec:
+                object-templates-raw: |-
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        kind: ConfigMap
+                        metadata:
+                          name: example
+                          namespace: default
+                        data:
+                          extraData: data
+                remediationAction: inform
+                severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: bird2
+            spec:
+                object-templates-raw: |-
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        kind: ConfigMap
+                        metadata:
+                          name: example
+                          namespace: default
+                        data:
+                          extraData: data
+                remediationAction: inform
+                severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
                 name: one
             spec:
                 object-templates-raw: |-
@@ -82,6 +118,47 @@ spec:
                           namespace: default
                         data:
                           extraData: data
+                remediationAction: inform
+                severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: tiger
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=cabbage
+                        kind: ConfigMap
+                        metadata:
+                            name: config-2
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=cabbage
+                        kind: ConfigMap
+                        metadata:
+                            name: config-2
                 remediationAction: inform
                 severity: low
     remediationAction: inform

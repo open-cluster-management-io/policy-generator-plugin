@@ -38,7 +38,7 @@ spec:
         apiVersion: policy.open-cluster-management.io/v1
         kind: ConfigurationPolicy
         metadata:
-          name: one2
+          name: one
         spec:
           object-templates:
             - complianceType: musthave
