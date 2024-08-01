@@ -169,6 +169,8 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 	objectTemplates := make([]map[string]interface{}, 0, objectTemplatesLength)
 	policyTemplates := make([]map[string]interface{}, 0, policyTemplatesLength)
 
+	policyNameCounter := 0
+
 	for i, manifestGroup := range manifestGroups {
 		complianceType := policyConf.Manifests[i].ComplianceType
 		metadataComplianceType := policyConf.Manifests[i].MetadataComplianceType
@@ -177,7 +179,9 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 		ignorePending := policyConf.Manifests[i].IgnorePending
 		extraDeps := policyConf.Manifests[i].ExtraDependencies
 
-		for j, manifest := range manifestGroup {
+		manifestNameCounter := 0
+
+		for _, manifest := range manifestGroup {
 			err := setGatekeeperEnforcementAction(manifest,
 				policyConf.Manifests[i].GatekeeperEnforcementAction)
 			if err != nil {
@@ -204,8 +208,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 						policyConf,
 						manifest["object-templates-raw"],
 						&policyConf.Manifests[i].ConfigurationPolicyOptions,
-						getConfigurationPolicyName(policyConf, i, len(policyTemplates),
-							j, !policyConf.ConsolidateManifests),
+						getConfigurationPolicyName(policyConf, i, &policyNameCounter, &manifestNameCounter),
 					)
 				} else {
 					policyTemplate = map[string]interface{}{"objectDefinition": manifest}
@@ -262,8 +265,8 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 					policyConf,
 					[]map[string]interface{}{objTemplate},
 					&policyConf.Manifests[i].ConfigurationPolicyOptions,
-					getConfigurationPolicyName(policyConf, i, len(policyTemplates),
-						j, !policyConf.ConsolidateManifests),
+					getConfigurationPolicyName(policyConf, i,
+						&policyNameCounter, &manifestNameCounter),
 				)
 
 				setTemplateOptions(policyTemplate, ignorePending, extraDeps)
@@ -282,11 +285,13 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 	// just build one policyTemplate by using the above non-empty consolidated objectTemplates
 	// ConsolidateManifests = true or there is non-policy-type manifest
 	if policyConf.ConsolidateManifests && len(objectTemplates) > 0 {
+		// If ConsolidateManifests is true and multiple manifest[].names are provided, the configuration policy
+		// name will be the first name of manifest[].names
 		policyTemplate := buildPolicyTemplate(
 			policyConf,
 			objectTemplates,
 			&policyConf.ConfigurationPolicyOptions,
-			getConfigurationPolicyName(policyConf, 0, 0, 0, false),
+			getConfigurationPolicyName(policyConf, 0, &policyNameCounter, nil),
 		)
 		setTemplateOptions(policyTemplate, policyConf.IgnorePending, policyConf.ExtraDependencies)
 		policyTemplates = append(policyTemplates, policyTemplate)
@@ -322,27 +327,35 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 	return policyTemplates, nil
 }
 
-// This function returns configurationPolicyName with Index+1 based on the provided PolicyConfig.
-// When index is 0, it won't attach any number. When useManifestName is true,
-// it returns the policyConf.Manifests[manifestGroupIndex].Name otherwise,
-// It returns policyConf.Name + index
-func getConfigurationPolicyName(policyConf *types.PolicyConfig, manifestGroupIndex, policyNum,
-	manifestIndex int, useManifestName bool,
+// getConfigurationPolicyName returns the `ConfigurationPolicy` name based on the provided PolicyConfig.
+// When a name is assigned, it increments the associated counter, using it as a suffix if it's greater
+// than one to create unique names. If both `manifest[].name` and `policies.name` are provided,
+// `manifest[].name` takes priority as the configuration name.
+func getConfigurationPolicyName(policyConf *types.PolicyConfig, manifestGroupIndex int,
+	policyNameCounter *int, manifestNameCounter *int,
 ) string {
 	// Do not append a number to configName when it is used for the first time.
 	configName := policyConf.Manifests[manifestGroupIndex].Name
 
-	if useManifestName && configName != "" {
-		if manifestIndex > 0 {
-			return fmt.Sprintf("%s%d", configName, manifestIndex+1)
+	// For the case where ConsolidateManifests is true and the manifest's name is provided,
+	if manifestNameCounter == nil && configName != "" {
+		return configName
+	}
+
+	if manifestNameCounter != nil && configName != "" {
+		*manifestNameCounter++
+		if *manifestNameCounter > 1 {
+			return fmt.Sprintf("%s%d", configName, *manifestNameCounter)
 		}
 
 		return configName
 	}
 
 	configName = policyConf.Name
-	if policyNum > 0 {
-		return fmt.Sprintf("%s%d", configName, policyNum+1)
+
+	*policyNameCounter++
+	if *policyNameCounter > 1 {
+		return fmt.Sprintf("%s%d", configName, *policyNameCounter)
 	}
 
 	return configName

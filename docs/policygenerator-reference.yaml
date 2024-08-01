@@ -236,6 +236,8 @@ policies:
       - path: ""
         # Optional. This name is used when ConsolidateManifests is set to false and will serve as the ConfigurationPolicy name.
         # If multiple manifests are present in the path, an index number will be appended.
+        # If multiple manifests are present and their names are provided, with `consolidateManifests` set to true,
+        # the name of the first manifest will be used for all manifest paths.
         name: "my-config-name"
         # Optional. (See policyDefaults.complianceType for description.)
         complianceType: "musthave"
