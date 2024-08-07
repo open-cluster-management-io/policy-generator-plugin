@@ -252,12 +252,12 @@ policies:
     remediationAction: inform
     name: bird
     extraDependencies:
-      - name: tiger2
-        kind: ConfigurationPolicy
-        compliance: "Compliant"
-      - name: lion2
-        kind: ConfigurationPolicy
-        compliance: "Compliant"
+    - name: tiger2
+      kind: ConfigurationPolicy
+      compliance: "Compliant"
+    - name: lion2
+      kind: ConfigurationPolicy
+      compliance: "Compliant"
 `,
 			wantFile: "testdata/ordering/manifest-level-name.yaml",
 			wantErr:  "",
@@ -283,7 +283,7 @@ policies:
 			wantFile: "testdata/ordering/manifest-level-name-raw-consolidate-false.yaml",
 			wantErr:  "",
 		},
-		"complicated raw policies with consolidateManifests true": {
+		"consolidateManifests true and objTemplate with raw": {
 			tmpDir: tmpDir,
 			generator: `
 apiVersion: policy.open-cluster-management.io/v1
@@ -297,16 +297,58 @@ policyDefaults:
 policies:
 - name: one
   manifests:
-  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
-    name: tiger
-  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
-    name: rabbit
   - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
     name: bird
-  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
-  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+    name: tiger
 `,
 			wantFile: "testdata/ordering/manifest-level-name-raw-consolidate-true.yaml",
+			wantErr:  "",
+		},
+		"consolidateManifests true and objTemplate with empty name": {
+			tmpDir: tmpDir,
+			generator: `
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: test
+policyDefaults:
+  orderPolicies: true
+  namespace: my-policies
+  consolidateManifests: true
+policies:
+- name: one
+  manifests:
+  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
+  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
+    name: bird
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+`,
+			wantFile: "testdata/ordering/manifest-level-name-raw-consolidate-true-empty-name.yaml",
+			wantErr:  "",
+		},
+		"consolidateManifests true and objTemplate with name": {
+			tmpDir: tmpDir,
+			generator: `
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: test
+policyDefaults:
+  orderPolicies: true
+  namespace: my-policies
+  consolidateManifests: true
+policies:
+- name: one
+  manifests:
+  - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
+    name: bird
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+  - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+    name: tiger
+`,
+			wantFile: "testdata/ordering/manifest-level-name-raw-consolidate-true-with-name.yaml",
 			wantErr:  "",
 		},
 	}
