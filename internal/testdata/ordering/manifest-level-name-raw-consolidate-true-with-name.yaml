@@ -71,6 +71,22 @@ spec:
                         kind: ConfigMap
                         metadata:
                             name: config-2
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=cabbage
+                        kind: ConfigMap
+                        metadata:
+                            name: config-2
                 remediationAction: inform
                 severity: low
     remediationAction: inform
