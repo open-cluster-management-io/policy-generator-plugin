@@ -45,6 +45,7 @@ type ConfigurationPolicyOptions struct {
 	PruneObjectBehavior    string             `json:"pruneObjectBehavior,omitempty" yaml:"pruneObjectBehavior,omitempty"`
 	RecordDiff             string             `json:"recordDiff,omitempty" yaml:"recordDiff,omitempty"`
 	RecreateOption         string             `json:"recreateOption,omitempty" yaml:"recreateOption,omitempty"`
+	CustomMessage          CustomMessage      `json:"customMessage,omitempty" yaml:"customMessage,omitempty"`
 }
 
 type GatekeeperOptions struct {
@@ -103,6 +104,11 @@ type PlacementConfig struct {
 }
 
 type EvaluationInterval struct {
+	Compliant    string `json:"compliant,omitempty" yaml:"compliant,omitempty"`
+	NonCompliant string `json:"noncompliant,omitempty" yaml:"noncompliant,omitempty"`
+}
+
+type CustomMessage struct {
 	Compliant    string `json:"compliant,omitempty" yaml:"compliant,omitempty"`
 	NonCompliant string `json:"noncompliant,omitempty" yaml:"noncompliant,omitempty"`
 }

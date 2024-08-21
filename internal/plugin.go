@@ -342,6 +342,24 @@ func isEvaluationIntervalSet(config map[string]interface{}, policyIndex int, com
 	return set
 }
 
+// isCustomMessageSet will return whether the customMessage field of the specified policy is set in the
+// Policy Generator configuration YAML
+func isCustomMessageSet(config map[string]interface{}, policyIndex int, complianceType string) bool {
+	policy := getPolicy(config, policyIndex)
+	if policy == nil {
+		return false
+	}
+
+	customMessage, ok := policy["customMessage"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	_, set := customMessage[complianceType].(string)
+
+	return set
+}
+
 // isEvaluationIntervalSetManifest will return whether the evaluation interval of the specified manifest
 // of the specified policy is set in the Policy Generator configuration YAML.
 func isEvaluationIntervalSetManifest(
@@ -372,6 +390,40 @@ func isEvaluationIntervalSetManifest(
 	}
 
 	_, set := evaluationInterval[complianceType].(string)
+
+	return set
+}
+
+// isCustomMessageSetManifest will return whether the custom message of the specified manifest
+// of the specified policy iset in the Policy Generator configuration YAML
+func isCustomMessageSetManifest(
+	config map[string]interface{}, policyIndex int, manifestIndex int, complianceType string,
+) bool {
+	policy := getPolicy(config, policyIndex)
+	if policy == nil {
+		return false
+	}
+
+	manifests, ok := policy["manifests"].([]interface{})
+	if !ok {
+		return false
+	}
+
+	if len(manifests)-1 < manifestIndex {
+		return false
+	}
+
+	manifest, ok := manifests[manifestIndex].(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	customMessage, ok := manifest["customMessage"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	_, set := customMessage[complianceType].(string)
 
 	return set
 }
@@ -598,6 +650,21 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			}
 		}
 
+		// Only use the policyDefault customMessage value when it's not explicitly set on the policy.
+		if policy.CustomMessage.Compliant == "" {
+			set := isCustomMessageSet(unmarshaledConfig, i, "compliant")
+			if !set {
+				policy.CustomMessage.Compliant = p.PolicyDefaults.CustomMessage.Compliant
+			}
+		}
+
+		if policy.CustomMessage.NonCompliant == "" {
+			set := isCustomMessageSet(unmarshaledConfig, i, "noncompliant")
+			if !set {
+				policy.CustomMessage.NonCompliant = p.PolicyDefaults.CustomMessage.NonCompliant
+			}
+		}
+
 		if policy.PruneObjectBehavior == "" {
 			policy.PruneObjectBehavior = p.PolicyDefaults.PruneObjectBehavior
 		}
@@ -720,6 +787,20 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 				set := isEvaluationIntervalSetManifest(unmarshaledConfig, i, j, "noncompliant")
 				if !set {
 					manifest.EvaluationInterval.NonCompliant = policy.EvaluationInterval.NonCompliant
+				}
+			}
+
+			if manifest.CustomMessage.Compliant == "" {
+				set := isCustomMessageSetManifest(unmarshaledConfig, i, j, "compliant")
+				if !set {
+					manifest.CustomMessage.Compliant = policy.CustomMessage.Compliant
+				}
+			}
+
+			if manifest.CustomMessage.NonCompliant == "" {
+				set := isCustomMessageSetManifest(unmarshaledConfig, i, j, "noncompliant")
+				if !set {
+					manifest.CustomMessage.NonCompliant = policy.CustomMessage.NonCompliant
 				}
 			}
 
@@ -1077,6 +1158,10 @@ func (p *Plugin) assertValidConfig() error {
 
 				if manifest.Severity != policy.Severity {
 					return fmt.Errorf(errorMsgFmt, "severity")
+				}
+
+				if !reflect.DeepEqual(manifest.CustomMessage, policy.CustomMessage) {
+					return fmt.Errorf(errorMsgFmt, "customMessage")
 				}
 
 				if !reflect.DeepEqual(manifest.ExtraDependencies, policy.ExtraDependencies) {
