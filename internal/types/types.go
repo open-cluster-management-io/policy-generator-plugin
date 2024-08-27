@@ -7,6 +7,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type HubTemplateOptions struct {
+	ServiceAccountName string `json:"serviceAccountName,omitempty" yaml:"serviceAccountName,omitempty"`
+}
+
 type PolicyOptions struct {
 	Categories                     []string           `json:"categories,omitempty" yaml:"categories,omitempty"`
 	Controls                       []string           `json:"controls,omitempty" yaml:"controls,omitempty"`
@@ -28,6 +32,7 @@ type PolicyOptions struct {
 	PolicyAnnotations              map[string]string  `json:"policyAnnotations,omitempty" yaml:"policyAnnotations,omitempty"`
 	PolicyLabels                   map[string]string  `json:"policyLabels,omitempty" yaml:"policyLabels,omitempty"`
 	ConfigurationPolicyAnnotations map[string]string  `json:"configurationPolicyAnnotations,omitempty" yaml:"configurationPolicyAnnotations,omitempty"`
+	HubTemplateOptions             HubTemplateOptions `json:"hubTemplateOptions,omitempty" yaml:"hubTemplateOptions,omitempty"`
 }
 
 type PolicySetOptions struct {
