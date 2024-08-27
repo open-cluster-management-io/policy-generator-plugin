@@ -696,6 +696,10 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.Severity = p.PolicyDefaults.Severity
 		}
 
+		if policy.HubTemplateOptions.ServiceAccountName == "" {
+			policy.HubTemplateOptions.ServiceAccountName = p.PolicyDefaults.HubTemplateOptions.ServiceAccountName
+		}
+
 		for j := range policy.Manifests {
 			manifest := &policy.Manifests[j]
 
@@ -1362,6 +1366,10 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 	spec := map[string]interface{}{
 		"disabled":         policyConf.Disabled,
 		"policy-templates": policyTemplates,
+	}
+
+	if policyConf.HubTemplateOptions.ServiceAccountName != "" {
+		spec["hubTemplateOptions"] = policyConf.HubTemplateOptions
 	}
 
 	if p.PolicyDefaults.OrderPolicies && p.previousPolicyName != "" {

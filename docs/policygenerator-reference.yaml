@@ -76,6 +76,13 @@ policyDefaults:
       kind: "Policy"
       # Optional. (See policyDefaults.dependencies.apiVersion for description.)
       apiVersion: "policy.open-cluster-management.io/v1"
+  # Optional. Changes the default behavior of hub templates.
+  hubTemplateOptions:
+    # Optional. serviceAccountName is the name of a service account in the same namespace as the policy to use for all hub
+    # template lookups. The service account must have list and watch permissions on any object the hub templates
+    # look up. If not specified, lookups are restricted to namespaced objects in the same namespace as the policy and
+    # to the `ManagedCluster` object associated with the propagated policy.
+    serviceAccountName: ""
   # Optional. Determines whether objects created or monitored by the policy should be deleted when the policy is
   # deleted. Pruning only takes place if the remediation action of the policy has been set to "enforce". Example values
   # are "DeleteIfCreated", "DeleteAll", or "None". This defaults to unset, which is equivalent to "None".
@@ -252,6 +259,9 @@ policies:
         # Optional. (See policyDefaults.extraDependencies for description)
         # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         extraDependencies: []
+        # Optional. (See policyDefaults.hubTemplateOptions for description.)
+        hubTemplateOptions:
+          serviceAccountName: ""
         # Optional. (See policyDefaults.pruneObjectBehavior for description.)
         # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         pruneObjectBehavior: ""
