@@ -538,6 +538,22 @@ func buildPolicyTemplate(
 		configSpec["evaluationInterval"] = evalInterval
 	}
 
+	// Set customMessage with manifest overrides
+	customMessage := configPolicyOptionsOverrides.CustomMessage
+	if customMessage.Compliant != "" || customMessage.NonCompliant != "" {
+		customMessageJSON := map[string]interface{}{}
+
+		if customMessage.Compliant != "" {
+			customMessageJSON["compliant"] = customMessage.Compliant
+		}
+
+		if customMessage.NonCompliant != "" {
+			customMessageJSON["noncompliant"] = customMessage.NonCompliant
+		}
+
+		configSpec["customMessage"] = customMessageJSON
+	}
+
 	// Set NamespaceSelector with manifest overrides
 	setNamespaceSelector(configPolicyOptionsOverrides, policyTemplate)
 
