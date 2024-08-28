@@ -35,6 +35,12 @@ policyDefaults:
   # If set to false, only the policy framework specific policy labels and annotations will be copied to the replicated
   # policy.
   copyPolicyMetadata: true
+  # Optional. customMessage configures the compliance messages emitted by the configuration policy to use one
+  # of the specified Go templates based on the current compliance. See the ConfigurationPolicy API documentation for
+  # more details.
+  customMessage:
+    compliant: ""
+    noncompliant: ""
   # Optional. A list of objects that should be in specific compliance states before this policy is applied. Cannot be
   # specified when policyDefaults.orderPolicies is set to true.
   dependencies:
@@ -253,6 +259,11 @@ policies:
         # Optional. (See policyDefaults.namespaceSelector for description.)
         # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         namespaceSelector: {}
+        # Optional. (See policyDefaults.customMessage for description.)
+        # Cannot be specified when policyDefaults.consolidateManifests is set to true.
+        customMessage:
+          compliant: ""
+          noncompliant: ""
         # Optional. (See policyDefaults.evaluationInterval for description.)
         # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         evaluationInterval: {}
@@ -312,6 +323,10 @@ policies:
     configurationPolicyAnnotations: {}
     # Optional. (See policyDefaults.copyPolicyMetadata for description.)
     copyPolicyMetadata: true
+    # Optional. (See policyDefaults.customMessage for description.)
+    customMessage:
+      compliant: ""
+      noncompliant: ""
     # Optional. (See policyDefaults.metadataComplianceType for description.)
     metadataComplianceType: ""
     # Optional. (See policyDefaults.controls for description.)
