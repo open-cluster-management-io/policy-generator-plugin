@@ -4650,6 +4650,213 @@ func TestCreatePolicyWithCopyPolicyMetadata(t *testing.T) {
 	}
 }
 
+func TestCreatePolicyWithCustomMessage(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	createConfigMap(t, tmpDir, "configmap2.yaml")
+
+	p := Plugin{}
+	var err error
+
+	p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	p.PolicyDefaults.Namespace = "my-policies"
+	p.PolicyDefaults.CustomMessage = types.CustomMessage{
+		Compliant:    "{{ default }}",
+		NonCompliant: "{{ default }}",
+	}
+
+	policyConf := types.PolicyConfig{
+		Name: "policy-app-config",
+		PolicyOptions: types.PolicyOptions{
+			ConsolidateManifests: false,
+		},
+		Manifests: []types.Manifest{
+			{
+				Path: path.Join(tmpDir, "configmap.yaml"),
+			},
+			{
+				Path: path.Join(tmpDir, "configmap2.yaml"),
+			},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf)
+
+	// Ensure values are correctly propagated/overridden
+	p.applyDefaults(map[string]interface{}{})
+	assertEqual(t, policyConf.Manifests[0].ConfigurationPolicyOptions.CustomMessage.Compliant, "{{ default }}")
+	assertEqual(t, policyConf.Manifests[0].ConfigurationPolicyOptions.CustomMessage.NonCompliant, "{{ default }}")
+	assertEqual(t, policyConf.Manifests[1].ConfigurationPolicyOptions.CustomMessage.Compliant, "{{ default }}")
+	assertEqual(t, policyConf.Manifests[1].ConfigurationPolicyOptions.CustomMessage.NonCompliant, "{{ default }}")
+
+	// With consolidateManifest = false
+	policyConf.ConfigurationPolicyOptions = types.ConfigurationPolicyOptions{
+		CustomMessage: types.CustomMessage{
+			Compliant:    "{{ root }}",
+			NonCompliant: "{{ root }}",
+		},
+	}
+	policyConf.Manifests[0].ConfigurationPolicyOptions = types.ConfigurationPolicyOptions{
+		CustomMessage: types.CustomMessage{
+			Compliant:    "{{ manifest1 }}",
+			NonCompliant: "{{ manifest1 }}",
+		},
+	}
+	policyConf.Manifests[1].ConfigurationPolicyOptions = types.ConfigurationPolicyOptions{
+		CustomMessage: types.CustomMessage{
+			Compliant:    "{{ manifest2 }}",
+			NonCompliant: "{{ manifest2 }}",
+		},
+	}
+
+	p.applyDefaults(map[string]interface{}{})
+
+	err = p.createPolicy(&policyConf)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output := p.outputBuffer.String()
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: ""
+        policy.open-cluster-management.io/controls: ""
+        policy.open-cluster-management.io/description: ""
+        policy.open-cluster-management.io/standards: ""
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    copyPolicyMetadata: false
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                customMessage:
+                    compliant: '{{ manifest1 }}'
+                    noncompliant: '{{ manifest1 }}'
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config2
+            spec:
+                customMessage:
+                    compliant: '{{ manifest2 }}'
+                    noncompliant: '{{ manifest2 }}'
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+    remediationAction: inform
+`
+
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+	p.outputBuffer.Reset()
+
+	// With consolidateManifest = true
+	policyConf.PolicyOptions.ConsolidateManifests = true
+	err = p.assertValidConfig()
+	expectedErr := "the policy policy-app-config has the customMessage " +
+		"value set on manifest[0] but consolidateManifests is true"
+	assertEqual(t, err.Error(), expectedErr)
+
+	// Note: customMessage field at the manifest level must be set to
+	// the same value as in the policy level when consolidateManifest = true
+	// to successfully generate a policy. If customMessage field is unset
+	// at the manifest level, applyDefaults() can be used to populate this field
+	// if it's set at the policyDefaults or policy level.
+	policyConf.Manifests[0].ConfigurationPolicyOptions.CustomMessage.Compliant = "{{ root }}"
+	policyConf.Manifests[0].ConfigurationPolicyOptions.CustomMessage.NonCompliant = "{{ root }}"
+	policyConf.Manifests[1].ConfigurationPolicyOptions.CustomMessage.Compliant = "{{ root }}"
+	policyConf.Manifests[1].ConfigurationPolicyOptions.CustomMessage.NonCompliant = "{{ root }}"
+
+	err = p.createPolicy(&policyConf)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output = p.outputBuffer.String()
+	expected = `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: ""
+        policy.open-cluster-management.io/controls: ""
+        policy.open-cluster-management.io/description: ""
+        policy.open-cluster-management.io/standards: ""
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    copyPolicyMetadata: false
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                customMessage:
+                    compliant: '{{ root }}'
+                    noncompliant: '{{ root }}'
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: ""
+                severity: ""
+`
+
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+}
+
 // Test Patching a CR object, "MyCr", containing a list of profile objects.
 // Patching profile interface name and (not profile) recommend
 // - metadata:

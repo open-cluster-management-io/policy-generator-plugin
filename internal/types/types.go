@@ -11,6 +11,11 @@ type HubTemplateOptions struct {
 	ServiceAccountName string `json:"serviceAccountName,omitempty" yaml:"serviceAccountName,omitempty"`
 }
 
+type CustomMessage struct {
+	Compliant    string `json:"compliant,omitempty" yaml:"compliant,omitempty"`
+	NonCompliant string `json:"noncompliant,omitempty" yaml:"noncompliant,omitempty"`
+}
+
 type PolicyOptions struct {
 	Categories                     []string           `json:"categories,omitempty" yaml:"categories,omitempty"`
 	Controls                       []string           `json:"controls,omitempty" yaml:"controls,omitempty"`
@@ -50,6 +55,7 @@ type ConfigurationPolicyOptions struct {
 	PruneObjectBehavior    string             `json:"pruneObjectBehavior,omitempty" yaml:"pruneObjectBehavior,omitempty"`
 	RecordDiff             string             `json:"recordDiff,omitempty" yaml:"recordDiff,omitempty"`
 	RecreateOption         string             `json:"recreateOption,omitempty" yaml:"recreateOption,omitempty"`
+	CustomMessage          CustomMessage      `json:"customMessage,omitempty" yaml:"customMessage,omitempty"`
 }
 
 type GatekeeperOptions struct {
