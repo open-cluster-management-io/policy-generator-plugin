@@ -70,10 +70,14 @@ build-release:
 			echo "There are local modifications in the repo" > /dev/stderr; \
 			exit 1; \
 	fi
-	@mkdir -p build_output
-	GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -ldflags="$(GO_LDFLAGS)" -o build_output/linux-amd64-PolicyGenerator ./cmd/PolicyGenerator
-	GOOS=darwin CGO_ENABLED=0 GOARCH=amd64 go build -ldflags="$(GO_LDFLAGS)" -o build_output/darwin-amd64-PolicyGenerator ./cmd/PolicyGenerator
-	GOOS=windows CGO_ENABLED=0 GOARCH=amd64 go build -ldflags="$(GO_LDFLAGS)" -o build_output/windows-amd64-PolicyGenerator.exe ./cmd/PolicyGenerator
+	@for OS in linux darwin windows; do for ARCH in amd64 arm64; do \
+			echo "# Building $${OS}-$${ARCH}-PolicyGenerator"; \
+			GOOS=$${OS} GOARCH=$${ARCH} CGO_ENABLED=0 go build -ldflags="$(GO_LDFLAGS)" -o build_output/$${OS}-$${ARCH}-PolicyGenerator ./cmd/PolicyGenerator; \
+		done; done
+	# Adding .exe extension to Windows binaries
+	@for FILE in $$(ls -1 build_output/windows-* | grep -v ".exe$$"); do \
+		mv $${FILE} $${FILE}.exe; \
+	done
 
 .PHONY: generate
 generate:
