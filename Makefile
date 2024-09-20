@@ -72,11 +72,14 @@ build-release:
 	fi
 	@for OS in linux darwin windows; do for ARCH in amd64 arm64; do \
 			echo "# Building $${OS}-$${ARCH}-PolicyGenerator"; \
-			GOOS=$${OS} GOARCH=$${ARCH} CGO_ENABLED=0 go build -mod=readonly -ldflags="$(GO_LDFLAGS)" -o build_output/$${OS}-$${ARCH}-PolicyGenerator ./cmd/PolicyGenerator; \
+			GOOS=$${OS} GOARCH=$${ARCH} CGO_ENABLED=0 \
+				go build -mod=readonly -ldflags="$(GO_LDFLAGS)" -o build_output/$${OS}-$${ARCH}-PolicyGenerator ./cmd/PolicyGenerator \
+				|| exit 1; \
 		done; done
 	# Adding .exe extension to Windows binaries
 	@for FILE in $$(ls -1 build_output/windows-* | grep -v ".exe$$"); do \
-		mv $${FILE} $${FILE}.exe; \
+		mv $${FILE} $${FILE}.exe \
+		|| exit 1; \
 	done
 
 .PHONY: generate
