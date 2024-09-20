@@ -60,14 +60,15 @@ policyDefaults:
   # Optional. Determines whether the policy is enabled or disabled. A disabled policy will not be propagated to any
   # managed clusters and will show no status as a result.
   disabled: false
-  # Optional. This is how often a policy should be evaluated when in a particular compliance state. When managed
-  # clusters have low CPU resources, the evaluation interval can be increased to to reduce CPU usage on the Kubernetes
-  # API.
+  # Optional. Configures the minimum elapsed time before a configuration policy is reevaluated. The default value is
+  # `watch` to leverage Kubernetes API watches instead of polling the Kubernetes API server. If the policy spec is
+  # changed or if the list of namespaces selected by the policy changes, the policy might be evaluated regardless of the
+  # settings here.
   evaluationInterval:
     # These are in the format of durations (e.g. "1h25m3s"). These can also be set to "never" to avoid evaluating the
-    # policy after it has become a particular compliance state.
+    # policy after it has become a particular compliance state. The default value for both fields is `watch`.
     compliant: 30m
-    noncompliant: 45s
+    noncompliant: watch
   # Optional. A list of objects that should be in specific compliance states before this policy is applied. These are
   # added to each policy template (eg ConfigurationPolicy) separately from the dependencies list. Cannot be specified
   # when policyDefaults.orderManifests is set to true.
