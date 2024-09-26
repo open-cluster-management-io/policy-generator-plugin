@@ -97,11 +97,11 @@ func TestGatekeeperExpand(t *testing.T) {
 			"objectDefinition": map[string]interface{}{
 				"apiVersion": configPolicyAPIVersion,
 				"kind":       configPolicyKind,
-				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-audit-my-awesome-constraint"},
+				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-violations-my-awesome-constraint"},
 				"spec": map[string]interface{}{
 					"namespaceSelector": map[string]interface{}{
-						"exclude": []string{"kube-*"},
-						"include": []string{"*"},
+						"exclude": []interface{}{"kube-*"},
+						"include": []interface{}{"*"},
 					},
 					"remediationAction": "inform",
 					"severity":          "medium",
@@ -130,8 +130,8 @@ func TestGatekeeperExpand(t *testing.T) {
 				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-admission-my-awesome-constraint"},
 				"spec": map[string]interface{}{
 					"namespaceSelector": map[string]interface{}{
-						"exclude": []string{"kube-*"},
-						"include": []string{"*"},
+						"exclude": []interface{}{"kube-*"},
+						"include": []interface{}{"*"},
 					},
 					"remediationAction": "inform",
 					"severity":          "medium",
@@ -146,6 +146,430 @@ func TestGatekeeperExpand(t *testing.T) {
 									"constraint_kind":   "MyConstraint",
 									"constraint_name":   "my-awesome-constraint",
 									"event_type":        "violation",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"objectDefinition": map[string]interface{}{
+				"apiVersion": configPolicyAPIVersion,
+				"kind":       configPolicyKind,
+				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-audit-my-awesome-constraint"},
+				"spec": map[string]interface{}{
+					"namespaceSelector": map[string]interface{}{
+						"exclude": []interface{}{"kube-*"},
+						"include": []interface{}{"*"},
+					},
+					"remediationAction": "inform",
+					"severity":          "medium",
+					"object-templates": []map[string]interface{}{
+						{
+							"complianceType": "mustnothave",
+							"objectDefinition": map[string]interface{}{
+								"apiVersion": "v1",
+								"kind":       "Event",
+								"annotations": map[string]interface{}{
+									"constraint_action": "deny",
+									"constraint_kind":   "MyConstraint",
+									"constraint_name":   "my-awesome-constraint",
+									"event_type":        "violation_audited",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	templates := g.Expand(manifest, "medium")
+
+	assertReflectEqual(t, templates, expected)
+}
+
+func TestGatekeeperExpandWithCustomIncludeNamespace(t *testing.T) {
+	t.Parallel()
+
+	g := GatekeeperPolicyExpander{}
+	manifest := map[string]interface{}{
+		"apiVersion": gatekeeperConstraintAPIVersion,
+		"kind":       "MyConstraint",
+		"metadata": map[string]interface{}{
+			"name": "my-awesome-constraint",
+		},
+		"spec": map[string]interface{}{
+			"match": map[string]interface{}{
+				"namespaces": []interface{}{
+					"include1",
+					"include2",
+				},
+			},
+		},
+	}
+
+	expected := []map[string]interface{}{
+		{
+			"objectDefinition": map[string]interface{}{
+				"apiVersion": configPolicyAPIVersion,
+				"kind":       configPolicyKind,
+				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-violations-my-awesome-constraint"},
+				"spec": map[string]interface{}{
+					"namespaceSelector": map[string]interface{}{
+						"exclude": []interface{}{"kube-*"},
+						"include": []interface{}{
+							"include1",
+							"include2",
+						},
+					},
+					"remediationAction": "inform",
+					"severity":          "medium",
+					"object-templates": []map[string]interface{}{
+						{
+							"complianceType": "musthave",
+							"objectDefinition": map[string]interface{}{
+								"apiVersion": gatekeeperConstraintAPIVersion,
+								"kind":       "MyConstraint",
+								"metadata": map[string]interface{}{
+									"name": "my-awesome-constraint",
+								},
+								"status": map[string]interface{}{
+									"totalViolations": 0,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"objectDefinition": map[string]interface{}{
+				"apiVersion": configPolicyAPIVersion,
+				"kind":       configPolicyKind,
+				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-admission-my-awesome-constraint"},
+				"spec": map[string]interface{}{
+					"namespaceSelector": map[string]interface{}{
+						"exclude": []interface{}{"kube-*"},
+						"include": []interface{}{
+							"include1",
+							"include2",
+						},
+					},
+					"remediationAction": "inform",
+					"severity":          "medium",
+					"object-templates": []map[string]interface{}{
+						{
+							"complianceType": "mustnothave",
+							"objectDefinition": map[string]interface{}{
+								"apiVersion": "v1",
+								"kind":       "Event",
+								"annotations": map[string]interface{}{
+									"constraint_action": "deny",
+									"constraint_kind":   "MyConstraint",
+									"constraint_name":   "my-awesome-constraint",
+									"event_type":        "violation",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"objectDefinition": map[string]interface{}{
+				"apiVersion": configPolicyAPIVersion,
+				"kind":       configPolicyKind,
+				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-audit-my-awesome-constraint"},
+				"spec": map[string]interface{}{
+					"namespaceSelector": map[string]interface{}{
+						"exclude": []interface{}{"kube-*"},
+						"include": []interface{}{
+							"include1",
+							"include2",
+						},
+					},
+					"remediationAction": "inform",
+					"severity":          "medium",
+					"object-templates": []map[string]interface{}{
+						{
+							"complianceType": "mustnothave",
+							"objectDefinition": map[string]interface{}{
+								"apiVersion": "v1",
+								"kind":       "Event",
+								"annotations": map[string]interface{}{
+									"constraint_action": "deny",
+									"constraint_kind":   "MyConstraint",
+									"constraint_name":   "my-awesome-constraint",
+									"event_type":        "violation_audited",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	templates := g.Expand(manifest, "medium")
+
+	assertReflectEqual(t, templates, expected)
+}
+
+func TestGatekeeperExpandWithCustomExcludedNamespace(t *testing.T) {
+	t.Parallel()
+
+	g := GatekeeperPolicyExpander{}
+	manifest := map[string]interface{}{
+		"apiVersion": gatekeeperConstraintAPIVersion,
+		"kind":       "MyConstraint",
+		"metadata": map[string]interface{}{
+			"name": "my-awesome-constraint",
+		},
+		"spec": map[string]interface{}{
+			"match": map[string]interface{}{
+				"excludedNamespaces": []interface{}{
+					"exclude1",
+					"exclude2",
+				},
+			},
+		},
+	}
+
+	expected := []map[string]interface{}{
+		{
+			"objectDefinition": map[string]interface{}{
+				"apiVersion": configPolicyAPIVersion,
+				"kind":       configPolicyKind,
+				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-violations-my-awesome-constraint"},
+				"spec": map[string]interface{}{
+					"namespaceSelector": map[string]interface{}{
+						"exclude": []interface{}{
+							"exclude1",
+							"exclude2",
+						},
+						"include": []interface{}{"*"},
+					},
+					"remediationAction": "inform",
+					"severity":          "medium",
+					"object-templates": []map[string]interface{}{
+						{
+							"complianceType": "musthave",
+							"objectDefinition": map[string]interface{}{
+								"apiVersion": gatekeeperConstraintAPIVersion,
+								"kind":       "MyConstraint",
+								"metadata": map[string]interface{}{
+									"name": "my-awesome-constraint",
+								},
+								"status": map[string]interface{}{
+									"totalViolations": 0,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"objectDefinition": map[string]interface{}{
+				"apiVersion": configPolicyAPIVersion,
+				"kind":       configPolicyKind,
+				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-admission-my-awesome-constraint"},
+				"spec": map[string]interface{}{
+					"namespaceSelector": map[string]interface{}{
+						"exclude": []interface{}{
+							"exclude1",
+							"exclude2",
+						},
+						"include": []interface{}{"*"},
+					},
+					"remediationAction": "inform",
+					"severity":          "medium",
+					"object-templates": []map[string]interface{}{
+						{
+							"complianceType": "mustnothave",
+							"objectDefinition": map[string]interface{}{
+								"apiVersion": "v1",
+								"kind":       "Event",
+								"annotations": map[string]interface{}{
+									"constraint_action": "deny",
+									"constraint_kind":   "MyConstraint",
+									"constraint_name":   "my-awesome-constraint",
+									"event_type":        "violation",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"objectDefinition": map[string]interface{}{
+				"apiVersion": configPolicyAPIVersion,
+				"kind":       configPolicyKind,
+				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-audit-my-awesome-constraint"},
+				"spec": map[string]interface{}{
+					"namespaceSelector": map[string]interface{}{
+						"exclude": []interface{}{
+							"exclude1",
+							"exclude2",
+						},
+						"include": []interface{}{"*"},
+					},
+					"remediationAction": "inform",
+					"severity":          "medium",
+					"object-templates": []map[string]interface{}{
+						{
+							"complianceType": "mustnothave",
+							"objectDefinition": map[string]interface{}{
+								"apiVersion": "v1",
+								"kind":       "Event",
+								"annotations": map[string]interface{}{
+									"constraint_action": "deny",
+									"constraint_kind":   "MyConstraint",
+									"constraint_name":   "my-awesome-constraint",
+									"event_type":        "violation_audited",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	templates := g.Expand(manifest, "medium")
+
+	assertReflectEqual(t, templates, expected)
+}
+
+func TestGatekeeperExpandWithCustomIncludeAndExcludedNamespace(t *testing.T) {
+	t.Parallel()
+
+	g := GatekeeperPolicyExpander{}
+	manifest := map[string]interface{}{
+		"apiVersion": gatekeeperConstraintAPIVersion,
+		"kind":       "MyConstraint",
+		"metadata": map[string]interface{}{
+			"name": "my-awesome-constraint",
+		},
+		"spec": map[string]interface{}{
+			"match": map[string]interface{}{
+				"namespaces": []interface{}{
+					"include1",
+					"include2",
+				},
+				"excludedNamespaces": []interface{}{
+					"exclude1",
+					"exclude2",
+				},
+			},
+		},
+	}
+
+	expected := []map[string]interface{}{
+		{
+			"objectDefinition": map[string]interface{}{
+				"apiVersion": configPolicyAPIVersion,
+				"kind":       configPolicyKind,
+				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-violations-my-awesome-constraint"},
+				"spec": map[string]interface{}{
+					"namespaceSelector": map[string]interface{}{
+						"exclude": []interface{}{
+							"exclude1",
+							"exclude2",
+						},
+						"include": []interface{}{
+							"include1",
+							"include2",
+						},
+					},
+					"remediationAction": "inform",
+					"severity":          "medium",
+					"object-templates": []map[string]interface{}{
+						{
+							"complianceType": "musthave",
+							"objectDefinition": map[string]interface{}{
+								"apiVersion": gatekeeperConstraintAPIVersion,
+								"kind":       "MyConstraint",
+								"metadata": map[string]interface{}{
+									"name": "my-awesome-constraint",
+								},
+								"status": map[string]interface{}{
+									"totalViolations": 0,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"objectDefinition": map[string]interface{}{
+				"apiVersion": configPolicyAPIVersion,
+				"kind":       configPolicyKind,
+				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-admission-my-awesome-constraint"},
+				"spec": map[string]interface{}{
+					"namespaceSelector": map[string]interface{}{
+						"exclude": []interface{}{
+							"exclude1",
+							"exclude2",
+						},
+						"include": []interface{}{
+							"include1",
+							"include2",
+						},
+					},
+					"remediationAction": "inform",
+					"severity":          "medium",
+					"object-templates": []map[string]interface{}{
+						{
+							"complianceType": "mustnothave",
+							"objectDefinition": map[string]interface{}{
+								"apiVersion": "v1",
+								"kind":       "Event",
+								"annotations": map[string]interface{}{
+									"constraint_action": "deny",
+									"constraint_kind":   "MyConstraint",
+									"constraint_name":   "my-awesome-constraint",
+									"event_type":        "violation",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			"objectDefinition": map[string]interface{}{
+				"apiVersion": configPolicyAPIVersion,
+				"kind":       configPolicyKind,
+				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-audit-my-awesome-constraint"},
+				"spec": map[string]interface{}{
+					"namespaceSelector": map[string]interface{}{
+						"exclude": []interface{}{
+							"exclude1",
+							"exclude2",
+						},
+						"include": []interface{}{
+							"include1",
+							"include2",
+						},
+					},
+					"remediationAction": "inform",
+					"severity":          "medium",
+					"object-templates": []map[string]interface{}{
+						{
+							"complianceType": "mustnothave",
+							"objectDefinition": map[string]interface{}{
+								"apiVersion": "v1",
+								"kind":       "Event",
+								"annotations": map[string]interface{}{
+									"constraint_action": "deny",
+									"constraint_kind":   "MyConstraint",
+									"constraint_name":   "my-awesome-constraint",
+									"event_type":        "violation_audited",
 								},
 							},
 						},

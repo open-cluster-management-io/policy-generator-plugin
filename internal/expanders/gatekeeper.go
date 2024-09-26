@@ -54,16 +54,29 @@ func (g GatekeeperPolicyExpander) Expand(
 	constraintName, _, _ := unstructured.NestedString(manifest, "metadata", "name")
 	constraintKind, _, _ := unstructured.NestedString(manifest, "kind")
 
-	auditConfigPolicyName := fmt.Sprintf("inform-gatekeeper-audit-%s", constraintName)
-	auditConfigurationPolicy := map[string]interface{}{
+	// determine excluded namespaces from constraint
+	excludedNamespaces, _, _ := unstructured.NestedSlice(manifest, "spec", "match", "excludedNamespaces")
+	if len(excludedNamespaces) == 0 {
+		excludedNamespaces = []interface{}{"kube-*"}
+	}
+
+	// determine included namespaces from constraint
+	includedNamespaces, _, _ := unstructured.NestedSlice(manifest, "spec", "match", "namespaces")
+	if len(includedNamespaces) == 0 {
+		includedNamespaces = []interface{}{"*"}
+	}
+
+	// build config policy for total violations
+	violationsConfigPolicyName := fmt.Sprintf("inform-gatekeeper-violations-%s", constraintName)
+	violationsConfigurationPolicy := map[string]interface{}{
 		"objectDefinition": map[string]interface{}{
 			"apiVersion": configPolicyAPIVersion,
 			"kind":       configPolicyKind,
-			"metadata":   map[string]interface{}{"name": auditConfigPolicyName},
+			"metadata":   map[string]interface{}{"name": violationsConfigPolicyName},
 			"spec": map[string]interface{}{
 				"namespaceSelector": map[string]interface{}{
-					"exclude": []string{"kube-*"},
-					"include": []string{"*"},
+					"exclude": excludedNamespaces,
+					"include": includedNamespaces,
 				},
 				"remediationAction": "inform",
 				"severity":          severity,
@@ -85,18 +98,17 @@ func (g GatekeeperPolicyExpander) Expand(
 			},
 		},
 	}
-	// Further improvements here could be made by having the user specify the Gatekeeper namespace and
-	// targeting the events for the constraint kind to just that namespace.
-	admissionConfigPolicyName := fmt.Sprintf("inform-gatekeeper-admission-%s", constraintName)
-	admissionConfigurationPolicy := map[string]interface{}{
+	// build config policy for admission violation events
+	admissionEventsConfigPolicyName := fmt.Sprintf("inform-gatekeeper-admission-%s", constraintName)
+	admissionEventsConfigurationPolicy := map[string]interface{}{
 		"objectDefinition": map[string]interface{}{
 			"apiVersion": configPolicyAPIVersion,
 			"kind":       configPolicyKind,
-			"metadata":   map[string]interface{}{"name": admissionConfigPolicyName},
+			"metadata":   map[string]interface{}{"name": admissionEventsConfigPolicyName},
 			"spec": map[string]interface{}{
 				"namespaceSelector": map[string]interface{}{
-					"exclude": []string{"kube-*"},
-					"include": []string{"*"},
+					"exclude": excludedNamespaces,
+					"include": includedNamespaces,
 				},
 				"remediationAction": "inform",
 				"severity":          severity,
@@ -118,8 +130,45 @@ func (g GatekeeperPolicyExpander) Expand(
 			},
 		},
 	}
+	// build config policy for audit violation events
+	auditEventsConfigPolicyName := fmt.Sprintf("inform-gatekeeper-audit-%s", constraintName)
+	auditEventsConfigurationPolicy := map[string]interface{}{
+		"objectDefinition": map[string]interface{}{
+			"apiVersion": configPolicyAPIVersion,
+			"kind":       configPolicyKind,
+			"metadata":   map[string]interface{}{"name": auditEventsConfigPolicyName},
+			"spec": map[string]interface{}{
+				"namespaceSelector": map[string]interface{}{
+					"exclude": excludedNamespaces,
+					"include": includedNamespaces,
+				},
+				"remediationAction": "inform",
+				"severity":          severity,
+				"object-templates": []map[string]interface{}{
+					{
+						"complianceType": "mustnothave",
+						"objectDefinition": map[string]interface{}{
+							"apiVersion": "v1",
+							"kind":       "Event",
+							"annotations": map[string]interface{}{
+								"constraint_action": "deny",
+								"constraint_kind":   constraintKind,
+								"constraint_name":   constraintName,
+								"event_type":        "violation_audited",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 
-	templates = append(templates, auditConfigurationPolicy, admissionConfigurationPolicy)
+	templates = append(
+		templates,
+		violationsConfigurationPolicy,
+		admissionEventsConfigurationPolicy,
+		auditEventsConfigurationPolicy,
+	)
 
 	return templates
 }
