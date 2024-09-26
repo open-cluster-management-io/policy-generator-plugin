@@ -145,7 +145,7 @@ func TestGatekeeperExpand(t *testing.T) {
 									"constraint_action": "deny",
 									"constraint_kind":   "MyConstraint",
 									"constraint_name":   "my-awesome-constraint",
-									"event_type":        "violation",
+									"event_type":        "violation_audited",
 								},
 							},
 						},

@@ -110,7 +110,7 @@ func (g GatekeeperPolicyExpander) Expand(
 								"constraint_action": "deny",
 								"constraint_kind":   constraintKind,
 								"constraint_name":   constraintName,
-								"event_type":        "violation",
+								"event_type":        "violation_audited",
 							},
 						},
 					},
