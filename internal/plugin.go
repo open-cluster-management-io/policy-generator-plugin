@@ -587,6 +587,10 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 			policy.Description = p.PolicyDefaults.Description
 		}
 
+		if policy.ObjectSelector.IsUnset() && !p.PolicyDefaults.ObjectSelector.IsUnset() {
+			policy.ObjectSelector = p.PolicyDefaults.ObjectSelector
+		}
+
 		if policy.RecreateOption == "" {
 			policy.RecreateOption = p.PolicyDefaults.RecreateOption
 		}
@@ -723,7 +727,7 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		defNsSelector := p.PolicyDefaults.NamespaceSelector
 
 		if nsSelector.Exclude == nil && nsSelector.Include == nil &&
-			nsSelector.MatchLabels == nil && nsSelector.MatchExpressions == nil {
+			nsSelector.LabelSelector.IsUnset() {
 			policy.NamespaceSelector = defNsSelector
 		}
 
@@ -796,6 +800,10 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 			if manifest.Severity == "" && policy.Severity != "" {
 				manifest.Severity = policy.Severity
+			}
+
+			if manifest.ObjectSelector.IsUnset() && !policy.ObjectSelector.IsUnset() {
+				manifest.ObjectSelector = policy.ObjectSelector
 			}
 
 			if manifest.RecreateOption == "" {

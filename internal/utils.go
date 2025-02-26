@@ -180,6 +180,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 		recordDiff := policyConf.Manifests[i].RecordDiff
 		ignorePending := policyConf.Manifests[i].IgnorePending
 		extraDeps := policyConf.Manifests[i].ExtraDependencies
+		objSelector := policyConf.Manifests[i].ObjectSelector
 
 		policyName := policyConf.Manifests[i].Name
 		if policyName == "" {
@@ -251,6 +252,10 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 
 			if metadataComplianceType != "" {
 				objTemplate["metadataComplianceType"] = metadataComplianceType
+			}
+
+			if !objSelector.IsUnset() {
+				objTemplate["objectSelector"] = objSelector
 			}
 
 			if recreateOption != "" {

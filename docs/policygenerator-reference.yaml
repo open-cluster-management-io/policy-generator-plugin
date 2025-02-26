@@ -119,6 +119,11 @@ policyDefaults:
     exclude: []
     matchLabels: {}
     matchExpressions: []
+  # Optional. Defines the label selector for objects defined in the `objectDefinition`. If there is an object name
+  # defined in the `objectDefinition`, the `objectSelector` is ignored.
+  objectSelector:
+    matchLabels: {}
+    matchExpressions: []
   # Optional. Determines whether to define extraDependencies on policy templates so that they are applied in the order
   # they are defined in the manifests list for that policy. Cannot be specified when consolidateManifests is set to
   # true. Cannot be specified at the same time as extraDependencies.
@@ -260,6 +265,8 @@ policies:
         # Optional. (See policyDefaults.namespaceSelector for description.)
         # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         namespaceSelector: {}
+        # Optional. (See policyDefaults.objectSelector for description.)
+        objectSelector: {}
         # Optional. (See policyDefaults.customMessage for description.)
         # Cannot be specified when policyDefaults.consolidateManifests is set to true.
         customMessage:
@@ -359,6 +366,8 @@ policies:
     consolidateManifests: true
     # Optional. (See policyDefaults.namespaceSelector for description.)
     namespaceSelector: {}
+    # Optional. (See policyDefaults.objectSelector for description.)
+    objectSelector: {}
     # Optional. (See policyDefaults.orderManifests for description.)
     # Cannot be specified when consolidateManifests is set to true.
     # If set true here, the default extraDependencies will be overwritten.

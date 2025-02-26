@@ -44,6 +44,9 @@ func TestGenerate(t *testing.T) {
 	p.PolicyDefaults.MetadataComplianceType = "musthave"
 	p.PolicyDefaults.RecordDiff = "Log"
 	p.PolicyDefaults.RecreateOption = "IfRequired"
+	p.PolicyDefaults.ObjectSelector = types.LabelSelector{
+		MatchLabels: &map[string]string{},
+	}
 	p.PolicyDefaults.PruneObjectBehavior = "DeleteAll"
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
@@ -56,6 +59,9 @@ func TestGenerate(t *testing.T) {
 		Name: "policy-app-config",
 		ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
 			PruneObjectBehavior: "None",
+			ObjectSelector: types.LabelSelector{
+				MatchLabels: &map[string]string{"phoebe": "buffay"},
+			},
 		},
 		Manifests: []types.Manifest{
 			{
@@ -72,6 +78,9 @@ func TestGenerate(t *testing.T) {
 					MetadataComplianceType: "mustonlyhave",
 					RecordDiff:             "None",
 					RecreateOption:         "None",
+					ObjectSelector: types.LabelSelector{
+						MatchExpressions: &[]metav1.LabelSelectorRequirement{},
+					},
 				},
 				Path: path.Join(tmpDir, "configmap.yaml"),
 			},
@@ -121,6 +130,9 @@ spec:
                             labels:
                                 chandler: bing
                             name: my-configmap
+                      objectSelector:
+                        matchLabels:
+                            phoebe: buffay
                       recordDiff: Log
                       recreateOption: IfRequired
                 pruneObjectBehavior: None
@@ -157,6 +169,8 @@ spec:
                         kind: ConfigMap
                         metadata:
                             name: my-configmap
+                      objectSelector:
+                        matchExpressions: []
                       recordDiff: None
                       recreateOption: None
                 pruneObjectBehavior: DeleteAll
@@ -3999,23 +4013,27 @@ func TestCreatePolicyWithNamespaceSelector(t *testing.T) {
 		"nil-selector": {namespaceSelector: types.NamespaceSelector{}},
 		"empty-selector-values": {
 			namespaceSelector: types.NamespaceSelector{
-				Include:          []string{},
-				Exclude:          []string{},
-				MatchLabels:      &map[string]string{},
-				MatchExpressions: &[]metav1.LabelSelectorRequirement{},
+				Include: []string{},
+				Exclude: []string{},
+				LabelSelector: types.LabelSelector{
+					MatchLabels:      &map[string]string{},
+					MatchExpressions: &[]metav1.LabelSelectorRequirement{},
+				},
 			},
 		},
 		"completely-filled-values": {
 			namespaceSelector: types.NamespaceSelector{
 				Include: []string{"test-ns-1", "test-ns-2"},
 				Exclude: []string{"*-ns-[1]"},
-				MatchLabels: &map[string]string{
-					"testing": "is awesome",
+				LabelSelector: types.LabelSelector{
+					MatchLabels: &map[string]string{
+						"testing": "is awesome",
+					},
+					MatchExpressions: &[]metav1.LabelSelectorRequirement{{
+						Key:      "door",
+						Operator: "Exists",
+					}},
 				},
-				MatchExpressions: &[]metav1.LabelSelectorRequirement{{
-					Key:      "door",
-					Operator: "Exists",
-				}},
 			},
 		},
 		"include-exclude-only": {
@@ -4026,13 +4044,15 @@ func TestCreatePolicyWithNamespaceSelector(t *testing.T) {
 		},
 		"label-selectors-only": {
 			namespaceSelector: types.NamespaceSelector{
-				MatchLabels: &map[string]string{
-					"testing": "is awesome",
+				LabelSelector: types.LabelSelector{
+					MatchLabels: &map[string]string{
+						"testing": "is awesome",
+					},
+					MatchExpressions: &[]metav1.LabelSelectorRequirement{{
+						Key:      "door",
+						Operator: "Exists",
+					}},
 				},
-				MatchExpressions: &[]metav1.LabelSelectorRequirement{{
-					Key:      "door",
-					Operator: "Exists",
-				}},
 			},
 		},
 	}
@@ -4046,7 +4066,9 @@ func TestCreatePolicyWithNamespaceSelector(t *testing.T) {
 			p := Plugin{}
 			p.PolicyDefaults.Namespace = "my-policies"
 			p.PolicyDefaults.NamespaceSelector = types.NamespaceSelector{
-				MatchLabels: &map[string]string{},
+				LabelSelector: types.LabelSelector{
+					MatchLabels: &map[string]string{},
+				},
 			}
 			policyConf := types.PolicyConfig{
 				Name: "policy-app-config", Manifests: []types.Manifest{
