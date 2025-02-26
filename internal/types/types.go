@@ -56,6 +56,7 @@ type ConfigurationPolicyOptions struct {
 	RecordDiff             string             `json:"recordDiff,omitempty" yaml:"recordDiff,omitempty"`
 	RecreateOption         string             `json:"recreateOption,omitempty" yaml:"recreateOption,omitempty"`
 	CustomMessage          CustomMessage      `json:"customMessage,omitempty" yaml:"customMessage,omitempty"`
+	ObjectSelector         LabelSelector      `json:"objectSelector,omitempty" yaml:"objectSelector,omitempty"`
 }
 
 type GatekeeperOptions struct {
@@ -77,17 +78,25 @@ type Filepath struct {
 	Path string `json:"path,omitempty" yaml:"path,omitempty"`
 }
 
-type NamespaceSelector struct {
-	Exclude          []string                           `json:"exclude,omitempty" yaml:"exclude,omitempty"`
-	Include          []string                           `json:"include,omitempty" yaml:"include,omitempty"`
+type LabelSelector struct {
 	MatchLabels      *map[string]string                 `json:"matchLabels,omitempty" yaml:"matchLabels,omitempty"`
 	MatchExpressions *[]metav1.LabelSelectorRequirement `json:"matchExpressions,omitempty" yaml:"matchExpressions,omitempty"`
+}
+
+func (s LabelSelector) IsUnset() bool {
+	return s.MatchExpressions == nil && s.MatchLabels == nil
+}
+
+type NamespaceSelector struct {
+	LabelSelector `json:",inline" yaml:",inline"`
+	Exclude       []string `json:"exclude,omitempty" yaml:"exclude,omitempty"`
+	Include       []string `json:"include,omitempty" yaml:"include,omitempty"`
 }
 
 // Define String() so that the LabelSelector is dereferenced in the logs
 func (t NamespaceSelector) String() string {
 	fmtSelectorStr := "{include:%s,exclude:%s,matchLabels:%+v,matchExpressions:%+v}"
-	if t.MatchLabels == nil && t.MatchExpressions == nil {
+	if t.LabelSelector.IsUnset() {
 		return fmt.Sprintf(fmtSelectorStr, t.Include, t.Exclude, nil, nil)
 	}
 
