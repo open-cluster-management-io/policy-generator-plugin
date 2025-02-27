@@ -1028,7 +1028,9 @@ func (p *Plugin) assertValidConfig() error {
 				p.PolicyDefaults.Namespace, policy.Name)
 		}
 
-		if policy.EvaluationInterval.Compliant != "" && policy.EvaluationInterval.Compliant != "never" {
+		if policy.EvaluationInterval.Compliant != "" &&
+			policy.EvaluationInterval.Compliant != "never" &&
+			policy.EvaluationInterval.Compliant != "watch" {
 			_, err := time.ParseDuration(policy.EvaluationInterval.Compliant)
 			if err != nil {
 				return fmt.Errorf(
@@ -1037,7 +1039,9 @@ func (p *Plugin) assertValidConfig() error {
 			}
 		}
 
-		if policy.EvaluationInterval.NonCompliant != "" && policy.EvaluationInterval.NonCompliant != "never" {
+		if policy.EvaluationInterval.NonCompliant != "" &&
+			policy.EvaluationInterval.NonCompliant != "never" &&
+			policy.EvaluationInterval.Compliant != "watch" {
 			_, err := time.ParseDuration(policy.EvaluationInterval.NonCompliant)
 			if err != nil {
 				return fmt.Errorf(
@@ -1149,7 +1153,8 @@ func (p *Plugin) assertValidConfig() error {
 				}
 			}
 
-			if evalInterval.Compliant != "" && evalInterval.Compliant != "never" {
+			if evalInterval.Compliant != "" && evalInterval.Compliant != "never" &&
+				evalInterval.Compliant != "watch" {
 				_, err := time.ParseDuration(evalInterval.Compliant)
 				if err != nil {
 					return fmt.Errorf(
@@ -1161,7 +1166,8 @@ func (p *Plugin) assertValidConfig() error {
 				}
 			}
 
-			if evalInterval.NonCompliant != "" && evalInterval.NonCompliant != "never" {
+			if evalInterval.NonCompliant != "" && evalInterval.NonCompliant != "never" &&
+				evalInterval.NonCompliant != "watch" {
 				_, err := time.ParseDuration(evalInterval.NonCompliant)
 				if err != nil {
 					return fmt.Errorf(
