@@ -956,7 +956,7 @@ policies:
 	assertEqual(t, err.Error(), expected)
 }
 
-func TestConfigInvalidEvalInterval(t *testing.T) {
+func TestConfigEvalInterval(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
@@ -1025,6 +1025,12 @@ func TestConfigInvalidEvalInterval(t *testing.T) {
 			`the policy policy-app has an invalid policy.evaluationInterval.noncompliant value: time: unknown unit ` +
 				`"w" in duration "1w2d"`,
 		},
+		{
+			`{"compliant": "watch", "noncompliant": "watch"}`,
+			`{"compliant": "watch", "noncompliant": "watch"}`,
+			`{"compliant": "watch", "noncompliant": "watch"}`,
+			``,
+		},
 	}
 
 	for _, test := range tests {
@@ -1056,12 +1062,19 @@ policies:
 				)
 
 				p := Plugin{}
+
 				err := p.Config([]byte(config), tmpDir)
 				if err == nil {
-					t.Fatal("Expected an error but did not get one")
-				}
+					if test.expectedMsg != "" {
+						t.Fatal("Expected an error but did not receive one")
+					}
+				} else {
+					if test.expectedMsg == "" {
+						t.Fatalf("Expected no error but received: %v", err)
+					}
 
-				assertEqual(t, err.Error(), test.expectedMsg)
+					assertEqual(t, err.Error(), test.expectedMsg)
+				}
 			},
 		)
 	}
