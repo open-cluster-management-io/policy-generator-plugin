@@ -99,18 +99,20 @@ func TestValidateManifestMissingData(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
-		name := fmt.Sprintf("manifest missing %s", strings.Join(test.missingFields, "."))
+		name := "manifest missing " + strings.Join(test.missingFields, ".")
 
 		t.Run(
 			name,
 			func(t *testing.T) {
 				t.Parallel()
+
 				configmap := *createExConfigMap("configmap1")
+
 				err := unstructured.SetNestedField(configmap, "", test.missingFields...)
 				if err != nil {
 					t.Fatal(err.Error())
 				}
+
 				manifests := []map[string]interface{}{configmap}
 
 				patcher := manifestPatcher{manifests: manifests, patches: []map[string]interface{}{}}
@@ -136,8 +138,7 @@ func TestValidatePatchMissingData(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
-		name := fmt.Sprintf("patch missing %s", strings.Join(test.missingFields, "."))
+		name := "patch missing " + strings.Join(test.missingFields, ".")
 
 		t.Run(
 			name,
@@ -159,10 +160,12 @@ func TestValidatePatchMissingData(t *testing.T) {
 						},
 					},
 				}
+
 				err := unstructured.SetNestedField(patch, "", test.missingFields...)
 				if err != nil {
 					t.Fatal(err.Error())
 				}
+
 				patches := []map[string]interface{}{patch}
 
 				patcher := manifestPatcher{manifests: manifests, patches: patches}
@@ -187,8 +190,7 @@ func TestValidatePatchInvalidSingleManifest(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
-		name := fmt.Sprintf("patch invalid %s", strings.Join(test.invalidFields, "."))
+		name := "patch invalid " + strings.Join(test.invalidFields, ".")
 
 		t.Run(
 			name,
@@ -207,10 +209,12 @@ func TestValidatePatchInvalidSingleManifest(t *testing.T) {
 						},
 					},
 				}
+
 				err := unstructured.SetNestedField(patch, true, test.invalidFields...)
 				if err != nil {
 					t.Fatal(err.Error())
 				}
+
 				patches := []map[string]interface{}{patch}
 
 				patcher := manifestPatcher{manifests: manifests, patches: patches}

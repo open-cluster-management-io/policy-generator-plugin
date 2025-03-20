@@ -24,6 +24,7 @@ run:
 linters:
   enable-all: true
   disable:
+    - mnd # Disabled as tech debt: Magic number detection
     - bodyclose
     - cyclop
     - depguard
