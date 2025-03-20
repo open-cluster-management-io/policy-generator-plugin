@@ -45,17 +45,17 @@ const (
 // desired policies.
 type Plugin struct {
 	APIVersion string `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
-	Kind       string `json:"kind,omitempty" yaml:"kind,omitempty"`
+	Kind       string `json:"kind,omitempty"       yaml:"kind,omitempty"`
 	Metadata   struct {
 		Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	PlacementBindingDefaults struct {
 		Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	} `json:"placementBindingDefaults,omitempty" yaml:"placementBindingDefaults,omitempty"`
-	PolicyDefaults    types.PolicyDefaults    `json:"policyDefaults,omitempty" yaml:"policyDefaults,omitempty"`
+	PolicyDefaults    types.PolicyDefaults    `json:"policyDefaults,omitempty"    yaml:"policyDefaults,omitempty"`
 	PolicySetDefaults types.PolicySetDefaults `json:"policySetDefaults,omitempty" yaml:"policySetDefaults,omitempty"`
-	Policies          []types.PolicyConfig    `json:"policies" yaml:"policies"`
-	PolicySets        []types.PolicySetConfig `json:"policySets" yaml:"policySets"`
+	Policies          []types.PolicyConfig    `json:"policies"                    yaml:"policies"`
+	PolicySets        []types.PolicySetConfig `json:"policySets"                  yaml:"policySets"`
 	// A set of all placement names that have been processed or generated
 	allPlcs map[string]bool
 	// The base of the directory tree to restrict all manifest files to be within
@@ -224,13 +224,15 @@ func (p *Plugin) Generate() ([]byte, error) {
 
 		// If there is only one policy or one policy set, use the policy or policy set name if there is no default
 		// binding name specified
-		if len(policyConfs) == 1 && len(policySetConfs) == 0 {
+		switch {
+		case len(policyConfs) == 1 && len(policySetConfs) == 0:
 			bindingName = "binding-" + policyConfs[0].Name
-		} else if len(policyConfs) == 0 && len(policySetConfs) == 0 {
+		case len(policyConfs) == 0 && len(policySetConfs) == 0:
 			bindingName = "binding-" + policySetConfs[0].Name
-		} else {
+		default:
 			existMultiple = true
 		}
+
 		// If there are multiple policies or policy sets, use the default placement binding name
 		// but append a number to it so it's a unique name.
 		if p.PlacementBindingDefaults.Name != "" && existMultiple {
@@ -483,11 +485,13 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 	}
 
 	consolidatedValue, setConsolidated := getPolicyDefaultBool(unmarshaledConfig, "consolidateManifests")
-	if setConsolidated {
+
+	switch {
+	case setConsolidated:
 		p.PolicyDefaults.ConsolidateManifests = consolidatedValue
-	} else if p.PolicyDefaults.OrderManifests {
+	case p.PolicyDefaults.OrderManifests:
 		p.PolicyDefaults.ConsolidateManifests = false
-	} else {
+	default:
 		p.PolicyDefaults.ConsolidateManifests = true
 	}
 
@@ -686,11 +690,13 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		}
 
 		consolidatedValue, setConsolidated := getPolicyBool(unmarshaledConfig, i, "consolidateManifests")
-		if setConsolidated {
+
+		switch {
+		case setConsolidated:
 			policy.ConsolidateManifests = consolidatedValue
-		} else if policy.OrderManifests {
+		case policy.OrderManifests:
 			policy.ConsolidateManifests = false
-		} else {
+		default:
 			policy.ConsolidateManifests = p.PolicyDefaults.ConsolidateManifests
 		}
 
@@ -926,27 +932,29 @@ func applyDefaultPlacementFields(placement *types.PlacementConfig, defaultPlacem
 	// If both cluster label selectors and placement path/name aren't set, then use the defaults with a
 	// priority on placement path followed by placement name.
 	if policyPlcUnset && plcDefaultSet {
-		if !policyPlrUnset {
+		switch {
+		case !policyPlrUnset:
 			return
-		} else if defaultPlacement.PlacementPath != "" {
+		case defaultPlacement.PlacementPath != "":
 			placement.PlacementPath = defaultPlacement.PlacementPath
-		} else if defaultPlacement.PlacementName != "" {
+		case defaultPlacement.PlacementName != "":
 			placement.PlacementName = defaultPlacement.PlacementName
-		} else if len(defaultPlacement.LabelSelector) > 0 {
+		case len(defaultPlacement.LabelSelector) > 0:
 			placement.LabelSelector = defaultPlacement.LabelSelector
 		}
 	} else if policyPlrUnset && plrDefaultSet {
 		// Else if both cluster selectors and placement rule path/name aren't set, then use the defaults with a
 		// priority on placement rule path followed by placement rule name.
-		if !policyPlcUnset {
+		switch {
+		case !policyPlcUnset:
 			return
-		} else if defaultPlacement.PlacementRulePath != "" {
+		case defaultPlacement.PlacementRulePath != "":
 			placement.PlacementRulePath = defaultPlacement.PlacementRulePath
-		} else if defaultPlacement.PlacementRuleName != "" {
+		case defaultPlacement.PlacementRuleName != "":
 			placement.PlacementRuleName = defaultPlacement.PlacementRuleName
-		} else if len(defaultPlacement.ClusterSelectors) > 0 {
+		case len(defaultPlacement.ClusterSelectors) > 0:
 			placement.ClusterSelectors = defaultPlacement.ClusterSelectors
-		} else if len(defaultPlacement.ClusterSelector) > 0 {
+		case len(defaultPlacement.ClusterSelector) > 0:
 			placement.ClusterSelector = defaultPlacement.ClusterSelector
 		}
 	}
@@ -1204,7 +1212,7 @@ func (p *Plugin) assertValidConfig() error {
 			}
 		}
 
-		err := p.assertValidPlacement(policy.Placement, fmt.Sprintf("policy %s", policy.Name), &plCount)
+		err := p.assertValidPlacement(policy.Placement, "policy "+policy.Name, &plCount)
 		if err != nil {
 			return err
 		}
@@ -1242,7 +1250,7 @@ func (p *Plugin) assertValidConfig() error {
 		seenPlcset[plcset.Name] = true
 
 		// Validate policy set Placement settings
-		err := p.assertValidPlacement(plcset.Placement, fmt.Sprintf("policySet %s", plcset.Name), &plCount)
+		err := p.assertValidPlacement(plcset.Placement, "policySet "+plcset.Name, &plCount)
 		if err != nil {
 			return err
 		}
@@ -1390,11 +1398,13 @@ func (p *Plugin) assertValidPlacement(
 
 	// Determine which selectors to use
 	var resolvedSelectors map[string]interface{}
-	if len(placement.ClusterSelectors) > 0 {
+
+	switch {
+	case len(placement.ClusterSelectors) > 0:
 		resolvedSelectors = placement.ClusterSelectors
-	} else if len(placement.ClusterSelector) > 0 {
+	case len(placement.ClusterSelector) > 0:
 		resolvedSelectors = placement.ClusterSelector
-	} else if len(placement.LabelSelector) > 0 {
+	case len(placement.LabelSelector) > 0:
 		resolvedSelectors = placement.LabelSelector
 	}
 
@@ -1709,6 +1719,7 @@ func (p *Plugin) createPlacement(
 		p.processedPlcs[name] = true
 	} else {
 		var skip bool
+
 		name, skip = p.getPlcName(defaultPlacementConfig, placementConfig, nameDefault)
 		if skip {
 			return
@@ -1716,11 +1727,13 @@ func (p *Plugin) createPlacement(
 
 		// Determine which selectors to use
 		var resolvedSelectors map[string]interface{}
-		if len(placementConfig.ClusterSelectors) > 0 {
+
+		switch {
+		case len(placementConfig.ClusterSelectors) > 0:
 			resolvedSelectors = placementConfig.ClusterSelectors
-		} else if len(placementConfig.ClusterSelector) > 0 {
+		case len(placementConfig.ClusterSelector) > 0:
 			resolvedSelectors = placementConfig.ClusterSelector
-		} else if len(placementConfig.LabelSelector) > 0 {
+		case len(placementConfig.LabelSelector) > 0:
 			resolvedSelectors = placementConfig.LabelSelector
 		}
 
@@ -1825,9 +1838,7 @@ func (p *Plugin) generateSelector(
 		for label, value := range resolvedSelectors {
 			valueStr, ok := value.(string)
 			if !ok {
-				return nil, fmt.Errorf(
-					"the input is not a valid label selector or key-value label matching map",
-				)
+				return nil, errors.New("the input is not a valid label selector or key-value label matching map")
 			}
 
 			lsReq := metav1.LabelSelectorRequirement{Key: label}

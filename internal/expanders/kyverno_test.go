@@ -18,11 +18,11 @@ func TestKyvernoCanHandle(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(
-			fmt.Sprintf("kind=%s", test.kind),
+			"kind="+test.kind,
 			func(t *testing.T) {
 				t.Parallel()
+
 				manifest := map[string]interface{}{
 					"apiVersion": kyvernoAPIVersion,
 					"kind":       test.kind,
@@ -49,11 +49,11 @@ func TestKyvernoCanHandleInvalid(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(
 			fmt.Sprintf("apiVersion=%s,kind=%s,name=%s", test.apiVersion, test.kind, test.name),
 			func(t *testing.T) {
 				t.Parallel()
+
 				manifest := map[string]interface{}{
 					"apiVersion": test.apiVersion,
 					"kind":       test.kind,

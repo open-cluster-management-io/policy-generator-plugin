@@ -18,8 +18,8 @@ import (
 
 type kustomizeFile struct {
 	OpenAPI   types.Filepath   `json:"openapi,omitempty" yaml:"openapi,omitempty"`
-	Patches   []types.Filepath `json:"patches" yaml:"patches"`
-	Resources []string         `json:"resources" yaml:"resources"`
+	Patches   []types.Filepath `json:"patches"           yaml:"patches"`
+	Resources []string         `json:"resources"         yaml:"resources"`
 }
 
 type manifestPatcher struct {

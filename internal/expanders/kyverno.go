@@ -2,8 +2,6 @@
 package expanders
 
 import (
-	"fmt"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"open-cluster-management.io/policy-generator-plugin/internal/types"
@@ -50,7 +48,7 @@ func (k KyvernoPolicyExpander) Expand(
 	// This was previously validated in the CanHandle method.
 	policyName, _, _ := unstructured.NestedString(manifest, "metadata", "name")
 
-	configPolicyName := fmt.Sprintf("inform-kyverno-%s", policyName)
+	configPolicyName := "inform-kyverno-" + policyName
 	configurationPolicy := map[string]interface{}{
 		"objectDefinition": map[string]interface{}{
 			"apiVersion": configPolicyAPIVersion,
