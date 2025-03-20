@@ -12,51 +12,51 @@ type HubTemplateOptions struct {
 }
 
 type CustomMessage struct {
-	Compliant    string `json:"compliant,omitempty" yaml:"compliant,omitempty"`
+	Compliant    string `json:"compliant,omitempty"    yaml:"compliant,omitempty"`
 	NonCompliant string `json:"noncompliant,omitempty" yaml:"noncompliant,omitempty"`
 }
 
 type PolicyOptions struct {
-	Categories                     []string           `json:"categories,omitempty" yaml:"categories,omitempty"`
-	Controls                       []string           `json:"controls,omitempty" yaml:"controls,omitempty"`
-	CopyPolicyMetadata             bool               `json:"copyPolicyMetadata,omitempty" yaml:"copyPolicyMetadata,omitempty"`
-	Dependencies                   []PolicyDependency `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	Description                    string             `json:"description,omitempty" yaml:"description,omitempty"`
-	ExtraDependencies              []PolicyDependency `json:"extraDependencies,omitempty" yaml:"extraDependencies,omitempty"`
-	Placement                      PlacementConfig    `json:"placement,omitempty" yaml:"placement,omitempty"`
-	Standards                      []string           `json:"standards,omitempty" yaml:"standards,omitempty"`
-	ConsolidateManifests           bool               `json:"consolidateManifests,omitempty" yaml:"consolidateManifests,omitempty"`
-	OrderManifests                 bool               `json:"orderManifests" yaml:"orderManifests"`
-	Disabled                       bool               `json:"disabled,omitempty" yaml:"disabled,omitempty"`
-	IgnorePending                  bool               `json:"ignorePending,omitempty" yaml:"ignorePending,omitempty"`
-	InformGatekeeperPolicies       bool               `json:"informGatekeeperPolicies,omitempty" yaml:"informGatekeeperPolicies,omitempty"`
-	InformKyvernoPolicies          bool               `json:"informKyvernoPolicies,omitempty" yaml:"informKyvernoPolicies,omitempty"`
-	GeneratePolicyPlacement        bool               `json:"generatePolicyPlacement,omitempty" yaml:"generatePolicyPlacement,omitempty"`
-	GeneratePlacementWhenInSet     bool               `json:"generatePlacementWhenInSet,omitempty" yaml:"generatePlacementWhenInSet,omitempty"`
-	PolicySets                     []string           `json:"policySets,omitempty" yaml:"policySets,omitempty"`
-	PolicyAnnotations              map[string]string  `json:"policyAnnotations,omitempty" yaml:"policyAnnotations,omitempty"`
-	PolicyLabels                   map[string]string  `json:"policyLabels,omitempty" yaml:"policyLabels,omitempty"`
+	Categories                     []string           `json:"categories,omitempty"                     yaml:"categories,omitempty"`
+	Controls                       []string           `json:"controls,omitempty"                       yaml:"controls,omitempty"`
+	CopyPolicyMetadata             bool               `json:"copyPolicyMetadata,omitempty"             yaml:"copyPolicyMetadata,omitempty"`
+	Dependencies                   []PolicyDependency `json:"dependencies,omitempty"                   yaml:"dependencies,omitempty"`
+	Description                    string             `json:"description,omitempty"                    yaml:"description,omitempty"`
+	ExtraDependencies              []PolicyDependency `json:"extraDependencies,omitempty"              yaml:"extraDependencies,omitempty"`
+	Placement                      PlacementConfig    `json:"placement,omitempty"                      yaml:"placement,omitempty"`
+	Standards                      []string           `json:"standards,omitempty"                      yaml:"standards,omitempty"`
+	ConsolidateManifests           bool               `json:"consolidateManifests,omitempty"           yaml:"consolidateManifests,omitempty"`
+	OrderManifests                 bool               `json:"orderManifests"                           yaml:"orderManifests"`
+	Disabled                       bool               `json:"disabled,omitempty"                       yaml:"disabled,omitempty"`
+	IgnorePending                  bool               `json:"ignorePending,omitempty"                  yaml:"ignorePending,omitempty"`
+	InformGatekeeperPolicies       bool               `json:"informGatekeeperPolicies,omitempty"       yaml:"informGatekeeperPolicies,omitempty"`
+	InformKyvernoPolicies          bool               `json:"informKyvernoPolicies,omitempty"          yaml:"informKyvernoPolicies,omitempty"`
+	GeneratePolicyPlacement        bool               `json:"generatePolicyPlacement,omitempty"        yaml:"generatePolicyPlacement,omitempty"`
+	GeneratePlacementWhenInSet     bool               `json:"generatePlacementWhenInSet,omitempty"     yaml:"generatePlacementWhenInSet,omitempty"`
+	PolicySets                     []string           `json:"policySets,omitempty"                     yaml:"policySets,omitempty"`
+	PolicyAnnotations              map[string]string  `json:"policyAnnotations,omitempty"              yaml:"policyAnnotations,omitempty"`
+	PolicyLabels                   map[string]string  `json:"policyLabels,omitempty"                   yaml:"policyLabels,omitempty"`
 	ConfigurationPolicyAnnotations map[string]string  `json:"configurationPolicyAnnotations,omitempty" yaml:"configurationPolicyAnnotations,omitempty"`
-	HubTemplateOptions             HubTemplateOptions `json:"hubTemplateOptions,omitempty" yaml:"hubTemplateOptions,omitempty"`
+	HubTemplateOptions             HubTemplateOptions `json:"hubTemplateOptions,omitempty"             yaml:"hubTemplateOptions,omitempty"`
 }
 
 type PolicySetOptions struct {
-	Placement                  PlacementConfig `json:"placement,omitempty" yaml:"placement,omitempty"`
+	Placement                  PlacementConfig `json:"placement,omitempty"                  yaml:"placement,omitempty"`
 	GeneratePolicySetPlacement bool            `json:"generatePolicySetPlacement,omitempty" yaml:"generatePolicySetPlacement,omitempty"`
 }
 
 type ConfigurationPolicyOptions struct {
-	RemediationAction      string             `json:"remediationAction,omitempty" yaml:"remediationAction,omitempty"`
-	Severity               string             `json:"severity,omitempty" yaml:"severity,omitempty"`
-	ComplianceType         string             `json:"complianceType,omitempty" yaml:"complianceType,omitempty"`
+	RemediationAction      string             `json:"remediationAction,omitempty"      yaml:"remediationAction,omitempty"`
+	Severity               string             `json:"severity,omitempty"               yaml:"severity,omitempty"`
+	ComplianceType         string             `json:"complianceType,omitempty"         yaml:"complianceType,omitempty"`
 	MetadataComplianceType string             `json:"metadataComplianceType,omitempty" yaml:"metadataComplianceType,omitempty"`
-	EvaluationInterval     EvaluationInterval `json:"evaluationInterval,omitempty" yaml:"evaluationInterval,omitempty"`
-	NamespaceSelector      NamespaceSelector  `json:"namespaceSelector,omitempty" yaml:"namespaceSelector,omitempty"`
-	PruneObjectBehavior    string             `json:"pruneObjectBehavior,omitempty" yaml:"pruneObjectBehavior,omitempty"`
-	RecordDiff             string             `json:"recordDiff,omitempty" yaml:"recordDiff,omitempty"`
-	RecreateOption         string             `json:"recreateOption,omitempty" yaml:"recreateOption,omitempty"`
-	CustomMessage          CustomMessage      `json:"customMessage,omitempty" yaml:"customMessage,omitempty"`
-	ObjectSelector         LabelSelector      `json:"objectSelector,omitempty" yaml:"objectSelector,omitempty"`
+	EvaluationInterval     EvaluationInterval `json:"evaluationInterval,omitempty"     yaml:"evaluationInterval,omitempty"`
+	NamespaceSelector      NamespaceSelector  `json:"namespaceSelector,omitempty"      yaml:"namespaceSelector,omitempty"`
+	PruneObjectBehavior    string             `json:"pruneObjectBehavior,omitempty"    yaml:"pruneObjectBehavior,omitempty"`
+	RecordDiff             string             `json:"recordDiff,omitempty"             yaml:"recordDiff,omitempty"`
+	RecreateOption         string             `json:"recreateOption,omitempty"         yaml:"recreateOption,omitempty"`
+	CustomMessage          CustomMessage      `json:"customMessage,omitempty"          yaml:"customMessage,omitempty"`
+	ObjectSelector         LabelSelector      `json:"objectSelector,omitempty"         yaml:"objectSelector,omitempty"`
 }
 
 type GatekeeperOptions struct {
@@ -64,14 +64,14 @@ type GatekeeperOptions struct {
 }
 
 type Manifest struct {
-	ConfigurationPolicyOptions `json:",inline" yaml:",inline"`
-	GatekeeperOptions          `json:",inline" yaml:",inline"`
-	Patches                    []map[string]interface{} `json:"patches,omitempty" yaml:"patches,omitempty"`
-	Path                       string                   `json:"path,omitempty" yaml:"path,omitempty"`
+	ConfigurationPolicyOptions `json:",inline"                     yaml:",inline"`
+	GatekeeperOptions          `json:",inline"                     yaml:",inline"`
+	Patches                    []map[string]interface{} `json:"patches,omitempty"           yaml:"patches,omitempty"`
+	Path                       string                   `json:"path,omitempty"              yaml:"path,omitempty"`
 	ExtraDependencies          []PolicyDependency       `json:"extraDependencies,omitempty" yaml:"extraDependencies,omitempty"`
-	IgnorePending              bool                     `json:"ignorePending,omitempty" yaml:"ignorePending,omitempty"`
-	OpenAPI                    Filepath                 `json:"openapi,omitempty" yaml:"openapi,omitempty"`
-	Name                       string                   `json:"name,omitempty" yaml:"name,omitempty"`
+	IgnorePending              bool                     `json:"ignorePending,omitempty"     yaml:"ignorePending,omitempty"`
+	OpenAPI                    Filepath                 `json:"openapi,omitempty"           yaml:"openapi,omitempty"`
+	Name                       string                   `json:"name,omitempty"              yaml:"name,omitempty"`
 }
 
 type Filepath struct {
@@ -79,7 +79,7 @@ type Filepath struct {
 }
 
 type LabelSelector struct {
-	MatchLabels      *map[string]string                 `json:"matchLabels,omitempty" yaml:"matchLabels,omitempty"`
+	MatchLabels      *map[string]string                 `json:"matchLabels,omitempty"      yaml:"matchLabels,omitempty"`
 	MatchExpressions *[]metav1.LabelSelectorRequirement `json:"matchExpressions,omitempty" yaml:"matchExpressions,omitempty"`
 }
 
@@ -88,7 +88,7 @@ func (s LabelSelector) IsUnset() bool {
 }
 
 type NamespaceSelector struct {
-	LabelSelector `json:",inline" yaml:",inline"`
+	LabelSelector `json:",inline"           yaml:",inline"`
 	Exclude       []string `json:"exclude,omitempty" yaml:"exclude,omitempty"`
 	Include       []string `json:"include,omitempty" yaml:"include,omitempty"`
 }
@@ -112,26 +112,26 @@ func (t NamespaceSelector) String() string {
 }
 
 type PlacementConfig struct {
-	ClusterSelectors  map[string]interface{} `json:"clusterSelectors,omitempty" yaml:"clusterSelectors,omitempty"`
-	ClusterSelector   map[string]interface{} `json:"clusterSelector,omitempty" yaml:"clusterSelector,omitempty"`
-	LabelSelector     map[string]interface{} `json:"labelSelector,omitempty" yaml:"labelSelector,omitempty"`
-	Name              string                 `json:"name,omitempty" yaml:"name,omitempty"`
-	PlacementPath     string                 `json:"placementPath,omitempty" yaml:"placementPath,omitempty"`
+	ClusterSelectors  map[string]interface{} `json:"clusterSelectors,omitempty"  yaml:"clusterSelectors,omitempty"`
+	ClusterSelector   map[string]interface{} `json:"clusterSelector,omitempty"   yaml:"clusterSelector,omitempty"`
+	LabelSelector     map[string]interface{} `json:"labelSelector,omitempty"     yaml:"labelSelector,omitempty"`
+	Name              string                 `json:"name,omitempty"              yaml:"name,omitempty"`
+	PlacementPath     string                 `json:"placementPath,omitempty"     yaml:"placementPath,omitempty"`
 	PlacementRulePath string                 `json:"placementRulePath,omitempty" yaml:"placementRulePath,omitempty"`
-	PlacementName     string                 `json:"placementName,omitempty" yaml:"placementName,omitempty"`
+	PlacementName     string                 `json:"placementName,omitempty"     yaml:"placementName,omitempty"`
 	PlacementRuleName string                 `json:"placementRuleName,omitempty" yaml:"placementRuleName,omitempty"`
 }
 
 type EvaluationInterval struct {
-	Compliant    string `json:"compliant,omitempty" yaml:"compliant,omitempty"`
+	Compliant    string `json:"compliant,omitempty"    yaml:"compliant,omitempty"`
 	NonCompliant string `json:"noncompliant,omitempty" yaml:"noncompliant,omitempty"`
 }
 
 // PolicyConfig represents a policy entry in the PolicyGenerator configuration.
 type PolicyConfig struct {
-	PolicyOptions              `json:",inline" yaml:",inline"`
-	ConfigurationPolicyOptions `json:",inline" yaml:",inline"`
-	GatekeeperOptions          `json:",inline" yaml:",inline"`
+	PolicyOptions              `json:",inline"        yaml:",inline"`
+	ConfigurationPolicyOptions `json:",inline"        yaml:",inline"`
+	GatekeeperOptions          `json:",inline"        yaml:",inline"`
 	Name                       string `json:"name,omitempty" yaml:"name,omitempty"`
 	// This a slice of structs to allow additional configuration related to a manifest such as
 	// accepting patches.
@@ -139,18 +139,18 @@ type PolicyConfig struct {
 }
 
 type PolicyDefaults struct {
-	PolicyOptions              `json:",inline" yaml:",inline"`
-	ConfigurationPolicyOptions `json:",inline" yaml:",inline"`
-	GatekeeperOptions          `json:",inline" yaml:",inline"`
-	Namespace                  string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	PolicyOptions              `json:",inline"                 yaml:",inline"`
+	ConfigurationPolicyOptions `json:",inline"                 yaml:",inline"`
+	GatekeeperOptions          `json:",inline"                 yaml:",inline"`
+	Namespace                  string `json:"namespace,omitempty"     yaml:"namespace,omitempty"`
 	OrderPolicies              bool   `json:"orderPolicies,omitempty" yaml:"orderPolicies,omitempty"`
 }
 
 type PolicySetConfig struct {
-	Name             string   `json:"name,omitempty" yaml:"name,omitempty"`
+	Name             string   `json:"name,omitempty"        yaml:"name,omitempty"`
 	Description      string   `json:"description,omitempty" yaml:"description,omitempty"`
-	Policies         []string `json:"policies,omitempty" yaml:"policies,omitempty"`
-	PolicySetOptions `json:",inline" yaml:",inline"`
+	Policies         []string `json:"policies,omitempty"    yaml:"policies,omitempty"`
+	PolicySetOptions `json:",inline"               yaml:",inline"`
 }
 
 type PolicySetDefaults struct {
@@ -160,7 +160,7 @@ type PolicySetDefaults struct {
 type PolicyDependency struct {
 	APIVersion string `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
 	Compliance string `json:"compliance,omitempty" yaml:"compliance,omitempty"`
-	Kind       string `json:"kind,omitempty" yaml:"kind,omitempty"`
-	Name       string `json:"name" yaml:"name"`
-	Namespace  string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Kind       string `json:"kind,omitempty"       yaml:"kind,omitempty"`
+	Name       string `json:"name"                 yaml:"name"`
+	Namespace  string `json:"namespace,omitempty"  yaml:"namespace,omitempty"`
 }

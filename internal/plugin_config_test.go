@@ -1034,12 +1034,11 @@ func TestConfigEvalInterval(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
-
 		t.Run(
-			fmt.Sprintf("expected=%s", test.expectedMsg),
+			"expected="+test.expectedMsg,
 			func(t *testing.T) {
 				t.Parallel()
+
 				config := fmt.Sprintf(`
 apiVersion: policy.open-cluster-management.io/v1
 kind: PolicyGenerator
@@ -1129,12 +1128,11 @@ func TestConfigInvalidManifestKey(t *testing.T) {
 	}
 
 	for testName, test := range tests {
-		test := test
-
 		t.Run(
 			testName,
 			func(t *testing.T) {
 				t.Parallel()
+
 				config := fmt.Sprintf(`
 apiVersion: policy.open-cluster-management.io/v1
 kind: PolicyGenerator
@@ -1157,6 +1155,7 @@ policies:
 				)
 
 				p := Plugin{}
+
 				err := p.Config([]byte(config), tmpDir)
 				if err == nil {
 					t.Fatal("Expected an error but did not get one")
@@ -1284,7 +1283,7 @@ policies:
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	expected := fmt.Sprintf("policyDefaults placement.placementRulePath could not read the path %s", plrPath)
+	expected := "policyDefaults placement.placementRulePath could not read the path " + plrPath
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -1578,15 +1577,18 @@ func TestPolicySetConfig(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc // capture range variable
+		// capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
 			p := Plugin{}
 			var err error
+
 			p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
 			if err != nil {
 				t.Fatal(err.Error())
 			}
+
 			p.PlacementBindingDefaults.Name = "my-placement-binding"
 			p.PolicyDefaults.Placement.Name = "my-placement-rule"
 			p.PolicyDefaults.Namespace = "my-policies"
@@ -1609,10 +1611,12 @@ func TestPolicySetConfig(t *testing.T) {
 			p.Policies = append(p.Policies, policyConf1, policyConf2)
 			tc.setupFunc(&p)
 			p.applyDefaults(map[string]interface{}{})
+
 			err = p.assertValidConfig()
 			if err == nil {
 				t.Fatal("Expected an error but did not get one")
 			}
+
 			assertEqual(t, err.Error(), tc.expectedErrMsg)
 		})
 	}

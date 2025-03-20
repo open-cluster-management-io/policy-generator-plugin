@@ -2,8 +2,6 @@
 package expanders
 
 import (
-	"fmt"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"open-cluster-management.io/policy-generator-plugin/internal/types"
@@ -54,7 +52,7 @@ func (g GatekeeperPolicyExpander) Expand(
 	constraintName, _, _ := unstructured.NestedString(manifest, "metadata", "name")
 	constraintKind, _, _ := unstructured.NestedString(manifest, "kind")
 
-	auditConfigPolicyName := fmt.Sprintf("inform-gatekeeper-audit-%s", constraintName)
+	auditConfigPolicyName := "inform-gatekeeper-audit-" + constraintName
 	auditConfigurationPolicy := map[string]interface{}{
 		"objectDefinition": map[string]interface{}{
 			"apiVersion": configPolicyAPIVersion,
@@ -87,7 +85,7 @@ func (g GatekeeperPolicyExpander) Expand(
 	}
 	// Further improvements here could be made by having the user specify the Gatekeeper namespace and
 	// targeting the events for the constraint kind to just that namespace.
-	admissionConfigPolicyName := fmt.Sprintf("inform-gatekeeper-admission-%s", constraintName)
+	admissionConfigPolicyName := "inform-gatekeeper-admission-" + constraintName
 	admissionConfigurationPolicy := map[string]interface{}{
 		"objectDefinition": map[string]interface{}{
 			"apiVersion": configPolicyAPIVersion,

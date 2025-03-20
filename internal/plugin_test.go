@@ -261,12 +261,11 @@ func TestConfigManifestKeyOverride(t *testing.T) {
 	}
 
 	for testName, test := range tests {
-		test := test
-
 		t.Run(
 			testName,
 			func(t *testing.T) {
 				t.Parallel()
+
 				config := fmt.Sprintf(`
 apiVersion: policy.open-cluster-management.io/v1
 kind: PolicyGenerator
@@ -291,6 +290,7 @@ policies:
 				)
 
 				p := Plugin{}
+
 				err := p.Config([]byte(config), tmpDir)
 				if err != nil {
 					t.Fatal("Unexpected error", err)
@@ -305,6 +305,7 @@ policies:
 				}
 
 				var policyObj map[string]interface{}
+
 				err = yaml.Unmarshal(output, &policyObj)
 				if err != nil {
 					t.Fatal("Failed to unmarshal object", err)
@@ -1184,7 +1185,7 @@ func TestCreatePolicyEmptyManifest(t *testing.T) {
 	p.applyDefaults(map[string]interface{}{})
 
 	err = p.createPolicy(&p.Policies[0])
-	expectedErr := fmt.Sprintf("found empty YAML in the manifest at %s", path.Join(tmpDir, "empty.yaml"))
+	expectedErr := "found empty YAML in the manifest at " + path.Join(tmpDir, "empty.yaml")
 	assertEqual(t, err.Error(), expectedErr)
 }
 
@@ -2263,9 +2264,7 @@ metadata:
 		t.Fatal("Expected an error but did not get one")
 	}
 
-	expected := fmt.Sprintf(
-		"invalid or not found kind in manifest path: %s", manifestPath,
-	)
+	expected := "invalid or not found kind in manifest path: " + manifestPath
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -3120,15 +3119,18 @@ func TestGeneratePolicySets(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		tc := tc // capture range variable
+		// capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
 			p := Plugin{}
 			var err error
+
 			p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
 			if err != nil {
 				t.Fatal(err.Error())
 			}
+
 			p.PlacementBindingDefaults.Name = "my-placement-binding"
 			p.PolicyDefaults.Placement.Name = "my-placement-rule"
 			p.PolicyDefaults.Namespace = "my-policies"
@@ -3891,7 +3893,8 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 		spec, _ := manifest["spec"].(map[string]interface{})
 		policyTemplates, _ := spec["policy-templates"].([]interface{})
 
-		if name == "policy-app-config" {
+		switch name {
+		case "policy-app-config":
 			assertEqual(t, len(policyTemplates), 3)
 			evaluationInterval := getYAMLEvaluationInterval(t, policyTemplates[0], false)
 			assertEqual(t, evaluationInterval["compliant"], "30m")
@@ -3903,20 +3906,17 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 
 			evaluationInterval = getYAMLEvaluationInterval(t, policyTemplates[2], true)
 			assertEqual(t, len(evaluationInterval), 0)
-		} else if name == "policy-app-config2" {
+
+		case "policy-app-config2", "policy-app-config4":
 			assertEqual(t, len(policyTemplates), 1)
 			evaluationInterval := getYAMLEvaluationInterval(t, policyTemplates[0], false)
 			assertEqual(t, evaluationInterval["compliant"], "never")
 			assertEqual(t, evaluationInterval["noncompliant"], "15s")
-		} else if name == "policy-app-config3" {
+
+		case "policy-app-config3":
 			assertEqual(t, len(policyTemplates), 1)
 			evaluationInterval := getYAMLEvaluationInterval(t, policyTemplates[0], true)
 			assertEqual(t, len(evaluationInterval), 0)
-		} else if name == "policy-app-config4" {
-			assertEqual(t, len(policyTemplates), 1)
-			evaluationInterval := getYAMLEvaluationInterval(t, policyTemplates[0], false)
-			assertEqual(t, evaluationInterval["compliant"], "never")
-			assertEqual(t, evaluationInterval["noncompliant"], "15s")
 		}
 	}
 }
@@ -3944,7 +3944,6 @@ func TestCreatePolicyWithConfigPolicyAnnotations(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -3970,6 +3969,7 @@ func TestCreatePolicyWithConfigPolicyAnnotations(t *testing.T) {
 			}
 
 			output := p.outputBuffer.Bytes()
+
 			policyManifests, err := unmarshalManifestBytes(output)
 			if err != nil {
 				t.Fatal(err.Error())
@@ -4058,8 +4058,6 @@ func TestCreatePolicyWithNamespaceSelector(t *testing.T) {
 	}
 
 	for name, test := range tests {
-		test := test
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -4086,6 +4084,7 @@ func TestCreatePolicyWithNamespaceSelector(t *testing.T) {
 			}
 
 			output := p.outputBuffer.Bytes()
+
 			policyManifests, err := unmarshalManifestBytes(output)
 			if err != nil {
 				t.Fatal(err.Error())
@@ -4129,7 +4128,6 @@ func TestGenerateNonDNSPolicyName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -4150,8 +4148,8 @@ func TestGenerateNonDNSPolicyName(t *testing.T) {
 					{Path: path.Join(tmpDir, "configmap.yaml")},
 				},
 			}
-			basePolicies := p.Policies
-			p.Policies = append(basePolicies, policyConf)
+
+			p.Policies = append(p.Policies, policyConf)
 			p.applyDefaults(map[string]interface{}{})
 
 			err = p.assertValidConfig()
@@ -4195,7 +4193,6 @@ func TestGenerateNonDNSPlacementName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -4260,7 +4257,6 @@ func TestGenerateNonDNSBindingName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -4612,10 +4608,7 @@ func TestCreatePolicyWithCopyPolicyMetadata(t *testing.T) {
 	}
 
 	for _, mode := range []string{"policyDefault", "policy"} {
-		mode := mode
-
 		for _, test := range tests {
-			test := test
 			t.Run(mode+" "+test.name, func(t *testing.T) {
 				t.Parallel()
 
@@ -4652,6 +4645,7 @@ func TestCreatePolicyWithCopyPolicyMetadata(t *testing.T) {
 				}
 
 				output := p.outputBuffer.Bytes()
+
 				policyManifests, err := unmarshalManifestBytes(output)
 				if err != nil {
 					t.Fatal(err.Error())
