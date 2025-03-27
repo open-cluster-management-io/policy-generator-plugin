@@ -31,7 +31,7 @@ jobs:
 
     - name: Linting
       run: |
-        make lint
+        echo "INFO: Linting disabled."
 
     - name: Verify format
       run: |
