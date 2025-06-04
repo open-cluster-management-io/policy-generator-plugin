@@ -70,7 +70,8 @@ build-release:
 			echo "There are local modifications in the repo" > /dev/stderr; \
 			exit 1; \
 	fi
-	@for OS in linux darwin windows; do for ARCH in amd64 arm64; do \
+	@for OS in linux darwin windows; do for ARCH in amd64 arm64 ppc64le s390x; do \
+			if [[ $${OS} != "linux" ]] && [[ $${ARCH} != *"64" ]]; then continue; fi; \
 			echo "# Building $${OS}-$${ARCH}-PolicyGenerator"; \
 			GOOS=$${OS} GOARCH=$${ARCH} CGO_ENABLED=0 \
 				go build -mod=readonly -ldflags="$(GO_LDFLAGS)" -o build_output/$${OS}-$${ARCH}-PolicyGenerator ./cmd/PolicyGenerator \
