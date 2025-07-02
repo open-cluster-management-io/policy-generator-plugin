@@ -19,8 +19,16 @@ var debug = false
 func main() {
 	// Parse command input
 	debugFlag := pflag.Bool("debug", false, "Print the stack trace with error messages")
+	helpFlag := pflag.BoolP("help", "h", false, "Print the help message")
 	versionFlag := pflag.Bool("version", false, "Print the version of the generator")
 	pflag.Parse()
+
+	if *helpFlag {
+		//nolint:forbidigo
+		fmt.Println("Usage: PolicyGenerator [flags] <policy-generator-config-file>...")
+		pflag.PrintDefaults()
+		os.Exit(0)
+	}
 
 	if *versionFlag {
 		if Version == "" {
