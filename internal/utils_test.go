@@ -1564,11 +1564,7 @@ func TestVerifyManifestPath(t *testing.T) {
 	}
 
 	defer func() {
-		err := os.Chdir(cwd)
-		if err != nil {
-			// panic since this could affect other tests that haven't yet run
-			panic(fmt.Sprintf("Couldn't go back to the original working directory: %v", err))
-		}
+		t.Chdir(cwd)
 	}()
 
 	// Set up directory structure, with 'workingdir' as target directory:
@@ -1606,10 +1602,7 @@ func TestVerifyManifestPath(t *testing.T) {
 		t.Fatalf("Failed to write %s", otherManifestPath)
 	}
 
-	err = os.Chdir(workingDir)
-	if err != nil {
-		t.Fatalf("Failed to change the working directory to %s: %v", workingDir, err)
-	}
+	t.Chdir(workingDir)
 
 	grandParentDir := path.Join("..", "..")
 	relOtherManifestPath := path.Join("..", "otherdir", "configmap.yaml")
