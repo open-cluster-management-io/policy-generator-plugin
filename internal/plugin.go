@@ -266,7 +266,7 @@ func getDefaultBool(config map[string]interface{}, defaultKey string, key string
 	if ok {
 		value, set = defaults[key].(bool)
 
-		return
+		return value, set
 	}
 
 	return false, false
@@ -282,7 +282,7 @@ func getPolicyBool(
 
 	value, set = policy[key].(bool)
 
-	return
+	return value, set
 }
 
 func getPolicySetBool(
@@ -295,7 +295,7 @@ func getPolicySetBool(
 
 	value, set = policySet[key].(bool)
 
-	return
+	return value, set
 }
 
 func getArrayObject(config map[string]interface{}, key string, idx int) map[string]interface{} {
@@ -1683,13 +1683,13 @@ func (p *Plugin) createPlacement(
 	if placementConfig.PlacementName != "" {
 		name = placementConfig.PlacementName
 
-		return
+		return name, err
 	}
 
 	if placementConfig.PlacementRuleName != "" {
 		name = placementConfig.PlacementRuleName
 
-		return
+		return name, err
 	}
 
 	plrPath := placementConfig.PlacementRulePath
@@ -1706,14 +1706,14 @@ func (p *Plugin) createPlacement(
 
 		name, placement, err = p.getPlcFromPath(resolvedPlPath)
 		if err != nil {
-			return
+			return name, err
 		}
 
 		// processedPlcs keeps track of which placements have been seen by name. This is so
 		// that if the same placement path is provided for multiple policies, it's not re-included
 		// in the generated output of the plugin.
 		if p.processedPlcs[name] {
-			return
+			return name, err
 		}
 
 		p.processedPlcs[name] = true
@@ -1722,7 +1722,7 @@ func (p *Plugin) createPlacement(
 
 		name, skip = p.getPlcName(defaultPlacementConfig, placementConfig, nameDefault)
 		if skip {
-			return
+			return name, err
 		}
 
 		// Determine which selectors to use
@@ -1803,13 +1803,13 @@ func (p *Plugin) createPlacement(
 			"an unexpected error occurred when converting the placement to YAML: %w", err,
 		)
 
-		return
+		return name, err
 	}
 
 	p.outputBuffer.Write([]byte("---\n"))
 	p.outputBuffer.Write(placementYAML)
 
-	return
+	return name, err
 }
 
 // generateSelector determines the type of input and creates a map of selectors to be used in either the

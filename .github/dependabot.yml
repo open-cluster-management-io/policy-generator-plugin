@@ -8,3 +8,28 @@ updates:
       github-actions:
         patterns:
           - "*"
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-type: all
+    ignore:
+      - dependency-name: "k8s.io/*"
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+      - dependency-name: "*.k8s.io/*"
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+    groups:
+      gomod-k8s.io:
+        patterns:
+          - "k8s.io/*"
+          - "*.k8s.io/*"
+        update-types:
+          - patch
+      gomod:
+        patterns:
+          - "*"
