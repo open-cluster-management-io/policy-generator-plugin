@@ -135,7 +135,7 @@ policyDefaults:
     exclude:
       - my-protected-ns
   placement:
-    clusterSelectors:
+    labelSelector:
       cloud: red hat
   remediationAction: enforce
   severity: medium
@@ -156,7 +156,7 @@ policies:
       metadataComplianceType: musthave
     - path: %s
   placement:
-    clusterSelectors:
+    labelSelector:
       cloud: weather
 `,
 		configMapPath,
@@ -183,14 +183,12 @@ policies:
 	}
 
 	assertReflectEqual(t, p.PolicyDefaults.NamespaceSelector, expectedNsSelector)
-	assertEqual(t, p.PolicyDefaults.Placement.PlacementRulePath, "")
 	assertEqual(t, p.PolicyDefaults.Placement.PlacementPath, "")
 	assertReflectEqual(
 		t,
-		p.PolicyDefaults.Placement.ClusterSelectors,
+		p.PolicyDefaults.Placement.LabelSelector,
 		map[string]interface{}{"cloud": "red hat"},
 	)
-	assertEqual(t, len(p.PolicyDefaults.Placement.LabelSelector), 0)
 	assertEqual(t, p.PolicyDefaults.RemediationAction, "enforce")
 	assertEqual(t, p.PolicyDefaults.Severity, "medium")
 	assertReflectEqual(t, p.PolicyDefaults.Standards, []string{"NIST SP 800-53"})
@@ -214,7 +212,7 @@ policies:
 	assertReflectEqual(t, policy1.NamespaceSelector, p1ExpectedNsSelector)
 	assertReflectEqual(
 		t,
-		policy1.Placement.ClusterSelectors,
+		policy1.Placement.LabelSelector,
 		map[string]interface{}{"cloud": "red hat"},
 	)
 	assertEqual(t, policy1.RemediationAction, "inform")
@@ -236,7 +234,7 @@ policies:
 	assertReflectEqual(t, policy2.NamespaceSelector, expectedNsSelector)
 	assertReflectEqual(
 		t,
-		policy2.Placement.ClusterSelectors,
+		policy2.Placement.LabelSelector,
 		map[string]interface{}{"cloud": "weather"},
 	)
 	assertEqual(t, policy2.RemediationAction, "enforce")
@@ -285,8 +283,6 @@ policies:
 	assertEqual(t, p.PolicyDefaults.InformGatekeeperPolicies, true)
 	assertEqual(t, p.PolicyDefaults.InformKyvernoPolicies, true)
 	assertReflectEqual(t, p.PolicyDefaults.NamespaceSelector, expectedNsSelector)
-	assertEqual(t, p.PolicyDefaults.Placement.PlacementRulePath, "")
-	assertEqual(t, len(p.PolicyDefaults.Placement.ClusterSelectors), 0)
 	assertEqual(t, p.PolicyDefaults.Placement.PlacementPath, "")
 	assertEqual(t, len(p.PolicyDefaults.Placement.LabelSelector), 0)
 	assertEqual(t, p.PolicyDefaults.RemediationAction, "inform")
@@ -305,8 +301,6 @@ policies:
 	assertEqual(t, policy.Manifests[0].Path, configMapPath)
 	assertEqual(t, policy.Name, "policy-app-config")
 	assertReflectEqual(t, policy.NamespaceSelector, expectedNsSelector)
-	assertEqual(t, len(policy.Placement.ClusterSelectors), 0)
-	assertEqual(t, policy.Placement.PlacementRulePath, "")
 	assertEqual(t, len(policy.Placement.LabelSelector), 0)
 	assertEqual(t, policy.Placement.PlacementPath, "")
 	assertEqual(t, policy.RemediationAction, "inform")
@@ -436,142 +430,6 @@ policies:
 	assertEqual(t, err.Error(), expected)
 }
 
-func TestConfigMultiplePlacementsClusterSelectorAndPlRPath(t *testing.T) {
-	t.Parallel()
-	tmpDir := t.TempDir()
-	createConfigMap(t, tmpDir, "configmap.yaml")
-	config := fmt.Sprintf(`
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-policies:
-- name: policy-app-config
-  placement:
-    clusterSelectors:
-      cloud: red hat
-    placementRulePath: path/to/plr.yaml
-  manifests:
-    - path: %s
-`,
-		path.Join(tmpDir, "configmap.yaml"),
-	)
-	p := Plugin{}
-
-	err := p.Config([]byte(config), tmpDir)
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
-	}
-
-	expected := "policy policy-app-config must specify only one of " +
-		"placement selector, placement path, or placement name"
-	assertEqual(t, err.Error(), expected)
-}
-
-func TestConfigMultiplePlacementsClusterSelectorAndPlRName(t *testing.T) {
-	t.Parallel()
-	tmpDir := t.TempDir()
-	createConfigMap(t, tmpDir, "configmap.yaml")
-	config := fmt.Sprintf(`
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-policies:
-- name: policy-app-config
-  placement:
-    clusterSelectors:
-      cloud: red hat
-    placementRuleName: plrexistingname
-  manifests:
-    - path: %s
-`,
-		path.Join(tmpDir, "configmap.yaml"),
-	)
-	p := Plugin{}
-
-	err := p.Config([]byte(config), tmpDir)
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
-	}
-
-	expected := "policy policy-app-config must specify only one of " +
-		"placement selector, placement path, or placement name"
-	assertEqual(t, err.Error(), expected)
-}
-
-func TestConfigMultiplePlacementsLabelSelectorAndPlRPath(t *testing.T) {
-	t.Parallel()
-	tmpDir := t.TempDir()
-	createConfigMap(t, tmpDir, "configmap.yaml")
-	config := fmt.Sprintf(`
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-policies:
-- name: policy-app-config
-  placement:
-    labelSelector:
-      cloud: red hat
-    placementRulePath: path/to/plr.yaml
-  manifests:
-    - path: %s
-`,
-		path.Join(tmpDir, "configmap.yaml"),
-	)
-	p := Plugin{}
-
-	err := p.Config([]byte(config), tmpDir)
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
-	}
-
-	expected := "policy policy-app-config must specify only one of " +
-		"placement selector, placement path, or placement name"
-	assertEqual(t, err.Error(), expected)
-}
-
-func TestConfigMultiplePlacementsLabelSelectorAndPlRName(t *testing.T) {
-	t.Parallel()
-	tmpDir := t.TempDir()
-	createConfigMap(t, tmpDir, "configmap.yaml")
-	config := fmt.Sprintf(`
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-policies:
-- name: policy-app-config
-  placement:
-    labelSelector:
-      cloud: red hat
-    placementRuleName: plrexistingname
-  manifests:
-    - path: %s
-`,
-		path.Join(tmpDir, "configmap.yaml"),
-	)
-	p := Plugin{}
-
-	err := p.Config([]byte(config), tmpDir)
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
-	}
-
-	expected := "policy policy-app-config must specify only one of " +
-		"placement selector, placement path, or placement name"
-	assertEqual(t, err.Error(), expected)
-}
-
 func TestConfigMultiplePlacementsLabelSelectorAndPlPath(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -637,254 +495,6 @@ policies:
 
 	expected := "policy policy-app-config must specify only one of " +
 		"placement selector, placement path, or placement name"
-	assertEqual(t, err.Error(), expected)
-}
-
-func TestConfigMultipleDefaultPlacementLabels(t *testing.T) {
-	t.Parallel()
-	const config = `
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-  placement:
-    clusterSelectors:
-      cloud: red hat
-    labelSelector:
-      cloud: red hat
-policies:
-- name: policy-app-config
-  manifests:
-    - path: input/configmap.yaml
-`
-
-	p := Plugin{}
-
-	err := p.Config([]byte(config), "")
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
-	}
-
-	expected := "policyDefaults must provide only one of " +
-		"placement.labelSelector or placement.clusterSelectors"
-	assertEqual(t, err.Error(), expected)
-}
-
-func TestConfigMultiplePolicyPlacementLabels(t *testing.T) {
-	t.Parallel()
-	tmpDir := t.TempDir()
-	createConfigMap(t, tmpDir, "configmap.yaml")
-	config := fmt.Sprintf(`
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-policies:
-- name: policy-app-config
-  placement:
-    clusterSelectors:
-      cloud: red hat
-    labelSelector:
-      cloud: red hat
-  manifests:
-    - path: %s
-`,
-		path.Join(tmpDir, "configmap.yaml"),
-	)
-
-	p := Plugin{}
-
-	err := p.Config([]byte(config), tmpDir)
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
-	}
-
-	expected := "policy policy-app-config must provide only one of " +
-		"placement.labelSelector or placement.clusterSelectors"
-	assertEqual(t, err.Error(), expected)
-}
-
-func TestConfigMultipleDefaultPlacementPaths(t *testing.T) {
-	t.Parallel()
-	const config = `
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-  placement:
-    placementPath: path/to/pl.yaml
-    placementRulePath: path/to/plr.yaml
-policies:
-- name: policy-app-config
-  placement:
-    clusterSelectors:
-      cloud: red hat
-    placementRulePath: path/to/plr.yaml
-  manifests:
-    - path: input/configmap.yaml
-`
-
-	p := Plugin{}
-
-	err := p.Config([]byte(config), "")
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
-	}
-
-	expected := "policyDefaults must provide only one of " +
-		"placement.placementPath or placement.placementRulePath"
-	assertEqual(t, err.Error(), expected)
-}
-
-func TestConfigMultipleDefaultPlacementName(t *testing.T) {
-	t.Parallel()
-	const config = `
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-  placement:
-    placementName: plExistingName
-    placementRuleName: plrExistingName
-policies:
-- name: policy-app-config
-  placement:
-    clusterSelectors:
-      cloud: red hat
-    placementRuleName: plrExistingName
-  manifests:
-    - path: input/configmap.yaml
-`
-
-	p := Plugin{}
-
-	err := p.Config([]byte(config), "")
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
-	}
-
-	expected := "policyDefaults must provide only one of " +
-		"placement.placementName or placement.placementRuleName"
-	assertEqual(t, err.Error(), expected)
-}
-
-func TestConfigMultipleDefaultAndPolicyPlacements(t *testing.T) {
-	t.Parallel()
-	tmpDir := t.TempDir()
-	plFileName := "plr.yaml"
-	cmFileName := "configmap.yaml"
-
-	createConfigMap(t, tmpDir, cmFileName)
-
-	err := os.WriteFile(path.Join(tmpDir, plFileName), []byte{}, 0o666)
-	if err != nil {
-		t.Fatalf("Failed to write %s", plFileName)
-	}
-
-	config := fmt.Sprintf(`
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-  placement:
-    placementPath: %s
-policies:
-- name: policy-app-config
-  placement:
-    clusterSelectors:
-      cloud: red hat
-  manifests:
-  - path: %s
-`,
-		path.Join(tmpDir, plFileName),
-		path.Join(tmpDir, cmFileName),
-	)
-	p := Plugin{}
-
-	err = p.Config([]byte(config), tmpDir)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-}
-
-func TestConfigMultipleDefaultAndPolicyPlacementNames(t *testing.T) {
-	t.Parallel()
-	tmpDir := t.TempDir()
-	createConfigMap(t, tmpDir, "configmap.yaml")
-	config := fmt.Sprintf(`
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-  placement:
-    placementName: plexistingname
-policies:
-- name: policy-app-config
-  placement:
-    clusterSelectors:
-      cloud: red hat
-  manifests:
-  - path: %s
-`,
-		path.Join(tmpDir, "configmap.yaml"),
-	)
-
-	p := Plugin{}
-
-	err := p.Config([]byte(config), tmpDir)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-}
-
-func TestConfigPlacementInvalidMixture(t *testing.T) {
-	t.Parallel()
-	tmpDir := t.TempDir()
-	createConfigMap(t, tmpDir, "configmap.yaml")
-	config := fmt.Sprintf(`
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-policies:
-- name: policy-app-config-1
-  placement:
-    clusterSelectors:
-      cloud: red hat
-  manifests:
-    - path: %s
-- name: policy-app-config-2
-  placement:
-    labelSelector:
-      cloud: red hat
-  manifests:
-    - path: %s
-`,
-		path.Join(tmpDir, "configmap.yaml"), path.Join(tmpDir, "configmap.yaml"),
-	)
-	p := Plugin{}
-
-	err := p.Config([]byte(config), tmpDir)
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
-	}
-
-	expected := "may not use a mix of Placement and PlacementRule for " +
-		"policies and policysets; found 1 Placement and 1 PlacementRule"
 	assertEqual(t, err.Error(), expected)
 }
 
@@ -1253,40 +863,6 @@ policies:
 	assertEqual(t, err.Error(), expected)
 }
 
-func TestConfigPlrNotFound(t *testing.T) {
-	t.Parallel()
-	tmpDir := t.TempDir()
-	createConfigMap(t, tmpDir, "configmap.yaml")
-	plrPath := path.Join(tmpDir, "plr.yaml")
-	config := fmt.Sprintf(
-		`
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-  placement:
-    placementRulePath: %s
-policies:
-- name: policy-app-config
-  manifests:
-    - path: %s
-`,
-		plrPath,
-		path.Join(tmpDir, "configmap.yaml"),
-	)
-	p := Plugin{}
-
-	err := p.Config([]byte(config), tmpDir)
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
-	}
-
-	expected := "policyDefaults placement.placementRulePath could not read the path " + plrPath
-	assertEqual(t, err.Error(), expected)
-}
-
 func TestPolicySetConfig(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -1300,8 +876,8 @@ func TestPolicySetConfig(t *testing.T) {
 					{
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
-								Name:             "policyset-placement",
-								ClusterSelectors: map[string]interface{}{"my": "app"},
+								Name:          "policyset-placement",
+								LabelSelector: map[string]interface{}{"my": "app"},
 							},
 						},
 					},
@@ -1322,96 +898,6 @@ func TestPolicySetConfig(t *testing.T) {
 				}
 			},
 			expectedErrMsg: "each policySet must have a unique name set, but found a duplicate name: my-policyset",
-		},
-		{
-			name: "policySet must provide only one of placementRulePath or placementPath",
-			setupFunc: func(p *Plugin) {
-				p.PolicySets = []types.PolicySetConfig{
-					{
-						Name: "my-policyset",
-						PolicySetOptions: types.PolicySetOptions{
-							Placement: types.PlacementConfig{
-								PlacementPath:     "../config/plc.yaml",
-								PlacementRulePath: "../config/plr.yaml",
-							},
-						},
-					},
-				}
-			},
-			expectedErrMsg: "policySet my-policyset must provide only one of " +
-				"placement.placementPath or placement.placementRulePath",
-		},
-		{
-			name: "policySet must provide only one of placementRuleName or placementName",
-			setupFunc: func(p *Plugin) {
-				p.PolicySets = []types.PolicySetConfig{
-					{
-						Name: "my-policyset",
-						PolicySetOptions: types.PolicySetOptions{
-							Placement: types.PlacementConfig{
-								PlacementName:     "plExistingName",
-								PlacementRuleName: "plrExistingName",
-							},
-						},
-					},
-				}
-			},
-			expectedErrMsg: "policySet my-policyset must provide only one of " +
-				"placement.placementName or placement.placementRuleName",
-		},
-		{
-			name: "policySet must provide only one of labelSelector or clusterSelectors",
-			setupFunc: func(p *Plugin) {
-				p.PolicySets = []types.PolicySetConfig{
-					{
-						Name: "my-policyset",
-						PolicySetOptions: types.PolicySetOptions{
-							Placement: types.PlacementConfig{
-								LabelSelector:    map[string]interface{}{"cloud": "red hat"},
-								ClusterSelectors: map[string]interface{}{"cloud": "red hat"},
-							},
-						},
-					},
-				}
-			},
-			expectedErrMsg: "policySet my-policyset must provide only one of placement.labelSelector or " +
-				"placement.clusterSelectors",
-		},
-		{
-			name: "policySet may not specify a cluster selector and placement path together",
-			setupFunc: func(p *Plugin) {
-				p.PolicySets = []types.PolicySetConfig{
-					{
-						Name: "my-policyset",
-						PolicySetOptions: types.PolicySetOptions{
-							Placement: types.PlacementConfig{
-								PlacementPath:    "../config/plc.yaml",
-								ClusterSelectors: map[string]interface{}{"cloud": "red hat"},
-							},
-						},
-					},
-				}
-			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
-				"placement name",
-		},
-		{
-			name: "policySet may not specify a cluster selector and placement name together",
-			setupFunc: func(p *Plugin) {
-				p.PolicySets = []types.PolicySetConfig{
-					{
-						Name: "my-policyset",
-						PolicySetOptions: types.PolicySetOptions{
-							Placement: types.PlacementConfig{
-								PlacementName:    "plexistingname",
-								ClusterSelectors: map[string]interface{}{"cloud": "red hat"},
-							},
-						},
-					},
-				}
-			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
-				"placement name",
 		},
 		{
 			name: "policySet may not specify a label selector and placement path together",
@@ -1450,78 +936,6 @@ func TestPolicySetConfig(t *testing.T) {
 				"placement name",
 		},
 		{
-			name: "policySet may not specify a cluster selector and placementrule path together",
-			setupFunc: func(p *Plugin) {
-				p.PolicySets = []types.PolicySetConfig{
-					{
-						Name: "my-policyset",
-						PolicySetOptions: types.PolicySetOptions{
-							Placement: types.PlacementConfig{
-								PlacementRulePath: "../config/plc.yaml",
-								ClusterSelectors:  map[string]interface{}{"cloud": "red hat"},
-							},
-						},
-					},
-				}
-			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
-				"placement name",
-		},
-		{
-			name: "policySet may not specify a cluster selector and placementrule name together",
-			setupFunc: func(p *Plugin) {
-				p.PolicySets = []types.PolicySetConfig{
-					{
-						Name: "my-policyset",
-						PolicySetOptions: types.PolicySetOptions{
-							Placement: types.PlacementConfig{
-								PlacementRuleName: "plrexistingname",
-								ClusterSelectors:  map[string]interface{}{"cloud": "red hat"},
-							},
-						},
-					},
-				}
-			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
-				"placement name",
-		},
-		{
-			name: "policySet may not specify a label selector and placementrule path together",
-			setupFunc: func(p *Plugin) {
-				p.PolicySets = []types.PolicySetConfig{
-					{
-						Name: "my-policyset",
-						PolicySetOptions: types.PolicySetOptions{
-							Placement: types.PlacementConfig{
-								PlacementRulePath: "../config/plc.yaml",
-								LabelSelector:     map[string]interface{}{"cloud": "red hat"},
-							},
-						},
-					},
-				}
-			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
-				"placement name",
-		},
-		{
-			name: "policySet may not specify a label selector and placementrule name together",
-			setupFunc: func(p *Plugin) {
-				p.PolicySets = []types.PolicySetConfig{
-					{
-						Name: "my-policyset",
-						PolicySetOptions: types.PolicySetOptions{
-							Placement: types.PlacementConfig{
-								PlacementRuleName: "plrexistingname",
-								LabelSelector:     map[string]interface{}{"cloud": "red hat"},
-							},
-						},
-					},
-				}
-			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
-				"placement name",
-		},
-		{
 			name: "policySet placementrule path not resolvable",
 			setupFunc: func(p *Plugin) {
 				p.PolicySets = []types.PolicySetConfig{
@@ -1529,13 +943,13 @@ func TestPolicySetConfig(t *testing.T) {
 						Name: "my-policyset",
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
-								PlacementRulePath: "../config/plc.yaml",
+								PlacementPath: "../config/plc.yaml",
 							},
 						},
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset placement.placementRulePath " +
+			expectedErrMsg: "policySet my-policyset placement.placementPath " +
 				"could not read the path ../config/plc.yaml",
 		},
 		{
@@ -1553,26 +967,6 @@ func TestPolicySetConfig(t *testing.T) {
 				}
 			},
 			expectedErrMsg: "policySet my-policyset placement.placementPath could not read the path ../config/plc.yaml",
-		},
-		{
-			name: "Placement and PlacementRule can't be mixed",
-			setupFunc: func(p *Plugin) {
-				p.Policies[0].Placement = types.PlacementConfig{
-					LabelSelector: map[string]interface{}{"cloud": "red hat"},
-				}
-				p.PolicySets = []types.PolicySetConfig{
-					{
-						Name: "my-policyset",
-						PolicySetOptions: types.PolicySetOptions{
-							Placement: types.PlacementConfig{
-								ClusterSelectors: map[string]interface{}{"cloud": "red hat"},
-							},
-						},
-					},
-				}
-			},
-			expectedErrMsg: "may not use a mix of Placement and PlacementRule for policies and policysets; found 1 " +
-				"Placement and 1 PlacementRule",
 		},
 	}
 

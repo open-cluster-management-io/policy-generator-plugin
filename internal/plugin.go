@@ -31,8 +31,6 @@ const (
 	policySetKind              = "PolicySet"
 	placementBindingAPIVersion = policyAPIGroup + "/v1"
 	placementBindingKind       = "PlacementBinding"
-	placementRuleAPIVersion    = "apps.open-cluster-management.io/v1"
-	placementRuleKind          = "PlacementRule"
 	placementAPIVersion        = "cluster.open-cluster-management.io/v1beta1"
 	placementKind              = "Placement"
 	maxObjectNameLength        = 63
@@ -60,15 +58,12 @@ type Plugin struct {
 	allPlcs map[string]bool
 	// The base of the directory tree to restrict all manifest files to be within
 	baseDirectory string
-	// This is a mapping of cluster/label selectors formatted as the return value of getCsKey to
-	// placement names. This is used to find common cluster/label selectors that can be consolidated
+	// This is a mapping of label selectors formatted as the return value of getLabelSelectorKey to
+	// placement names. This is used to find common label selectors that can be consolidated
 	// to a single placement.
-	csToPlc      map[string]string
-	outputBuffer bytes.Buffer
-	// Track placement kind (we only expect to have one kind)
-	usingPlR bool
-	// A set of processed placements from external placements (either Placement.PlacementRulePath or
-	// Placement.PlacementPath)
+	selectorToPlc map[string]string
+	outputBuffer  bytes.Buffer
+	// A set of processed placements from external placement files specified by Placement.PlacementPath
 	processedPlcs map[string]bool
 	// Track previous policy name for use if policies are being ordered
 	previousPolicyName string
@@ -124,7 +119,7 @@ func (p *Plugin) Config(config []byte, baseDirectory string) error {
 func (p *Plugin) Generate() ([]byte, error) {
 	// Set the default empty values to the fields that track state
 	p.allPlcs = map[string]bool{}
-	p.csToPlc = map[string]string{}
+	p.selectorToPlc = map[string]string{}
 	p.outputBuffer = bytes.Buffer{}
 	p.processedPlcs = map[string]bool{}
 
@@ -917,45 +912,20 @@ func applyDefaultPlacementFields(placement *types.PlacementConfig, defaultPlacem
 	plcDefaultSet := len(defaultPlacement.LabelSelector) != 0 ||
 		defaultPlacement.PlacementPath != "" ||
 		defaultPlacement.PlacementName != ""
-	plrDefaultSet := len(defaultPlacement.ClusterSelectors) != 0 ||
-		len(defaultPlacement.ClusterSelector) != 0 ||
-		defaultPlacement.PlacementRulePath != "" ||
-		defaultPlacement.PlacementRuleName != ""
 	policyPlcUnset := len(placement.LabelSelector) == 0 &&
 		placement.PlacementPath == "" &&
 		placement.PlacementName == ""
-	policyPlrUnset := len(placement.ClusterSelectors) == 0 &&
-		len(placement.ClusterSelector) == 0 &&
-		placement.PlacementRulePath == "" &&
-		placement.PlacementRuleName == ""
 
-	// If both cluster label selectors and placement path/name aren't set, then use the defaults with a
+	// If label selectors and placement path/name aren't set, then use the defaults with a
 	// priority on placement path followed by placement name.
 	if policyPlcUnset && plcDefaultSet {
 		switch {
-		case !policyPlrUnset:
-			return
 		case defaultPlacement.PlacementPath != "":
 			placement.PlacementPath = defaultPlacement.PlacementPath
 		case defaultPlacement.PlacementName != "":
 			placement.PlacementName = defaultPlacement.PlacementName
 		case len(defaultPlacement.LabelSelector) > 0:
 			placement.LabelSelector = defaultPlacement.LabelSelector
-		}
-	} else if policyPlrUnset && plrDefaultSet {
-		// Else if both cluster selectors and placement rule path/name aren't set, then use the defaults with a
-		// priority on placement rule path followed by placement rule name.
-		switch {
-		case !policyPlcUnset:
-			return
-		case defaultPlacement.PlacementRulePath != "":
-			placement.PlacementRulePath = defaultPlacement.PlacementRulePath
-		case defaultPlacement.PlacementRuleName != "":
-			placement.PlacementRuleName = defaultPlacement.PlacementRuleName
-		case len(defaultPlacement.ClusterSelectors) > 0:
-			placement.ClusterSelectors = defaultPlacement.ClusterSelectors
-		case len(defaultPlacement.ClusterSelector) > 0:
-			placement.ClusterSelector = defaultPlacement.ClusterSelector
 		}
 	}
 }
@@ -968,7 +938,7 @@ func (p *Plugin) assertValidConfig() error {
 	}
 
 	// Validate default policy placement settings
-	err := p.assertValidPlacement(p.PolicyDefaults.Placement, "policyDefaults", nil)
+	err := p.assertValidPlacement(p.PolicyDefaults.Placement, "policyDefaults")
 	if err != nil {
 		return err
 	}
@@ -1012,10 +982,6 @@ func (p *Plugin) assertValidConfig() error {
 	}
 
 	seenPlc := map[string]bool{}
-	plCount := struct {
-		plc int
-		plr int
-	}{}
 
 	for i := range p.Policies {
 		policy := &p.Policies[i]
@@ -1212,14 +1178,14 @@ func (p *Plugin) assertValidConfig() error {
 			}
 		}
 
-		err := p.assertValidPlacement(policy.Placement, "policy "+policy.Name, &plCount)
+		err := p.assertValidPlacement(policy.Placement, "policy "+policy.Name)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Validate default policy set placement settings
-	err = p.assertValidPlacement(p.PolicySetDefaults.Placement, "policySetDefaults", nil)
+	err = p.assertValidPlacement(p.PolicySetDefaults.Placement, "policySetDefaults")
 	if err != nil {
 		return err
 	}
@@ -1250,22 +1216,11 @@ func (p *Plugin) assertValidConfig() error {
 		seenPlcset[plcset.Name] = true
 
 		// Validate policy set Placement settings
-		err := p.assertValidPlacement(plcset.Placement, "policySet "+plcset.Name, &plCount)
+		err := p.assertValidPlacement(plcset.Placement, "policySet "+plcset.Name)
 		if err != nil {
 			return err
 		}
 	}
-
-	// Validate only one type of placement kind is in use
-	if plCount.plc != 0 && plCount.plr != 0 {
-		return fmt.Errorf(
-			"may not use a mix of Placement and PlacementRule for policies and policysets; found %d Placement and "+
-				"%d PlacementRule",
-			plCount.plc, plCount.plr,
-		)
-	}
-
-	p.usingPlR = plCount.plr != 0
 
 	return nil
 }
@@ -1274,41 +1229,17 @@ func (p *Plugin) assertValidConfig() error {
 func (p *Plugin) assertValidPlacement(
 	placement types.PlacementConfig,
 	path string,
-	plCount *struct {
-		plc int
-		plr int
-	},
 ) error {
-	if placement.PlacementRulePath != "" && placement.PlacementPath != "" {
-		return fmt.Errorf(
-			"%s must provide only one of placement.placementPath or placement.placementRulePath", path,
-		)
-	}
-
-	if (len(placement.ClusterSelectors) > 0 || len(placement.ClusterSelector) > 0) &&
-		len(placement.LabelSelector) > 0 {
-		return fmt.Errorf(
-			"%s must provide only one of placement.labelSelector or placement.clusterSelectors", path,
-		)
-	}
-
-	if placement.PlacementRuleName != "" && placement.PlacementName != "" {
-		return fmt.Errorf(
-			"%s must provide only one of placement.placementName or placement.placementRuleName", path,
-		)
-	}
-
 	placementOptionCount := 0
-	if len(placement.LabelSelector) != 0 || len(placement.ClusterSelectors) != 0 ||
-		len(placement.ClusterSelector) != 0 {
+	if len(placement.LabelSelector) != 0 {
 		placementOptionCount++
 	}
 
-	if placement.PlacementRulePath != "" || placement.PlacementPath != "" {
+	if placement.PlacementPath != "" {
 		placementOptionCount++
 	}
 
-	if placement.PlacementRuleName != "" || placement.PlacementName != "" {
+	if placement.PlacementName != "" {
 		placementOptionCount++
 	}
 
@@ -1319,16 +1250,6 @@ func (p *Plugin) assertValidPlacement(
 	}
 
 	// validate placement names are DNS compliant
-	defPlrName := placement.PlacementRuleName
-	if defPlrName != "" && len(validation.IsDNS1123Subdomain(defPlrName)) > 0 {
-		return fmt.Errorf(
-			"%s placement.placementRuleName placement name `%s` is not DNS compliant. See %s",
-			path,
-			defPlrName,
-			dnsReference,
-		)
-	}
-
 	defPlcmtPlName := placement.PlacementName
 	if defPlcmtPlName != "" && len(validation.IsDNS1123Subdomain(defPlcmtPlName)) > 0 {
 		return fmt.Errorf(
@@ -1346,16 +1267,6 @@ func (p *Plugin) assertValidPlacement(
 		)
 	}
 
-	if placement.PlacementRulePath != "" {
-		_, err := os.Stat(placement.PlacementRulePath)
-		if err != nil {
-			return fmt.Errorf(
-				"%s placement.placementRulePath could not read the path %s",
-				path, placement.PlacementRulePath,
-			)
-		}
-	}
-
 	if placement.PlacementPath != "" {
 		_, err := os.Stat(placement.PlacementPath)
 		if err != nil {
@@ -1366,51 +1277,11 @@ func (p *Plugin) assertValidPlacement(
 		}
 	}
 
-	if plCount != nil {
-		foundPl := false
-
-		if len(placement.LabelSelector) != 0 ||
-			placement.PlacementPath != "" ||
-			placement.PlacementName != "" {
-			plCount.plc++
-
-			foundPl = true
+	if len(placement.LabelSelector) > 0 {
+		_, err := p.generateSelector(placement.LabelSelector)
+		if err != nil {
+			return fmt.Errorf("%s placement has invalid selectors: %w", path, err)
 		}
-
-		if len(placement.ClusterSelectors) != 0 ||
-			len(placement.ClusterSelector) != 0 ||
-			placement.PlacementRulePath != "" ||
-			placement.PlacementRuleName != "" {
-			plCount.plr++
-
-			if foundPl {
-				return fmt.Errorf(
-					"%s may not use both Placement and PlacementRule kinds", path,
-				)
-			}
-		}
-	}
-
-	if len(placement.ClusterSelectors) > 0 && len(placement.ClusterSelector) > 0 {
-		return fmt.Errorf("cannot use both clusterSelector and clusterSelectors in %s placement config "+
-			"(clusterSelector is recommended since it matches the actual placement field)", path)
-	}
-
-	// Determine which selectors to use
-	var resolvedSelectors map[string]interface{}
-
-	switch {
-	case len(placement.ClusterSelectors) > 0:
-		resolvedSelectors = placement.ClusterSelectors
-	case len(placement.ClusterSelector) > 0:
-		resolvedSelectors = placement.ClusterSelector
-	case len(placement.LabelSelector) > 0:
-		resolvedSelectors = placement.LabelSelector
-	}
-
-	_, err := p.generateSelector(resolvedSelectors)
-	if err != nil {
-		return fmt.Errorf("%s placement has invalid selectors: %w", path, err)
 	}
 
 	return nil
@@ -1552,26 +1423,8 @@ func (p *Plugin) getPlcFromPath(plcPath string) (string, map[string]interface{},
 
 	for _, manifest := range manifests {
 		kind, _, _ := unstructured.NestedString(manifest, "kind")
-		if kind != placementRuleKind && kind != placementKind {
+		if kind != placementKind {
 			continue
-		}
-
-		// Validate PlacementRule Kind given in manifest
-		if kind == placementRuleKind {
-			if !p.usingPlR {
-				return "", nil, fmt.Errorf(
-					"the placement %s specified a placementRule kind but expected a placement kind", plcPath,
-				)
-			}
-		}
-
-		// Validate Placement Kind given in manifest
-		if kind == placementKind {
-			if p.usingPlR {
-				return "", nil, fmt.Errorf(
-					"the placement %s specified a placement kind but expected a placementRule kind", plcPath,
-				)
-			}
 		}
 
 		var found bool
@@ -1614,10 +1467,10 @@ func (p *Plugin) getPlcFromPath(plcPath string) (string, map[string]interface{},
 	return name, placement, nil
 }
 
-// getCsKey generates the key for the policy's cluster/label selectors to be used in
-// Policies.csToPlc.
-func getCsKey(placementConfig types.PlacementConfig) string {
-	return fmt.Sprintf("%#v", placementConfig.ClusterSelectors)
+// getLabelSelectorKey generates the key for the policy's label selectors to be used in
+// Policies.selectorToPlc.
+func getLabelSelectorKey(placementConfig types.PlacementConfig) string {
+	return fmt.Sprintf("%#v", placementConfig.LabelSelector)
 }
 
 // getPlcName will generate a placement name for the policy. If the placement has
@@ -1638,20 +1491,20 @@ func (p *Plugin) getPlcName(
 		}
 		// If the policy doesn't explicitly specify a placement name, and there is a
 		// default placement name set, check if one has already been generated for these
-		// cluster/label selectors
-		csKey := getCsKey(placementConfig)
-		if _, ok := p.csToPlc[csKey]; ok {
-			// Just reuse the previously created placement with the same cluster/label selectors
-			return p.csToPlc[csKey], true
+		// label selectors
+		selectorKey := getLabelSelectorKey(placementConfig)
+		if _, ok := p.selectorToPlc[selectorKey]; ok {
+			// Just reuse the previously created placement with the same label selectors
+			return p.selectorToPlc[selectorKey], true
 		}
 		// If the policy doesn't explicitly specify a placement name, and there is a
 		// default placement name, use that
-		if len(p.csToPlc) == 0 {
+		if len(p.selectorToPlc) == 0 {
 			// If this is the first generated placement, just use it as is
 			return defaultPlacementName, false
 		}
 		// If there is already one or more generated placements, increment the name
-		return fmt.Sprintf("%s%d", defaultPlacementName, len(p.csToPlc)+1), false
+		return fmt.Sprintf("%s%d", defaultPlacementName, len(p.selectorToPlc)+1), false
 	}
 	// Default to a placement per policy
 	return "placement-" + nameDefault, false
@@ -1679,32 +1532,18 @@ func (p *Plugin) createPlacement(
 	nameDefault string) (
 	name string, err error,
 ) {
-	// If a placementName or placementRuleName is defined just return it
+	// If a placementName is defined just return it
 	if placementConfig.PlacementName != "" {
 		name = placementConfig.PlacementName
 
 		return name, err
 	}
 
-	if placementConfig.PlacementRuleName != "" {
-		name = placementConfig.PlacementRuleName
-
-		return name, err
-	}
-
-	plrPath := placementConfig.PlacementRulePath
 	plcPath := placementConfig.PlacementPath
 	var placement map[string]interface{}
 	// If a path to a placement is provided, find the placement and reuse it.
-	if plrPath != "" || plcPath != "" {
-		var resolvedPlPath string
-		if plrPath != "" {
-			resolvedPlPath = plrPath
-		} else {
-			resolvedPlPath = plcPath
-		}
-
-		name, placement, err = p.getPlcFromPath(resolvedPlPath)
+	if plcPath != "" {
+		name, placement, err = p.getPlcFromPath(plcPath)
 		if err != nil {
 			return name, err
 		}
@@ -1725,68 +1564,42 @@ func (p *Plugin) createPlacement(
 			return name, err
 		}
 
-		// Determine which selectors to use
-		var resolvedSelectors map[string]interface{}
-
-		switch {
-		case len(placementConfig.ClusterSelectors) > 0:
-			resolvedSelectors = placementConfig.ClusterSelectors
-		case len(placementConfig.ClusterSelector) > 0:
-			resolvedSelectors = placementConfig.ClusterSelector
-		case len(placementConfig.LabelSelector) > 0:
-			resolvedSelectors = placementConfig.LabelSelector
-		}
-
-		// Build cluster selector object
-		selectorObj, err := p.generateSelector(resolvedSelectors)
+		// Build label selector object
+		selectorObj, err := p.generateSelector(placementConfig.LabelSelector)
 		if err != nil {
 			return "", err
 		}
 
-		if p.usingPlR {
-			placement = map[string]interface{}{
-				"apiVersion": placementRuleAPIVersion,
-				"kind":       placementRuleKind,
-				"metadata": map[string]interface{}{
-					"name":      name,
-					"namespace": p.PolicyDefaults.Namespace,
-				},
-				"spec": map[string]interface{}{
-					"clusterSelector": selectorObj,
-				},
-			}
-		} else {
-			placement = map[string]interface{}{
-				"apiVersion": placementAPIVersion,
-				"kind":       placementKind,
-				"metadata": map[string]interface{}{
-					"name":      name,
-					"namespace": p.PolicyDefaults.Namespace,
-				},
-				"spec": map[string]interface{}{
-					"predicates": []map[string]interface{}{
-						{
-							"requiredClusterSelector": map[string]interface{}{
-								"labelSelector": selectorObj,
-							},
-						},
-					},
-					"tolerations": []map[string]interface{}{
-						{
-							"key":      "cluster.open-cluster-management.io/unavailable",
-							"operator": "Exists",
-						},
-						{
-							"key":      "cluster.open-cluster-management.io/unreachable",
-							"operator": "Exists",
+		placement = map[string]interface{}{
+			"apiVersion": placementAPIVersion,
+			"kind":       placementKind,
+			"metadata": map[string]interface{}{
+				"name":      name,
+				"namespace": p.PolicyDefaults.Namespace,
+			},
+			"spec": map[string]interface{}{
+				"predicates": []map[string]interface{}{
+					{
+						"requiredClusterSelector": map[string]interface{}{
+							"labelSelector": selectorObj,
 						},
 					},
 				},
-			}
+				"tolerations": []map[string]interface{}{
+					{
+						"key":      "cluster.open-cluster-management.io/unavailable",
+						"operator": "Exists",
+					},
+					{
+						"key":      "cluster.open-cluster-management.io/unreachable",
+						"operator": "Exists",
+					},
+				},
+			},
 		}
 
-		csKey := getCsKey(placementConfig)
-		p.csToPlc[csKey] = name
+		selectorKey := getLabelSelectorKey(placementConfig)
+		p.selectorToPlc[selectorKey] = name
 	}
 
 	if p.allPlcs[name] {
@@ -1812,8 +1625,8 @@ func (p *Plugin) createPlacement(
 	return name, err
 }
 
-// generateSelector determines the type of input and creates a map of selectors to be used in either the
-// clusterSelector or labelSelector field
+// generateSelector determines the type of input and creates a map of selectors to be used in the
+// labelSelector field
 func (p *Plugin) generateSelector(
 	resolvedSelectors map[string]interface{},
 ) (map[string]interface{}, error) {
@@ -1895,17 +1708,6 @@ func (p *Plugin) createPlacementBinding(
 		subjects = append(subjects, subject)
 	}
 
-	var resolvedPlcKind string
-	var resolvedPlcAPIVersion string
-
-	if p.usingPlR {
-		resolvedPlcKind = placementRuleKind
-		resolvedPlcAPIVersion = placementRuleAPIVersion
-	} else {
-		resolvedPlcKind = placementKind
-		resolvedPlcAPIVersion = placementAPIVersion
-	}
-
 	binding := map[string]interface{}{
 		"apiVersion": placementBindingAPIVersion,
 		"kind":       placementBindingKind,
@@ -1915,9 +1717,9 @@ func (p *Plugin) createPlacementBinding(
 		},
 		"placementRef": map[string]string{
 			// Remove the version at the end
-			"apiGroup": strings.Split(resolvedPlcAPIVersion, "/")[0],
+			"apiGroup": strings.Split(placementAPIVersion, "/")[0],
 			"name":     plcName,
-			"kind":     resolvedPlcKind,
+			"kind":     placementKind,
 		},
 		"subjects": subjects,
 	}
