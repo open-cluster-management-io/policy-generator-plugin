@@ -18,15 +18,10 @@ generator plugin to be enabled.
 
 By default, a Placement and PlacementBinding are created for each policy with the policy name as the
 suffix. To signal that you'd like to consolidate policies that use the same Placement under a single
-PlacementBinding, either specify `placement.placementRulePath` to an existing Placement rule manifest or 
-set `placement.name` along with `placement.clusterSelector`. When the PlacementBinding is consolidated in
+PlacementBinding, specify `placement.placementPath` to an existing Placement manifest or set
+`placement.name` along with `placement.labelSelector`. When the PlacementBinding is consolidated in
 this way, `placementBindingDefaults.name` must be specified so that the generator can create unique
 names for the bindings.
-
-The Placement kind in the `cluster.open-cluster-management.io` API group is used by default if no
-placement is given. However, you can use the deprecated PlacementRule kind in the
-`apps.open-cluster-management.io` API group by specifying a PlacementRule manifest in
-`placement.placementRulePath` or specifying labels in `placement.clusterSelector`.
 
 ## Policy expanders
 
@@ -77,16 +72,21 @@ DIRECTORY TREE              PACKAGE                 DESCRIPTION
 ```
 
 ## OpenAPI schema support
-The Policy Generator supports OpenAPI schemas as defined in
-https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/openapi by Kustomize. The goal of this feature is
-to support patching non-Kubernetes custom resource objects that contain list of objects. The OpenAPI object in this
-project has the same format of the OpenAPI object in the Kustomize project. The path indicates the relative path of the
-schema JSON file relative to the `kustomization.yaml` file:
+
+The Policy Generator supports OpenAPI schemas through Kustomize (see the
+[openapi](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/openapi) Kustomize
+documentation). The goal of this feature is to support patching non-Kubernetes custom resource
+objects that contain list of objects. The OpenAPI object in this project has the same format of the
+OpenAPI object in the Kustomize project. The path indicates the relative path of the schema JSON
+file relative to the `kustomization.yaml` file:
+
 ```yaml
 openapi:
   path: schema.json
 ```
+
 The OpenAPI object is included with the manifest object in the plugin file:
+
 ```yaml
 apiVersion: policy.open-cluster-management.io/v1
 kind: PolicyGenerator
@@ -99,22 +99,30 @@ policies:
         openapi:
           path: schema.json
 ```
+
 ### How to create a Kustomize schema manually
-Ideally the OpenAPI schema is provided by the developper of the Custom Resource (CR). To retrieve a schema from a
-running Kubernetes cluster manually, do the following:
+
+Ideally the OpenAPI schema is provided by the developper of the Custom Resource (CR). To retrieve a
+schema from a running Kubernetes cluster manually, do the following:
+
 ```shell
 kustomize openapi fetch
 ```
-Then cut and paste the subset containing the resources that need to be patched.
-Next, identify the list objects in the schema and select a key from the fields of the object that would be use to index
+
+Then cut and paste the subset containing the resources that need to be patched. Next, identify the
+list objects in the schema and select a key from the fields of the object that would be use to index
 the list, for instance a name. After the definition of the list, add the following text:
+
 ```yaml
 "x-kubernetes-patch-merge-key": "name",
 "x-kubernetes-patch-strategy": "merge"
 ```
-`x-kubernetes-patch-merge-key` indicates the field in the object that is used to uniquely identify it in the list in
-this case the `name` field. `x-kubernetes-patch-strategy` indicates the patch strategy. Merge would merge fields,
-replace would replace the object identified by the key with patch content.  
-`Note:` The "key" selected in this step is used in patches to uniquely identify a list object.
-An example of schema is shown at
-[link](internal/testdata/OpenAPI/openapi-schema.json)openapi-schema.json)
+
+`x-kubernetes-patch-merge-key` indicates the field in the object that is used to uniquely identify
+it in the list in this case the `name` field. `x-kubernetes-patch-strategy` indicates the patch
+strategy. Merge would merge fields, replace would replace the object identified by the key with
+patch content.
+
+**Note:** The "key" selected in this step is used in patches to uniquely identify a list object. An
+example of schema is shown at
+[openapi-schema.json](../internal/testdata/OpenAPI/openapi-schema.json)

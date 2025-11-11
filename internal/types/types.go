@@ -112,14 +112,10 @@ func (t NamespaceSelector) String() string {
 }
 
 type PlacementConfig struct {
-	ClusterSelectors  map[string]interface{} `json:"clusterSelectors,omitempty"  yaml:"clusterSelectors,omitempty"`
-	ClusterSelector   map[string]interface{} `json:"clusterSelector,omitempty"   yaml:"clusterSelector,omitempty"`
-	LabelSelector     map[string]interface{} `json:"labelSelector,omitempty"     yaml:"labelSelector,omitempty"`
-	Name              string                 `json:"name,omitempty"              yaml:"name,omitempty"`
-	PlacementPath     string                 `json:"placementPath,omitempty"     yaml:"placementPath,omitempty"`
-	PlacementRulePath string                 `json:"placementRulePath,omitempty" yaml:"placementRulePath,omitempty"`
-	PlacementName     string                 `json:"placementName,omitempty"     yaml:"placementName,omitempty"`
-	PlacementRuleName string                 `json:"placementRuleName,omitempty" yaml:"placementRuleName,omitempty"`
+	LabelSelector map[string]interface{} `json:"labelSelector,omitempty" yaml:"labelSelector,omitempty"`
+	Name          string                 `json:"name,omitempty"          yaml:"name,omitempty"`
+	PlacementPath string                 `json:"placementPath,omitempty" yaml:"placementPath,omitempty"`
+	PlacementName string                 `json:"placementName,omitempty" yaml:"placementName,omitempty"`
 }
 
 type EvaluationInterval struct {

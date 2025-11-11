@@ -897,7 +897,7 @@ metadata:
 policyDefaults:
   namespace: my-policies
   placement:
-    clusterSelector:
+    labelSelector:
       matchExpressions: []
   extraDependencies:
   - kind: CertificatePolicy

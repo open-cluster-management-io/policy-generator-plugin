@@ -63,7 +63,7 @@ make test
   - Creates policy sets via `createPolicySet()`
   - Creates placements (consolidated where possible)
   - Creates placement bindings
-- Placement consolidation: Tracks cluster/label selectors in `csToPlc` map to reuse placements when selectors match
+- Placement consolidation: Tracks cluster/label selectors in `selectorToPlc` map to reuse placements when selectors match
 
 **internal/types/types.go**
 - Defines all configuration structs:
@@ -99,14 +99,14 @@ The `applyDefaults()` method (internal/plugin.go:446) cascades these defaults in
 
 ### Placement Logic
 
-**Consolidation**: Multiple policies can share a Placement if they have identical cluster/label selectors. The `csToPlc` map tracks selector → placement name mappings.
+**Consolidation**: Multiple policies can share a Placement if they have identical cluster/label selectors. The `selectorToPlc` map tracks selector → placement name mappings.
 
-**Kind Selection**: Plugin supports both Placement (cluster.open-cluster-management.io/v1beta1) and deprecated PlacementRule (apps.open-cluster-management.io/v1). Cannot mix in single PolicyGenerator.
+**Kind Selection**: Plugin only supports Placement (cluster.open-cluster-management.io/v1beta1).
 
 **Placement Sources**:
-1. External file via `placementPath` or `placementRulePath`
-2. Referenced by name via `placementName` or `placementRuleName`
-3. Generated from inline `labelSelector` or `clusterSelector`
+1. External file via `placementPath`
+2. Referenced by name via `placementName`
+3. Generated from inline `labelSelector`
 
 ### Manifest Processing
 
@@ -126,7 +126,6 @@ The generator wraps each manifest in a ConfigurationPolicy, which is then wrappe
 
 - Policy names must be DNS-compliant (RFC 1123)
 - Policy namespace + name must be ≤ 63 characters
-- Cannot mix Placement and PlacementRule kinds
 - `consolidateManifests` and `orderManifests` are mutually exclusive
 - `orderManifests` incompatible with `extraDependencies`
 - When consolidating manifests, all ConfigurationPolicy options must match at policy level
