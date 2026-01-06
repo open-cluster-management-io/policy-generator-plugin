@@ -62,7 +62,7 @@ build: layout
 
 .PHONY: build-binary
 build-binary:
-	go build -ldflags="$(GO_LDFLAGS)" ./cmd/PolicyGenerator
+	CGO_ENABLED=1 go build -mod=readonly -ldflags="$(GO_LDFLAGS)" ./cmd/PolicyGenerator
 
 .PHONY: build-release
 build-release:
