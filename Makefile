@@ -70,17 +70,26 @@ build-release:
 			echo "There are local modifications in the repo" > /dev/stderr; \
 			exit 1; \
 	fi
-	@for OS in linux darwin windows; do for ARCH in amd64 arm64 ppc64le s390x; do \
-			if [[ $${OS} != "linux" ]] && [[ $${ARCH} != *"64" ]]; then continue; fi; \
-			echo "# Building $${OS}-$${ARCH}-PolicyGenerator"; \
-			GOOS=$${OS} GOARCH=$${ARCH} CGO_ENABLED=0 \
-				go build -mod=readonly -ldflags="$(GO_LDFLAGS)" -o build_output/$${OS}-$${ARCH}-PolicyGenerator ./cmd/PolicyGenerator \
-				|| exit 1; \
-		done; done
-	# Adding .exe extension to Windows binaries
-	@for FILE in $$(ls -1 build_output/windows-* | grep -v ".exe$$"); do \
-		mv $${FILE} $${FILE}.exe \
-		|| exit 1; \
+	@for ARCH in amd64 arm64 ppc64le s390x; do \
+		NAME="linux-$${ARCH}-PolicyGenerator"; \
+		echo "# Building $${NAME}"; \
+		GOOS=linux GOARCH=$${ARCH} CGO_ENABLED=0 \
+			go build -mod=readonly -ldflags="$(GO_LDFLAGS)" -o build_output/$${NAME} ./cmd/PolicyGenerator \
+			|| exit 1; \
+	done
+	@for ARCH in amd64 arm64; do \
+		NAME="darwin-$${ARCH}-PolicyGenerator"; \
+		echo "# Building $${NAME}"; \
+		GOOS=darwin GOARCH=$${ARCH} CGO_ENABLED=0 \
+			go build -mod=readonly -ldflags="$(GO_LDFLAGS)" -o build_output/$${NAME} ./cmd/PolicyGenerator \
+			|| exit 1; \
+	done
+	@for ARCH in amd64 arm64; do \
+		NAME="windows-$${ARCH}-PolicyGenerator.exe"; \
+		echo "# Building $${NAME}"; \
+		GOOS=windows GOARCH=$${ARCH} CGO_ENABLED=0 \
+			go build -mod=readonly -ldflags="$(GO_LDFLAGS)" -o build_output/$${NAME} ./cmd/PolicyGenerator \
+			|| exit 1; \
 	done
 
 .PHONY: generate
