@@ -12,6 +12,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      gomod:
+        patterns:
+          - "*"
     allow:
       - dependency-type: all
     ignore:
@@ -23,13 +27,3 @@ updates:
         update-types:
           - version-update:semver-major
           - version-update:semver-minor
-    groups:
-      gomod-k8s.io:
-        patterns:
-          - "k8s.io/*"
-          - "*.k8s.io/*"
-        update-types:
-          - patch
-      gomod:
-        patterns:
-          - "*"
