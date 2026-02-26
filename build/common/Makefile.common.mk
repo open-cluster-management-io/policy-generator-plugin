@@ -20,9 +20,9 @@ KBVERSION := 4.9.0
 GOCOVMERGE_VERSION := v2.16.0
 # ref: https://book.kubebuilder.io/reference/envtest.html?highlight=setup-envtest#installation
 # Parse the controller-runtime version from go.mod and parse to its release-X.Y git branch
-ENVTEST_VERSION ?= $(shell go list -m -f "{{ .Version }}" sigs.k8s.io/controller-runtime 2>/dev/null | awk -F'[v.]' '{printf "release-%d.%d", $$2, $$3}')
+ENVTEST_VERSION ?= $(shell go list -mod=readonly -m -f "{{ .Version }}" sigs.k8s.io/controller-runtime 2>/dev/null | awk -F'[v.]' '{printf "release-%d.%d", $$2, $$3}')
 # Parse the Kubernetes API version from go.mod (which is v0.Y.Z) and convert to the corresponding v1.Y.Z format
-ENVTEST_K8S_VERSION := $(shell go list -m -f "{{ .Version }}" k8s.io/api 2>/dev/null | awk -F'[v.]' '{printf "1.%d", $$3}')
+ENVTEST_K8S_VERSION := $(shell go list -mod=readonly -m -f "{{ .Version }}" k8s.io/api 2>/dev/null | awk -F'[v.]' '{printf "1.%d", $$3}')
 
 LOCAL_BIN ?= $(error LOCAL_BIN is not set.)
 ifneq ($(findstring $(LOCAL_BIN), $(PATH)), $(LOCAL_BIN))
@@ -80,7 +80,7 @@ lint-dependencies:
 
 .PHONY: lint-yaml
 lint-yaml:
-	# Linting YAML 
+	# Linting YAML
 	@$(FINDFILES) \( -name '*.yml' -o -name '*.yaml' \) -print0 | $(XARGS) grep -L -e "{{" | $(CLEANXARGS) yamllint -c ./build/common/config/.yamllint.yml
 
 .PHONY: lint-go
@@ -170,6 +170,7 @@ kind-controller-kubeconfig: install-resources
 		--server=$(shell kubectl config view --minify -o jsonpath='{.clusters[].cluster.server}' --kubeconfig=kubeconfig_$(CLUSTER_NAME)_e2e) \
 		--certificate-authority=temp-ca.crt --embed-certs=true
 	@rm -f temp-ca.crt
+	@kubectl wait --for='jsonpath={.data.token}' -n $(CONTROLLER_NAMESPACE) secret $(CONTROLLER_NAME) --timeout=60s --kubeconfig=$(PWD)/kubeconfig_$(CLUSTER_NAME)_e2e
 	@kubectl config set-credentials $(KIND_CLUSTER_NAME) --kubeconfig=$(PWD)/kubeconfig_$(CLUSTER_NAME) \
 		--token=$$(kubectl get secret -n $(CONTROLLER_NAMESPACE) $(CONTROLLER_NAME) -o jsonpath='{.data.token}' --kubeconfig=$(PWD)/kubeconfig_$(CLUSTER_NAME)_e2e | $(BASE64) --decode)
 	@kubectl config set-context $(KIND_CLUSTER_NAME) --kubeconfig=$(PWD)/kubeconfig_$(CLUSTER_NAME) \
