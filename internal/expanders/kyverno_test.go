@@ -12,9 +12,21 @@ func TestKyvernoCanHandle(t *testing.T) {
 	t.Parallel()
 
 	k := KyvernoPolicyExpander{}
-	tests := []struct{ kind string }{
-		{kyvernoClusterKind},
-		{kyvernoNamespacedKind},
+
+	tests := []struct {
+		apiVersion string
+		kind       string
+	}{
+		{kyvernoAPIVersion, kyvernoClusterPolicy},
+		{kyvernoAPIVersion, kyvernoNamespacedPolicy},
+		{kyvernoPolicyAPIVersion, "ValidatingPolicy"},
+		{kyvernoPolicyAPIVersion, "MutatingPolicy"},
+		{kyvernoPolicyAPIVersion, "GeneratingPolicy"},
+		{kyvernoPolicyAPIVersion, "ImageValidatingPolicy"},
+		{kyvernoPolicyAPIVersion, "NamespacedValidatingPolicy"},
+		{kyvernoPolicyAPIVersion, "NamespacedMutatingPolicy"},
+		{kyvernoPolicyAPIVersion, "NamespacedGeneratingPolicy"},
+		{kyvernoPolicyAPIVersion, "NamespacedImageValidatingPolicy"},
 	}
 
 	for _, test := range tests {
@@ -24,7 +36,7 @@ func TestKyvernoCanHandle(t *testing.T) {
 				t.Parallel()
 
 				manifest := map[string]interface{}{
-					"apiVersion": kyvernoAPIVersion,
+					"apiVersion": test.apiVersion,
 					"kind":       test.kind,
 					"metadata": map[string]interface{}{
 						"name": "my-awesome-policy",
@@ -41,11 +53,15 @@ func TestKyvernoCanHandleInvalid(t *testing.T) {
 
 	k := KyvernoPolicyExpander{}
 	tests := []struct{ apiVersion, kind, name string }{
-		{"v1", kyvernoClusterKind, "my-awesome-policy"},
-		{"v1", kyvernoNamespacedKind, "my-awesome-policy"},
+		{"v1", kyvernoClusterPolicy, "my-awesome-policy"},
+		{"v1", kyvernoNamespacedPolicy, "my-awesome-policy"},
 		{kyvernoAPIVersion, "ConfigMap", "my-awesome-policy"},
-		{kyvernoAPIVersion, kyvernoClusterKind, ""},
-		{kyvernoAPIVersion, kyvernoNamespacedKind, ""},
+		{kyvernoAPIVersion, kyvernoClusterPolicy, ""},
+		{kyvernoAPIVersion, kyvernoNamespacedPolicy, ""},
+		{kyvernoPolicyAPIVersion, kyvernoClusterPolicy, "my-awesome-policy"},
+		{kyvernoPolicyAPIVersion, kyvernoNamespacedPolicy, "my-awesome-policy"},
+		{"policies.kyverno.io/v2", "ValidatingPolicy", "my-awesome-policy"},
+		{kyvernoPolicyAPIVersion, "ValidatingPolicy", ""},
 	}
 
 	for _, test := range tests {
@@ -87,61 +103,86 @@ func TestKyvernoExpand(t *testing.T) {
 	t.Parallel()
 
 	k := KyvernoPolicyExpander{}
-	manifest := map[string]interface{}{
-		"apiVersion": kyvernoAPIVersion,
-		"kind":       kyvernoClusterKind,
-		"metadata": map[string]interface{}{
-			"name": "my-awesome-policy",
-		},
+
+	tests := []struct {
+		apiVersion string
+		kind       string
+	}{
+		{kyvernoAPIVersion, kyvernoClusterPolicy},
+		{kyvernoAPIVersion, kyvernoNamespacedPolicy},
+		{kyvernoPolicyAPIVersion, kyvernoValidatingPolicy},
+		{kyvernoPolicyAPIVersion, kyvernoMutatingPolicy},
+		{kyvernoPolicyAPIVersion, kyvernoGeneratingPolicy},
+		{kyvernoPolicyAPIVersion, kyvernoImageValidatingPolicy},
+		{kyvernoPolicyAPIVersion, kyvernoNamespacedValidatingPolicy},
+		{kyvernoPolicyAPIVersion, kyvernoNamespacedMutatingPolicy},
+		{kyvernoPolicyAPIVersion, kyvernoNamespacedGeneratingPolicy},
+		{kyvernoPolicyAPIVersion, kyvernoNamespacedImageValidatingPolicy},
 	}
 
-	expected := []map[string]interface{}{
-		{
-			"objectDefinition": map[string]interface{}{
-				"apiVersion": configPolicyAPIVersion,
-				"kind":       configPolicyKind,
-				"metadata":   map[string]interface{}{"name": "inform-kyverno-my-awesome-policy"},
-				"spec": map[string]interface{}{
-					"namespaceSelector": map[string]interface{}{
-						"exclude": []string{"kube-*"},
-						"include": []string{"*"},
+	for _, test := range tests {
+		t.Run(
+			"kind="+test.kind,
+			func(t *testing.T) {
+				t.Parallel()
+
+				manifest := map[string]interface{}{
+					"apiVersion": test.apiVersion,
+					"kind":       test.kind,
+					"metadata": map[string]interface{}{
+						"name": "my-awesome-policy",
 					},
-					"remediationAction": "inform",
-					"severity":          "medium",
-					"object-templates": []map[string]interface{}{
-						{
-							"complianceType": "mustnothave",
-							"objectDefinition": map[string]interface{}{
-								"apiVersion": kyvernoPolicyReportAPIVersion,
-								"kind":       "ClusterPolicyReport",
-								"results": []map[string]interface{}{
+				}
+
+				expected := []map[string]interface{}{
+					{
+						"objectDefinition": map[string]interface{}{
+							"apiVersion": configPolicyAPIVersion,
+							"kind":       configPolicyKind,
+							"metadata":   map[string]interface{}{"name": "inform-kyverno-my-awesome-policy"},
+							"spec": map[string]interface{}{
+								"namespaceSelector": map[string]interface{}{
+									"exclude": []string{"kube-*"},
+									"include": []string{"*"},
+								},
+								"remediationAction": "inform",
+								"severity":          "medium",
+								"object-templates": []map[string]interface{}{
 									{
-										"policy": "my-awesome-policy",
-										"result": "fail",
+										"complianceType": "mustnothave",
+										"objectDefinition": map[string]interface{}{
+											"apiVersion": kyvernoPolicyReportAPIVersion,
+											"kind":       clusterPolicyReportKind,
+											"results": []map[string]interface{}{
+												{
+													"policy": "my-awesome-policy",
+													"result": "fail",
+												},
+											},
+										},
+									},
+									{
+										"complianceType": "mustnothave",
+										"objectDefinition": map[string]interface{}{
+											"apiVersion": kyvernoPolicyReportAPIVersion,
+											"kind":       namespacedPolicyReportKind,
+											"results": []map[string]interface{}{
+												{
+													"policy": "my-awesome-policy",
+													"result": "fail",
+												},
+											},
+										},
 									},
 								},
 							},
 						},
-						{
-							"complianceType": "mustnothave",
-							"objectDefinition": map[string]interface{}{
-								"apiVersion": kyvernoPolicyReportAPIVersion,
-								"kind":       "PolicyReport",
-								"results": []map[string]interface{}{
-									{
-										"policy": "my-awesome-policy",
-										"result": "fail",
-									},
-								},
-							},
-						},
 					},
-				},
+				}
+				templates := k.Expand(manifest, "medium")
+
+				assertReflectEqual(t, templates, expected)
 			},
-		},
+		)
 	}
-
-	templates := k.Expand(manifest, "medium")
-
-	assertReflectEqual(t, templates, expected)
 }
