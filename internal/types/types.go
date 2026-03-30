@@ -160,3 +160,12 @@ type PolicyDependency struct {
 	Name       string `json:"name"                 yaml:"name"`
 	Namespace  string `json:"namespace,omitempty"  yaml:"namespace,omitempty"`
 }
+
+type PlacementBindingDefaults struct {
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+}
+
+type Metadata struct {
+	Name        string            `json:"name,omitempty"        yaml:"name,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+}

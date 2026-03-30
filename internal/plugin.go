@@ -42,18 +42,17 @@ const (
 // Plugin is used to store the PolicyGenerator configuration and the methods to generate the
 // desired policies.
 type Plugin struct {
-	APIVersion string `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
-	Kind       string `json:"kind,omitempty"       yaml:"kind,omitempty"`
-	Metadata   struct {
-		Name string `json:"name,omitempty" yaml:"name,omitempty"`
-	} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
-	PlacementBindingDefaults struct {
-		Name string `json:"name,omitempty" yaml:"name,omitempty"`
-	} `json:"placementBindingDefaults,omitempty" yaml:"placementBindingDefaults,omitempty"`
-	PolicyDefaults    types.PolicyDefaults    `json:"policyDefaults,omitempty"    yaml:"policyDefaults,omitempty"`
-	PolicySetDefaults types.PolicySetDefaults `json:"policySetDefaults,omitempty" yaml:"policySetDefaults,omitempty"`
-	Policies          []types.PolicyConfig    `json:"policies"                    yaml:"policies"`
-	PolicySets        []types.PolicySetConfig `json:"policySets"                  yaml:"policySets"`
+	APIVersion string         `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
+	Kind       string         `json:"kind,omitempty"       yaml:"kind,omitempty"`
+	Metadata   types.Metadata `json:"metadata"             yaml:"metadata"`
+
+	//nolint:lll
+	PlacementBindingDefaults types.PlacementBindingDefaults `json:"placementBindingDefaults" yaml:"placementBindingDefaults"`
+	PolicyDefaults           types.PolicyDefaults           `json:"policyDefaults"           yaml:"policyDefaults"`
+	PolicySetDefaults        types.PolicySetDefaults        `json:"policySetDefaults"        yaml:"policySetDefaults"`
+	Policies                 []types.PolicyConfig           `json:"policies"                 yaml:"policies"`
+	PolicySets               []types.PolicySetConfig        `json:"policySets"               yaml:"policySets"`
+
 	// A set of all placement names that have been processed or generated
 	allPlcs map[string]bool
 	// The base of the directory tree to restrict all manifest files to be within
