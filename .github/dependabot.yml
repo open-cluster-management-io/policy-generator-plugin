@@ -4,7 +4,7 @@ updates:
     directory: /
     schedule:
       interval: cron
-      cronjob: "* 0-9 1-7,15-21 * 1"
+      cronjob: "0 7 * * MON#1"
       timezone: America/New_York
     groups:
       github-actions:
@@ -14,7 +14,7 @@ updates:
     directory: /
     schedule:
       interval: cron
-      cronjob: "* 0-9 1-7,15-21 * 1"
+      cronjob: "0 7 * * MON#1"
       timezone: America/New_York
     groups:
       gomod:
