@@ -21,13 +21,16 @@ func main() {
 	debugFlag := pflag.Bool("debug", false, "Print the stack trace with error messages")
 	helpFlag := pflag.BoolP("help", "h", false, "Print the help message")
 	versionFlag := pflag.Bool("version", false, "Print the version of the generator")
-	pflag.Parse()
-
-	if *helpFlag {
+	pflag.Usage = func() {
 		//nolint:forbidigo
 		fmt.Println("Usage: PolicyGenerator [flags] <policy-generator-config-file>...")
 		pflag.PrintDefaults()
-		os.Exit(0)
+	}
+	pflag.Parse()
+
+	// Handle flags
+	if *helpFlag {
+		printUsageAndExit("")
 	}
 
 	if *versionFlag {
@@ -48,6 +51,11 @@ func main() {
 
 	debug = *debugFlag
 
+	// Validate positional arguments
+	if pflag.NArg() == 0 {
+		printUsageAndExit("no policy generator config files provided")
+	}
+
 	// Collect and parse PolicyGeneratorConfig file paths
 	generators := pflag.Args()
 	var outputBuffer bytes.Buffer
@@ -59,6 +67,20 @@ func main() {
 	// Output results to stdout for Kustomize to handle
 	//nolint:forbidigo
 	fmt.Print(outputBuffer.String())
+}
+
+func printUsageAndExit(errMsg string) {
+	pflag.Usage()
+
+	exitCode := 0
+
+	if errMsg != "" {
+		fmt.Fprintf(os.Stderr, "error: %s\n", errMsg)
+
+		exitCode = 2
+	}
+
+	os.Exit(exitCode)
 }
 
 // errorAndExit takes a message string with formatting verbs and associated formatting
