@@ -16,7 +16,7 @@ jobs:
     name: Unit Tests
     steps:
     - name: Checkout the repo
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         fetch-depth: 0 # Fetch all history for all tags and branches
 
