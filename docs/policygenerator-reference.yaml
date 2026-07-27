@@ -9,6 +9,9 @@ metadata:
 placementBindingDefaults:
   # Set an explicit placement binding name to use rather than rely on the default.
   name: ""
+  # Optional. Set an explicit placement binding name to use for generated selective enforcement bindings
+  # rather than rely on the default.
+  enforcementName: ""
 
 # Required. Defaults for policy generation. Any default value listed here can be overridden under an entry in the
 # policies array except for "namespace".
@@ -154,6 +157,30 @@ policyDefaults:
     # responsibility of the administrator to ensure the placement exists. Use of this setting will prevent a Placement
     # from being generated, but the Placement Binding will still be created.
     placementName: ""
+  # Optional. The placement configuration for the selective enforcement binding of the policies. When set, the
+  # generator creates a second Placement and PlacementBinding with `subFilter: restricted` and
+  # `bindingOverrides.remediationAction: enforce`. This defaults to unset.
+  enforcementPlacement:
+    # To specify a placement, specify key:value pair cluster label selectors or the full LabelSelector for the desired
+    # cluster label selector. (See placementPath to specify an existing file instead.)
+    # For example, to specify a placement using matchExpressions:
+    #   labelSelector:
+    #     matchExpressions:
+    #       - key: provider
+    #         operator: NotIn
+    #         values:
+    #          - "cloud"
+    labelSelector: {}
+    # Optional. Specifying a name will consolidate placements that contain the same cluster selectors.
+    # A name alone does not enable selective enforcement generation; also set labelSelector.
+    name: ""
+    # To reuse an existing placement manifest, specify the path here relative to the kustomization.yaml file. If given,
+    # this placement will be used by all policies by default. (See labelSelector to generate a new Placement instead.)
+    placementPath: ""
+    # Use a placement that already exists in the cluster in the same namespace as the policy to be generated. It is the
+    # responsibility of the administrator to ensure the placement exists. Use of this setting will prevent a Placement
+    # from being generated, but the Placement Binding will still be created.
+    placementName: ""
   # Optional. recreateOption describes whether to delete and recreate an object when an update is required. `IfRequired`
   # will recreate the object when updating an immutable field. `Always` will always recreate the object if a mismatch
   # is detected. `RecreateOption` has no effect when the `remediationAction` is `inform`. `IfRequired` has no effect
@@ -183,9 +210,15 @@ policyDefaults:
   # part of a policy set. Use this setting to turn off placement generation for policies not in policy sets. This
   # defaults to "true".
   generatePolicyPlacement: true
+  # Optional. Whether to generate the selective enforcement Placement and PlacementBinding when enforcementPlacement is
+  # configured. Generation occurs except when policies are part of a policy set. Use this setting to turn off the
+  # enforcement binding path for policies not in policy sets. This is independent from generatePolicyPlacement. This
+  # defaults to "true".
+  generatePolicyEnforcementPlacement: true
   # Optional. When a policy is part of a policy set, by default the generator will not generate the placement for this
   # policy since a placement is generated for the policy set. If a placement should still be generated, set it to "true"
-  # so that the policy will be deployed with both policy placement and policy set placement. This defaults to "false".
+  # so that the policy will be deployed with both policy placement and policy set placement. This applies to both the
+  # primary placement and the optional selective enforcement placement. This defaults to "false".
   generatePlacementWhenInSet: false
   # Optional. Annotations that the policy will include under its metadata.annotations. It will be applied for all
   # policies unless specified in the policy.
@@ -204,8 +237,17 @@ policySetDefaults:
   # all clusters. If a placement.name is not provided here for placement consolidation, it will fall back to
   # policyDefaults.placement.name, if provided there. (See policyDefaults.placement for description.)
   placement: {}
+  # Optional. The placement configuration for the selective enforcement binding of the policy sets. This defaults to
+  # unset. If an enforcementPlacement.name is not provided here for placement consolidation, it will fall back to
+  # policyDefaults.enforcementPlacement.name, if provided there. (See policyDefaults.enforcementPlacement for
+  # description.)
+  enforcementPlacement: {}
   # Optional. Whether to generate placement manifests for policy sets. This defaults to "true".
   generatePolicySetPlacement: true
+  # Optional. Whether to generate the selective enforcement Placement and PlacementBinding for policy sets when
+  # enforcementPlacement is configured. Use this setting to turn off the enforcement binding path for policy sets.
+  # This is independent from generatePolicySetPlacement. This defaults to "true".
+  generatePolicySetEnforcementPlacement: true
 
 # Required. The list of policies to create along with overrides to either the default values or, if set, the values
 # given in policyDefaults.
@@ -349,6 +391,8 @@ policies:
     orderManifests: false
     # Optional. (See policyDefaults.placement for description.)
     placement: {}
+    # Optional. (See policyDefaults.enforcementPlacement for description.)
+    enforcementPlacement: {}
     # Optional. (See policyDefaults.remediationAction for description.)
     remediationAction: ""
     # Optional. (See policyDefaults.recreateOption for description.)
@@ -364,6 +408,8 @@ policies:
     policySets: []
     # Optional. (See policyDefaults.generatePolicyPlacement for description.)
     generatePolicyPlacement: true
+    # Optional. (See policyDefaults.generatePolicyEnforcementPlacement for description.)
+    generatePolicyEnforcementPlacement: true
     # Optional. (See policyDefaults.generatePlacementWhenInSet for description.)
     generatePlacementWhenInSet: false
     # Optional. Annotations that the policy will include under its metadata.annotations. It will overwrite the
@@ -387,5 +433,10 @@ policySets:
     # Optional. (See policySetDefaults.placement to set a default placement for policy sets. See
     # policyDefaults.placement for description of placement options.)
     placement: {}
+    # Optional. (See policySetDefaults.enforcementPlacement to set a default selective enforcement placement for policy
+    # sets. See policyDefaults.enforcementPlacement for description of placement options.)
+    enforcementPlacement: {}
     # Optional. (See policySetDefaults.generatePolicySetPlacement for description.)
     generatePolicySetPlacement: true
+    # Optional. (See policySetDefaults.generatePolicySetEnforcementPlacement for description.)
+    generatePolicySetEnforcementPlacement: true

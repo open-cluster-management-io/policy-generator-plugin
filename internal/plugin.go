@@ -40,6 +40,10 @@ const (
 	dnsReference               = "https://kubernetes.io/docs/concepts/overview/working-with-objects/names/" +
 		"#dns-subdomain-names"
 	severityAnnotation = "policy.open-cluster-management.io/severity"
+
+	placementScopeDefault          = "placement"
+	placementScopeEnforcement      = "enforcementPlacement"
+	enforcementPlacementNameSuffix = "-enforcement"
 )
 
 // Plugin is used to store the PolicyGenerator configuration and the methods to generate the
@@ -60,9 +64,9 @@ type Plugin struct {
 	allPlcs map[string]bool
 	// The base of the directory tree to restrict all manifest files to be within
 	baseDirectory string
-	// This is a mapping of label selectors formatted as the return value of getLabelSelectorKey to
+	// This is a mapping of "<scope>:<labelSelector>" formatted as the return value of getLabelSelectorKey to
 	// placement names. This is used to find common label selectors that can be consolidated
-	// to a single placement.
+	// to a single primary placement or selective enforcement placement.
 	selectorToPlc map[string]string
 	outputBuffer  bytes.Buffer
 	// A set of processed placements from external placement files specified by Placement.PlacementPath
@@ -144,6 +148,10 @@ func (p *Plugin) Generate() ([]byte, error) {
 	// plcNameToPolicyAndSetIdxs[plcName]["policy"] stores the index of policy
 	// plcNameToPolicyAndSetIdxs[plcName]["policyset"] stores the index of policyset
 	plcNameToPolicyAndSetIdxs := map[string]map[string][]int{}
+	enfPlcNameToPolicyAndSetIdxs := map[string]map[string][]int{}
+
+	defaultsEnfSet := isEnforcementPlacementSet(p.PolicyDefaults.EnforcementPlacement)
+	policySetDefaultsEnfSet := isEnforcementPlacementSet(p.PolicySetDefaults.EnforcementPlacement)
 
 	for i := range p.Policies {
 		// only generate placement when GeneratePlacementWhenInSet equals to true, GeneratePlacement is true,
@@ -161,6 +169,29 @@ func (p *Plugin) Generate() ([]byte, error) {
 
 			plcNameToPolicyAndSetIdxs[plcName]["policy"] = append(plcNameToPolicyAndSetIdxs[plcName]["policy"], i)
 		}
+
+		// Generate a selective enforcement placement independently from the primary placement when
+		// enforcementPlacement is set and either:
+		// - generatePlacementWhenInSet is true, or
+		// - generatePolicyEnforcementPlacement is true and the policy is not in a policy set.
+		if (p.Policies[i].GeneratePlacementWhenInSet ||
+			(p.Policies[i].GeneratePolicyEnforcementPlacement && len(p.Policies[i].PolicySets) == 0)) &&
+			(isEnforcementPlacementSet(p.Policies[i].EnforcementPlacement) || defaultsEnfSet) {
+			enfPlcName, err := p.createPolicyEnforcementPlacement(
+				p.Policies[i].EnforcementPlacement, p.Policies[i].Name,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			if enfPlcNameToPolicyAndSetIdxs[enfPlcName] == nil {
+				enfPlcNameToPolicyAndSetIdxs[enfPlcName] = map[string][]int{}
+			}
+
+			enfPlcNameToPolicyAndSetIdxs[enfPlcName]["policy"] = append(
+				enfPlcNameToPolicyAndSetIdxs[enfPlcName]["policy"], i,
+			)
+		}
 	}
 
 	for i := range p.PolicySets {
@@ -177,6 +208,54 @@ func (p *Plugin) Generate() ([]byte, error) {
 
 			plcNameToPolicyAndSetIdxs[plcName]["policyset"] = append(plcNameToPolicyAndSetIdxs[plcName]["policyset"], i)
 		}
+
+		// Generate a selective enforcement placement for the policy set when
+		// GeneratePolicySetEnforcementPlacement is true and enforcementPlacement is set.
+		if p.PolicySets[i].GeneratePolicySetEnforcementPlacement &&
+			(isEnforcementPlacementSet(p.PolicySets[i].EnforcementPlacement) || policySetDefaultsEnfSet) {
+			enfPlcName, err := p.createPolicySetEnforcementPlacement(
+				p.PolicySets[i].EnforcementPlacement, p.PolicySets[i].Name,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			if enfPlcNameToPolicyAndSetIdxs[enfPlcName] == nil {
+				enfPlcNameToPolicyAndSetIdxs[enfPlcName] = map[string][]int{}
+			}
+
+			enfPlcNameToPolicyAndSetIdxs[enfPlcName]["policyset"] = append(
+				enfPlcNameToPolicyAndSetIdxs[enfPlcName]["policyset"], i,
+			)
+		}
+	}
+
+	// Create the placement bindings for the primary placements.
+	err := p.createPlacementBindings(plcNameToPolicyAndSetIdxs, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the placement bindings for the selective enforcement placements.
+	err = p.createPlacementBindings(enfPlcNameToPolicyAndSetIdxs, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return p.outputBuffer.Bytes(), nil
+}
+
+func (p *Plugin) createPlacementBindings(
+	plcNameToPolicyAndSetIdxs map[string]map[string][]int, selectiveEnforcement bool,
+) error {
+	defaultBindingName := p.PlacementBindingDefaults.Name
+	singleSubjectSuffix := ""
+	defaultBindingPath := "placementBindingDefaults.name"
+
+	if selectiveEnforcement {
+		defaultBindingName = p.PlacementBindingDefaults.EnforcementName
+		singleSubjectSuffix = enforcementPlacementNameSuffix
+		defaultBindingPath = "placementBindingDefaults.enforcementName"
 	}
 
 	// Sort the keys of plcNameToPolicyseetsIdxs so that the policy bindings are generated in a
@@ -207,10 +286,11 @@ func (p *Plugin) Generate() ([]byte, error) {
 
 		// If there is more than one policy associated with a placement but no default binding name
 		// specified, throw an error
-		if (len(policyConfs) > 1 || len(policySetConfs) > 1) && p.PlacementBindingDefaults.Name == "" {
-			return nil, fmt.Errorf(
-				"placementBindingDefaults.name must be set but is empty (multiple policies or policy sets were found "+
+		if (len(policyConfs) > 1 || len(policySetConfs) > 1) && defaultBindingName == "" {
+			return fmt.Errorf(
+				"%s must be set but is empty (multiple policies or policy sets were found "+
 					"for the PlacementBinding to placement %s)",
+				defaultBindingPath,
 				plcName,
 			)
 		}
@@ -223,31 +303,31 @@ func (p *Plugin) Generate() ([]byte, error) {
 		// binding name specified
 		switch {
 		case len(policyConfs) == 1 && len(policySetConfs) == 0:
-			bindingName = "binding-" + policyConfs[0].Name
-		case len(policyConfs) == 0 && len(policySetConfs) == 0:
-			bindingName = "binding-" + policySetConfs[0].Name
+			bindingName = "binding-" + policyConfs[0].Name + singleSubjectSuffix
+		case len(policyConfs) == 0 && len(policySetConfs) == 1:
+			bindingName = "binding-" + policySetConfs[0].Name + singleSubjectSuffix
 		default:
 			existMultiple = true
 		}
 
 		// If there are multiple policies or policy sets, use the default placement binding name
 		// but append a number to it so it's a unique name.
-		if p.PlacementBindingDefaults.Name != "" && existMultiple {
+		if defaultBindingName != "" && existMultiple {
 			plcBindingCount++
 			if plcBindingCount == 1 {
-				bindingName = p.PlacementBindingDefaults.Name
+				bindingName = defaultBindingName
 			} else {
-				bindingName = fmt.Sprintf("%s%d", p.PlacementBindingDefaults.Name, plcBindingCount)
+				bindingName = fmt.Sprintf("%s%d", defaultBindingName, plcBindingCount)
 			}
 		}
 
-		err := p.createPlacementBinding(bindingName, plcName, policyConfs, policySetConfs)
+		err := p.createPlacementBinding(bindingName, plcName, policyConfs, policySetConfs, selectiveEnforcement)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create a placement binding: %w", err)
+			return fmt.Errorf("failed to create a placement binding: %w", err)
 		}
 	}
 
-	return p.outputBuffer.Bytes(), nil
+	return nil
 }
 
 func getPolicyDefaultBool(config map[string]any, key string) (value bool, set bool) {
@@ -435,6 +515,14 @@ func isManifestFieldSet(config map[string]any, policyIdx, manifestIdx int, field
 	return set
 }
 
+// isEnforcementPlacementSet returns true if enforcementPlacement has targeting configuration
+// that should trigger selective enforcement Placement/PlacementBinding generation.
+func isEnforcementPlacementSet(placement types.PlacementConfig) bool {
+	return len(placement.LabelSelector) != 0 ||
+		placement.PlacementPath != "" ||
+		placement.PlacementName != ""
+}
+
 // applyDefaults applies any missing defaults under Policy.PlacementBindingDefaults,
 // Policy.PolicyDefaults and PolicySets. It then applies the defaults and user provided
 // defaults on each policy and policyset entry if they are not overridden by the user. The
@@ -510,6 +598,14 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]any) {
 		p.PolicyDefaults.GeneratePolicyPlacement = gppValue
 	} else {
 		p.PolicyDefaults.GeneratePolicyPlacement = true
+	}
+
+	// GeneratePolicyEnforcementPlacement defaults to true unless explicitly set in the config.
+	gpepValue, setGpep := getPolicyDefaultBool(unmarshaledConfig, "generatePolicyEnforcementPlacement")
+	if setGpep {
+		p.PolicyDefaults.GeneratePolicyEnforcementPlacement = gpepValue
+	} else {
+		p.PolicyDefaults.GeneratePolicyEnforcementPlacement = true
 	}
 
 	// Generate temporary sets to later merge the policy sets declared in p.Policies[*] and p.PolicySets
@@ -652,6 +748,14 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]any) {
 			policy.GeneratePolicyPlacement = p.PolicyDefaults.GeneratePolicyPlacement
 		}
 
+		// GeneratePolicyEnforcementPlacement defaults to true unless explicitly set in the config.
+		gpepValue, setGpep := getPolicyBool(unmarshaledConfig, i, "generatePolicyEnforcementPlacement")
+		if setGpep {
+			policy.GeneratePolicyEnforcementPlacement = gpepValue
+		} else {
+			policy.GeneratePolicyEnforcementPlacement = p.PolicyDefaults.GeneratePolicyEnforcementPlacement
+		}
+
 		// GeneratePlacementWhenInSet defaults to false unless explicitly set in the config.
 		gpsetValue, setGpset := getPolicyBool(unmarshaledConfig, i, "generatePlacementWhenInSet")
 		if setGpset {
@@ -717,6 +821,7 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]any) {
 			policy.ExtraDependencies = p.PolicyDefaults.ExtraDependencies
 		}
 
+		applyDefaultPlacementFields(&policy.EnforcementPlacement, p.PolicyDefaults.EnforcementPlacement)
 		applyDefaultPlacementFields(&policy.Placement, p.PolicyDefaults.Placement)
 
 		// Only use defaults when the namespaceSelector is not set on the policy
@@ -858,6 +963,13 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]any) {
 		p.PolicySetDefaults.GeneratePolicySetPlacement = true
 	}
 
+	gpsepValue, setGpsep := getPolicySetDefaultBool(unmarshaledConfig, "generatePolicySetEnforcementPlacement")
+	if setGpsep {
+		p.PolicySetDefaults.GeneratePolicySetEnforcementPlacement = gpsepValue
+	} else {
+		p.PolicySetDefaults.GeneratePolicySetEnforcementPlacement = true
+	}
+
 	// Sync up the declared policy sets in p.Policies[*]
 	for i := range p.PolicySets {
 		plcset := &p.PolicySets[i]
@@ -875,6 +987,15 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]any) {
 			plcset.GeneratePolicySetPlacement = p.PolicySetDefaults.GeneratePolicySetPlacement
 		}
 
+		// GeneratePolicySetEnforcementPlacement defaults to true unless explicitly set in the config.
+		gpsepValue, setGpsep := getPolicySetBool(unmarshaledConfig, i, "generatePolicySetEnforcementPlacement")
+		if setGpsep {
+			plcset.GeneratePolicySetEnforcementPlacement = gpsepValue
+		} else {
+			plcset.GeneratePolicySetEnforcementPlacement = p.PolicySetDefaults.GeneratePolicySetEnforcementPlacement
+		}
+
+		applyDefaultPlacementFields(&plcset.EnforcementPlacement, p.PolicySetDefaults.EnforcementPlacement)
 		applyDefaultPlacementFields(&plcset.Placement, p.PolicySetDefaults.Placement)
 
 		// Sort alphabetically to make it deterministic
@@ -934,7 +1055,12 @@ func (p *Plugin) assertValidConfig() error {
 	}
 
 	// Validate default policy placement settings
-	err := p.assertValidPlacement(p.PolicyDefaults.Placement, "policyDefaults")
+	err := p.assertValidPlacement(p.PolicyDefaults.Placement, "policyDefaults.placement")
+	if err != nil {
+		return err
+	}
+
+	err = p.assertValidPlacement(p.PolicyDefaults.EnforcementPlacement, "policyDefaults.enforcementPlacement")
 	if err != nil {
 		return err
 	}
@@ -945,6 +1071,15 @@ func (p *Plugin) assertValidConfig() error {
 		return fmt.Errorf(
 			"PlacementBindingDefaults.Name `%s` is not DNS compliant. See %s",
 			p.PlacementBindingDefaults.Name,
+			dnsReference,
+		)
+	}
+
+	if p.PlacementBindingDefaults.EnforcementName != "" &&
+		len(validation.IsDNS1123Subdomain(p.PlacementBindingDefaults.EnforcementName)) > 0 {
+		return fmt.Errorf(
+			"PlacementBindingDefaults.EnforcementName `%s` is not DNS compliant. See %s",
+			p.PlacementBindingDefaults.EnforcementName,
 			dnsReference,
 		)
 	}
@@ -1174,14 +1309,24 @@ func (p *Plugin) assertValidConfig() error {
 			}
 		}
 
-		err := p.assertValidPlacement(policy.Placement, "policy "+policy.Name)
+		err := p.assertValidPlacement(policy.Placement, "policy "+policy.Name+".placement")
+		if err != nil {
+			return err
+		}
+
+		err = p.assertValidPlacement(policy.EnforcementPlacement, "policy "+policy.Name+".enforcementPlacement")
 		if err != nil {
 			return err
 		}
 	}
 
 	// Validate default policy set placement settings
-	err = p.assertValidPlacement(p.PolicySetDefaults.Placement, "policySetDefaults")
+	err = p.assertValidPlacement(p.PolicySetDefaults.Placement, "policySetDefaults.placement")
+	if err != nil {
+		return err
+	}
+
+	err = p.assertValidPlacement(p.PolicySetDefaults.EnforcementPlacement, "policySetDefaults.enforcementPlacement")
 	if err != nil {
 		return err
 	}
@@ -1212,7 +1357,12 @@ func (p *Plugin) assertValidConfig() error {
 		seenPlcset[plcset.Name] = true
 
 		// Validate policy set Placement settings
-		err := p.assertValidPlacement(plcset.Placement, "policySet "+plcset.Name)
+		err := p.assertValidPlacement(plcset.Placement, "policySet "+plcset.Name+".placement")
+		if err != nil {
+			return err
+		}
+
+		err = p.assertValidPlacement(plcset.EnforcementPlacement, "policySet "+plcset.Name+".enforcementPlacement")
 		if err != nil {
 			return err
 		}
@@ -1241,7 +1391,7 @@ func (p *Plugin) assertValidPlacement(
 
 	if placementOptionCount > 1 {
 		return fmt.Errorf(
-			"%s must specify only one of placement selector, placement path, or placement name", path,
+			"%s must specify only one of labelSelector, placementPath, or placementName", path,
 		)
 	}
 
@@ -1249,7 +1399,7 @@ func (p *Plugin) assertValidPlacement(
 	defPlcmtPlName := placement.PlacementName
 	if defPlcmtPlName != "" && len(validation.IsDNS1123Subdomain(defPlcmtPlName)) > 0 {
 		return fmt.Errorf(
-			"%s placement.placementName `%s` is not DNS compliant. See %s",
+			"%s.placementName `%s` is not DNS compliant. See %s",
 			path,
 			defPlcmtPlName,
 			dnsReference,
@@ -1259,7 +1409,7 @@ func (p *Plugin) assertValidPlacement(
 	defPlName := placement.Name
 	if defPlName != "" && len(validation.IsDNS1123Subdomain(defPlName)) > 0 {
 		return fmt.Errorf(
-			"%s placement.name `%s` is not DNS compliant. See %s", path, defPlName, dnsReference,
+			"%s.name `%s` is not DNS compliant. See %s", path, defPlName, dnsReference,
 		)
 	}
 
@@ -1267,7 +1417,7 @@ func (p *Plugin) assertValidPlacement(
 		_, err := os.Stat(placement.PlacementPath)
 		if err != nil {
 			return fmt.Errorf(
-				"%s placement.placementPath could not read the path %s",
+				"%s.placementPath could not read the path %s",
 				path, placement.PlacementPath,
 			)
 		}
@@ -1276,7 +1426,7 @@ func (p *Plugin) assertValidPlacement(
 	if len(placement.LabelSelector) > 0 {
 		_, err := p.generateSelector(placement.LabelSelector)
 		if err != nil {
-			return fmt.Errorf("%s placement has invalid selectors: %w", path, err)
+			return fmt.Errorf("%s has invalid selectors: %w", path, err)
 		}
 	}
 
@@ -1463,59 +1613,90 @@ func (p *Plugin) getPlcFromPath(plcPath string) (string, map[string]any, error) 
 	return name, placement, nil
 }
 
-// getLabelSelectorKey generates the key for the policy's label selectors to be used in
-// Policies.selectorToPlc.
-func getLabelSelectorKey(placementConfig types.PlacementConfig) string {
-	return fmt.Sprintf("%#v", placementConfig.LabelSelector)
+// getLabelSelectorKey generates the scope-qualified key for the policy's label selectors to be
+// used in Policies.selectorToPlc.
+func getLabelSelectorKey(scope string, placementConfig types.PlacementConfig) string {
+	return fmt.Sprintf("%s:%#v", scope, placementConfig.LabelSelector)
+}
+
+// countScopePlacements returns how many placements have already been recorded in selectorToPlc
+// for the given scope.
+func (p *Plugin) countScopePlacements(scope string) int {
+	count := 0
+	prefix := scope + ":"
+
+	for selectorKey := range p.selectorToPlc {
+		if strings.HasPrefix(selectorKey, prefix) {
+			count++
+		}
+	}
+
+	return count
 }
 
 // getPlcName will generate a placement name for the policy. If the placement has
 // previously been generated, skip will be true.
 func (p *Plugin) getPlcName(
+	scope string,
 	defaultPlacementConfig types.PlacementConfig,
+	fallbackDefaultPlacementName string,
 	placementConfig types.PlacementConfig,
-	nameDefault string,
+	nameDefault, nameSuffix string,
 ) (string, bool) {
 	if placementConfig.Name != "" {
 		// If the policy explicitly specifies a placement name, use it
 		return placementConfig.Name, false
-	} else if defaultPlacementConfig.Name != "" || p.PolicyDefaults.Placement.Name != "" {
+	} else if defaultPlacementConfig.Name != "" || fallbackDefaultPlacementName != "" {
 		// Prioritize the provided default but fall back to policyDefaults
-		defaultPlacementName := p.PolicyDefaults.Placement.Name
+		defaultPlacementName := fallbackDefaultPlacementName
 		if defaultPlacementConfig.Name != "" {
 			defaultPlacementName = defaultPlacementConfig.Name
 		}
 		// If the policy doesn't explicitly specify a placement name, and there is a
 		// default placement name set, check if one has already been generated for these
 		// label selectors
-		selectorKey := getLabelSelectorKey(placementConfig)
+		selectorKey := getLabelSelectorKey(scope, placementConfig)
+		scopePlacementCount := p.countScopePlacements(scope)
+
 		if _, ok := p.selectorToPlc[selectorKey]; ok {
 			// Just reuse the previously created placement with the same label selectors
 			return p.selectorToPlc[selectorKey], true
 		}
 		// If the policy doesn't explicitly specify a placement name, and there is a
 		// default placement name, use that
-		if len(p.selectorToPlc) == 0 {
+		if scopePlacementCount == 0 {
 			// If this is the first generated placement, just use it as is
 			return defaultPlacementName, false
 		}
 		// If there is already one or more generated placements, increment the name
-		return fmt.Sprintf("%s%d", defaultPlacementName, len(p.selectorToPlc)+1), false
+		return fmt.Sprintf("%s%d", defaultPlacementName, scopePlacementCount+1), false
 	}
 	// Default to a placement per policy
-	return "placement-" + nameDefault, false
+	return "placement-" + nameDefault + nameSuffix, false
 }
 
 func (p *Plugin) createPolicyPlacement(placementConfig types.PlacementConfig, nameDefault string) (
 	name string, err error,
 ) {
-	return p.createPlacement(p.PolicyDefaults.Placement, placementConfig, nameDefault)
+	return p.createPlacement(p.PolicyDefaults.Placement, placementConfig, nameDefault, false)
 }
 
 func (p *Plugin) createPolicySetPlacement(placementConfig types.PlacementConfig, nameDefault string) (
 	name string, err error,
 ) {
-	return p.createPlacement(p.PolicySetDefaults.Placement, placementConfig, nameDefault)
+	return p.createPlacement(p.PolicySetDefaults.Placement, placementConfig, nameDefault, false)
+}
+
+func (p *Plugin) createPolicyEnforcementPlacement(placementConfig types.PlacementConfig, nameDefault string) (
+	name string, err error,
+) {
+	return p.createPlacement(p.PolicyDefaults.EnforcementPlacement, placementConfig, nameDefault, true)
+}
+
+func (p *Plugin) createPolicySetEnforcementPlacement(placementConfig types.PlacementConfig, nameDefault string) (
+	name string, err error,
+) {
+	return p.createPlacement(p.PolicySetDefaults.EnforcementPlacement, placementConfig, nameDefault, true)
 }
 
 // createPlacement creates a placement for the input placement config and default name by writing it to
@@ -1525,7 +1706,8 @@ func (p *Plugin) createPolicySetPlacement(placementConfig types.PlacementConfig,
 func (p *Plugin) createPlacement(
 	defaultPlacementConfig types.PlacementConfig,
 	placementConfig types.PlacementConfig,
-	nameDefault string) (
+	nameDefault string,
+	selectiveEnforcement bool) (
 	name string, err error,
 ) {
 	// If a placementName is defined just return it
@@ -1555,7 +1737,25 @@ func (p *Plugin) createPlacement(
 	} else {
 		var skip bool
 
-		name, skip = p.getPlcName(defaultPlacementConfig, placementConfig, nameDefault)
+		// Set the placement scope and name suffix based on the selectiveEnforcement flag.
+		scope := placementScopeDefault
+		nameSuffix := ""
+		fallbackDefaultPlacementName := p.PolicyDefaults.Placement.Name
+
+		if selectiveEnforcement {
+			scope = placementScopeEnforcement
+			nameSuffix = enforcementPlacementNameSuffix
+			fallbackDefaultPlacementName = p.PolicyDefaults.EnforcementPlacement.Name
+		}
+
+		name, skip = p.getPlcName(
+			scope,
+			defaultPlacementConfig,
+			fallbackDefaultPlacementName,
+			placementConfig,
+			nameDefault,
+			nameSuffix,
+		)
 		if skip {
 			return name, err
 		}
@@ -1594,7 +1794,7 @@ func (p *Plugin) createPlacement(
 			},
 		}
 
-		selectorKey := getLabelSelectorKey(placementConfig)
+		selectorKey := getLabelSelectorKey(scope, placementConfig)
 		p.selectorToPlc[selectorKey] = name
 	}
 
@@ -1682,7 +1882,10 @@ func (p *Plugin) generateSelector(
 // writing it to the policy generator's output buffer. An error is returned if the placement binding
 // cannot be created.
 func (p *Plugin) createPlacementBinding(
-	bindingName, plcName string, policyConfs []*types.PolicyConfig, policySetConfs []*types.PolicySetConfig,
+	bindingName, plcName string,
+	policyConfs []*types.PolicyConfig,
+	policySetConfs []*types.PolicySetConfig,
+	selectiveEnforcement bool,
 ) error {
 	subjects := make([]map[string]string, 0, len(policyConfs)+len(policySetConfs))
 
@@ -1718,6 +1921,13 @@ func (p *Plugin) createPlacementBinding(
 			"kind":     placementKind,
 		},
 		"subjects": subjects,
+	}
+
+	if selectiveEnforcement {
+		binding["bindingOverrides"] = map[string]string{
+			"remediationAction": "enforce",
+		}
+		binding["subFilter"] = "restricted"
 	}
 
 	bindingYAML, err := yaml.Marshal(binding)

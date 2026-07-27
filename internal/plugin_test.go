@@ -409,6 +409,8 @@ spec:
 	assertEqual(t, string(output), expected)
 }
 
+// TestGeneratePolicyDisablePlacementOverride verifies policy-level overrides can
+// disable both primary and optional enforcement placement generation.
 func TestGeneratePolicyDisablePlacementOverride(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -425,6 +427,9 @@ func TestGeneratePolicyDisablePlacementOverride(t *testing.T) {
 	p.PolicyDefaults.Namespace = "my-policies"
 	p.PolicyDefaults.MetadataComplianceType = "musthave"
 	p.PolicyDefaults.Placement.PlacementName = "my-placement"
+	// Set default enforcement placement
+	p.PolicyDefaults.EnforcementPlacement.Name = "my-enforcement-placement"
+	p.PolicyDefaults.EnforcementPlacement.LabelSelector = map[string]any{"env": "prod"}
 	policyConf := types.PolicyConfig{
 		Name: "policy-app-config",
 		Manifests: []types.Manifest{
@@ -443,11 +448,13 @@ func TestGeneratePolicyDisablePlacementOverride(t *testing.T) {
 	p.applyDefaults(map[string]any{
 		"policies": []any{
 			map[string]any{
-				"generatePolicyPlacement": false,
+				"generatePolicyPlacement":            false,
+				"generatePolicyEnforcementPlacement": false, // disable enforcement placement at policy level
 			},
 		},
 	})
 	assertEqual(t, p.Policies[0].GeneratePolicyPlacement, false)
+	assertEqual(t, p.Policies[0].GeneratePolicyEnforcementPlacement, false)
 	// Default all policy ConsolidateManifests flags are set to true
 	// unless explicitly set
 	assertEqual(t, p.Policies[0].ConsolidateManifests, true)
@@ -501,6 +508,8 @@ spec:
 	assertEqual(t, string(output), expected)
 }
 
+// TestGeneratePolicyExistingPlacementName verifies bindings reference existing
+// placements for both primary and optional enforcement when placementName is set.
 func TestGeneratePolicyExistingPlacementName(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -515,6 +524,7 @@ func TestGeneratePolicyExistingPlacementName(t *testing.T) {
 	}
 
 	p.PolicyDefaults.Placement.PlacementName = "plrexistingname"
+	p.PolicyDefaults.EnforcementPlacement.PlacementName = "plrenforcementexistingname"
 	p.PolicyDefaults.Namespace = "my-policies"
 	p.PolicyDefaults.MetadataComplianceType = "musthave"
 	policyConf := types.PolicyConfig{
@@ -583,6 +593,23 @@ subjects:
     - apiGroup: policy.open-cluster-management.io
       kind: Policy
       name: policy-app-config
+---
+apiVersion: policy.open-cluster-management.io/v1
+bindingOverrides:
+    remediationAction: enforce
+kind: PlacementBinding
+metadata:
+    name: binding-policy-app-config-enforcement
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: plrenforcementexistingname
+subFilter: restricted
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config
 `
 	expected = strings.TrimPrefix(expected, "\n")
 
@@ -594,6 +621,8 @@ subjects:
 	assertEqual(t, string(output), expected)
 }
 
+// TestGeneratePolicyOverrideDefaultPlacement verifies per-policy placementName
+// overrides for both primary and optional enforcement placements.
 func TestGeneratePolicyOverrideDefaultPlacement(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -608,6 +637,7 @@ func TestGeneratePolicyOverrideDefaultPlacement(t *testing.T) {
 	}
 
 	p.PolicyDefaults.Placement.PlacementName = "my-placement"
+	p.PolicyDefaults.EnforcementPlacement.PlacementName = "my-enforcement-placement"
 	p.PolicyDefaults.Namespace = "my-policies"
 	PolicyConf := types.PolicyConfig{
 		Name: "policy-app-config",
@@ -619,6 +649,10 @@ func TestGeneratePolicyOverrideDefaultPlacement(t *testing.T) {
 		PolicyOptions: types.PolicyOptions{
 			Placement: types.PlacementConfig{
 				PlacementName: "my-placement-rule",
+			},
+			EnforcementPlacement: types.PlacementConfig{
+				// Override the default enforcement placement with existing placement.
+				PlacementName: "my-enforcement-placement-override",
 			},
 		},
 	}
@@ -678,6 +712,23 @@ subjects:
     - apiGroup: policy.open-cluster-management.io
       kind: Policy
       name: policy-app-config
+---
+apiVersion: policy.open-cluster-management.io/v1
+bindingOverrides:
+    remediationAction: enforce
+kind: PlacementBinding
+metadata:
+    name: binding-policy-app-config-enforcement
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: my-enforcement-placement-override
+subFilter: restricted
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config
 `
 
 	expected = strings.TrimPrefix(expected, "\n")
@@ -690,6 +741,9 @@ subjects:
 	assertEqual(t, string(output), expected)
 }
 
+// TestGenerateSeparateBindings verifies a PlacementBinding is generated
+// per policy for both the primary placement and the optional enforcement
+// placement when selectors differ.
 func TestGenerateSeparateBindings(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -709,11 +763,21 @@ func TestGenerateSeparateBindings(t *testing.T) {
 		Manifests: []types.Manifest{
 			{Path: path.Join(tmpDir, "configmap.yaml")},
 		},
+		PolicyOptions: types.PolicyOptions{
+			EnforcementPlacement: types.PlacementConfig{
+				LabelSelector: map[string]any{"env": "prod"},
+			},
+		},
 	}
 	policyConf2 := types.PolicyConfig{
 		Name: "policy-app-config2",
 		Manifests: []types.Manifest{
 			{Path: path.Join(tmpDir, "configmap.yaml")},
+		},
+		PolicyOptions: types.PolicyOptions{
+			EnforcementPlacement: types.PlacementConfig{
+				LabelSelector: map[string]any{"env": "staging"},
+			},
 		},
 	}
 	p.Policies = append(p.Policies, policyConf, policyConf2)
@@ -808,6 +872,26 @@ spec:
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
+    name: placement-policy-app-config-enforcement
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions:
+                    - key: env
+                      operator: In
+                      values:
+                        - prod
+    tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
     name: placement-policy-app-config2
     namespace: my-policies
 spec:
@@ -815,6 +899,26 @@ spec:
         - requiredClusterSelector:
             labelSelector:
                 matchExpressions: []
+    tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+    name: placement-policy-app-config2-enforcement
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions:
+                    - key: env
+                      operator: In
+                      values:
+                        - staging
     tolerations:
         - key: cluster.open-cluster-management.io/unavailable
           operator: Exists
@@ -848,6 +952,40 @@ subjects:
     - apiGroup: policy.open-cluster-management.io
       kind: Policy
       name: policy-app-config2
+---
+apiVersion: policy.open-cluster-management.io/v1
+bindingOverrides:
+    remediationAction: enforce
+kind: PlacementBinding
+metadata:
+    name: binding-policy-app-config-enforcement
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: placement-policy-app-config-enforcement
+subFilter: restricted
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config
+---
+apiVersion: policy.open-cluster-management.io/v1
+bindingOverrides:
+    remediationAction: enforce
+kind: PlacementBinding
+metadata:
+    name: binding-policy-app-config2-enforcement
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: placement-policy-app-config2-enforcement
+subFilter: restricted
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config2
 `
 	expected = strings.TrimPrefix(expected, "\n")
 
@@ -859,7 +997,100 @@ subjects:
 	assertEqual(t, string(output), expected)
 }
 
+// TestGenerateMissingBindingName verifies an error when a shared placement needs
+// placementBindingDefaults.name or enforcementName and the value is empty.
 func TestGenerateMissingBindingName(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+
+	tests := []struct {
+		name     string
+		setup    func(*Plugin)
+		errField string
+		plcName  string
+	}{
+		{
+			name: "name",
+			setup: func(p *Plugin) {
+				p.PlacementBindingDefaults.Name = ""
+				p.PolicyDefaults.Placement.Name = "my-placement-rule"
+			},
+			errField: "placementBindingDefaults.name",
+			plcName:  "my-placement-rule",
+		},
+		{
+			name: "enforcementName",
+			setup: func(p *Plugin) {
+				p.PlacementBindingDefaults.EnforcementName = ""
+				p.PolicyDefaults.EnforcementPlacement.Name = "my-enforcement-placement"
+				p.PolicyDefaults.EnforcementPlacement.LabelSelector = map[string]any{"env": "prod"}
+			},
+			errField: "placementBindingDefaults.enforcementName",
+			plcName:  "my-enforcement-placement",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			p := Plugin{}
+			var err error
+
+			p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+			if err != nil {
+				t.Fatal(err.Error())
+			}
+
+			test.setup(&p)
+			p.PolicyDefaults.Namespace = "my-policies"
+			p.Policies = append(p.Policies,
+				types.PolicyConfig{
+					Name: "policy-app-config",
+					Manifests: []types.Manifest{
+						{Path: path.Join(tmpDir, "configmap.yaml")},
+					},
+				},
+				types.PolicyConfig{
+					Name: "policy-app-config2",
+					Manifests: []types.Manifest{
+						{Path: path.Join(tmpDir, "configmap.yaml")},
+					},
+				},
+			)
+
+			rawConfig := map[string]any{}
+			if test.name == "enforcementName" {
+				// Disable primary placement so only the enforcement binding error is exercised.
+				rawConfig["policyDefaults"] = map[string]any{
+					"generatePolicyPlacement": false,
+				}
+			}
+
+			p.applyDefaults(rawConfig)
+
+			if err := p.assertValidConfig(); err != nil {
+				t.Fatal(err.Error())
+			}
+
+			_, err = p.Generate()
+			if err == nil {
+				t.Fatal("Expected an error but did not get one")
+			}
+
+			expected := fmt.Sprintf(
+				"%s must be set but is empty (multiple policies or policy sets were found for the "+
+					"PlacementBinding to placement %s)",
+				test.errField,
+				test.plcName,
+			)
+			assertEqual(t, err.Error(), expected)
+		})
+	}
+}
+
+func TestGeneratePolicyWithEnforcementPlacement(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
@@ -872,39 +1103,132 @@ func TestGenerateMissingBindingName(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	p.PlacementBindingDefaults.Name = ""
-	p.PolicyDefaults.Placement.Name = "my-placement-rule"
+	p.PolicyDefaults.Placement.Name = "my-placement"
+	p.PolicyDefaults.EnforcementPlacement.Name = "my-enforcement-placement"
+	p.PolicyDefaults.EnforcementPlacement.LabelSelector = map[string]any{"env": "prod"}
 	p.PolicyDefaults.Namespace = "my-policies"
-	policyConf := types.PolicyConfig{
+	p.Policies = append(p.Policies, types.PolicyConfig{
 		Name: "policy-app-config",
 		Manifests: []types.Manifest{
 			{Path: path.Join(tmpDir, "configmap.yaml")},
 		},
-	}
-	policyConf2 := types.PolicyConfig{
-		Name: "policy-app-config2",
-		Manifests: []types.Manifest{
-			{Path: path.Join(tmpDir, "configmap.yaml")},
-		},
-	}
-	p.Policies = append(p.Policies, policyConf, policyConf2)
+	})
+
 	p.applyDefaults(map[string]any{})
 
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}
 
-	_, err = p.Generate()
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: CM Configuration Management
+        policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+        policy.open-cluster-management.io/description: ""
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            game.properties: enemies=potato
+                        kind: ConfigMap
+                        metadata:
+                            name: my-configmap
+                remediationAction: inform
+                severity: low
+    remediationAction: inform
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+    name: my-placement
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions: []
+    tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+    name: my-enforcement-placement
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions:
+                    - key: env
+                      operator: In
+                      values:
+                        - prod
+    tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+    name: binding-policy-app-config
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: my-placement
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config
+---
+apiVersion: policy.open-cluster-management.io/v1
+bindingOverrides:
+    remediationAction: enforce
+kind: PlacementBinding
+metadata:
+    name: binding-policy-app-config-enforcement
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: my-enforcement-placement
+subFilter: restricted
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config
+`
+	expected = strings.TrimPrefix(expected, "\n")
+
+	outputBytes, err := p.Generate()
+	if err != nil {
+		t.Fatal(err.Error())
 	}
 
-	expected := fmt.Sprintf(
-		"placementBindingDefaults.name must be set but is empty (multiple policies or policy sets were found for the "+
-			"PlacementBinding to placement %s)",
-		p.PolicyDefaults.Placement.Name,
-	)
-	assertEqual(t, err.Error(), expected)
+	assertEqual(t, string(outputBytes), expected)
 }
 
 func TestCreatePolicy(t *testing.T) {
@@ -2256,6 +2580,40 @@ func TestCreatePlacementDuplicateName(t *testing.T) {
 	assertEqual(t, err.Error(), "a duplicate placement name was detected: my-placement")
 }
 
+func TestCreatePlacementDuplicatePrimaryAndEnforcementName(t *testing.T) {
+	t.Parallel()
+
+	p := Plugin{}
+	p.allPlcs = map[string]bool{}
+	p.selectorToPlc = map[string]string{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := types.PolicyConfig{
+		Name: "policy-app-config",
+		PolicyOptions: types.PolicyOptions{
+			Placement: types.PlacementConfig{
+				Name:          "shared-placement",
+				LabelSelector: map[string]any{"env": "prod"},
+			},
+			EnforcementPlacement: types.PlacementConfig{
+				Name:          "shared-placement",
+				LabelSelector: map[string]any{"env": "enforce"},
+			},
+		},
+	}
+
+	_, err := p.createPolicyPlacement(policyConf.Placement, policyConf.Name)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	_, err = p.createPolicyEnforcementPlacement(policyConf.EnforcementPlacement, policyConf.Name)
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	assertEqual(t, err.Error(), "a duplicate placement name was detected: shared-placement")
+}
+
 func plPathHelper(t *testing.T, placementYAML string) (*Plugin, string) {
 	t.Helper()
 	tmpDir := t.TempDir()
@@ -2488,7 +2846,7 @@ func TestCreatePlacementBinding(t *testing.T) {
 		},
 	}
 
-	err := p.createPlacementBinding(bindingName, plrName, policyConfs, policySetConfs)
+	err := p.createPlacementBinding(bindingName, plrName, policyConfs, policySetConfs, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2519,6 +2877,48 @@ subjects:
 	assertEqual(t, p.outputBuffer.String(), expected)
 }
 
+func TestCreateEnforcementPlacementBinding(t *testing.T) {
+	t.Parallel()
+
+	p := Plugin{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := types.PolicyConfig{Name: "policy-app-config"}
+	p.Policies = append(p.Policies, policyConf)
+
+	err := p.createPlacementBinding(
+		"my-placement-binding",
+		"my-placement-rule",
+		[]*types.PolicyConfig{&p.Policies[0]},
+		nil,
+		true,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+bindingOverrides:
+    remediationAction: enforce
+kind: PlacementBinding
+metadata:
+    name: my-placement-binding
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: my-placement-rule
+subFilter: restricted
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, p.outputBuffer.String(), expected)
+}
+
 func TestGeneratePolicySets(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -2543,7 +2943,8 @@ func TestGeneratePolicySets(t *testing.T) {
 						"policy-app-config2",
 					},
 					PolicySetOptions: types.PolicySetOptions{
-						GeneratePolicySetPlacement: true,
+						GeneratePolicySetPlacement:            true,
+						GeneratePolicySetEnforcementPlacement: true,
 					},
 				},
 			},
@@ -2576,7 +2977,8 @@ func TestGeneratePolicySets(t *testing.T) {
 						"policy-app-config",
 					},
 					PolicySetOptions: types.PolicySetOptions{
-						GeneratePolicySetPlacement: true,
+						GeneratePolicySetPlacement:            true,
+						GeneratePolicySetEnforcementPlacement: true,
 					},
 				},
 				{
@@ -2585,7 +2987,8 @@ func TestGeneratePolicySets(t *testing.T) {
 						"policy-app-config2",
 					},
 					PolicySetOptions: types.PolicySetOptions{
-						GeneratePolicySetPlacement: true,
+						GeneratePolicySetPlacement:            true,
+						GeneratePolicySetEnforcementPlacement: true,
 					},
 				},
 			},
@@ -2618,7 +3021,8 @@ func TestGeneratePolicySets(t *testing.T) {
 						"policy-app-config2",
 					},
 					PolicySetOptions: types.PolicySetOptions{
-						GeneratePolicySetPlacement: true,
+						GeneratePolicySetPlacement:            true,
+						GeneratePolicySetEnforcementPlacement: true,
 					},
 				},
 			},
@@ -2653,7 +3057,8 @@ func TestGeneratePolicySets(t *testing.T) {
 						"pre-exists-policy",
 					},
 					PolicySetOptions: types.PolicySetOptions{
-						GeneratePolicySetPlacement: true,
+						GeneratePolicySetPlacement:            true,
+						GeneratePolicySetEnforcementPlacement: true,
 					},
 				},
 			},
@@ -2699,6 +3104,8 @@ func TestGeneratePolicySets(t *testing.T) {
 	}
 }
 
+// TestGeneratePolicySetsWithPlacement verifies policy-set primary and optional
+// enforcement placements and bindings are generated from defaults.
 func TestGeneratePolicySetsWithPlacement(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -2712,28 +3119,34 @@ func TestGeneratePolicySetsWithPlacement(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	p.PlacementBindingDefaults.Name = "my-placement-binding"
+	// Leave PlacementBindingDefaults empty so binding names are derived from the
+	// single policy set (binding-<policySetName> / binding-<policySetName>-enforcement).
 	p.PolicyDefaults.Placement.Name = "my-placement"
 	p.PolicyDefaults.Namespace = "my-policies"
-
-	policyConf := types.PolicyConfig{
+	p.PolicySetDefaults.EnforcementPlacement.Name = "my-enforcement-placement"
+	p.PolicySetDefaults.EnforcementPlacement.LabelSelector = map[string]any{"env": "prod"}
+	p.Policies = append(p.Policies, types.PolicyConfig{
 		Name: "policy-app-config",
 		Manifests: []types.Manifest{
-			{
-				Path: path.Join(tmpDir, "configmap.yaml"),
-			},
+			{Path: path.Join(tmpDir, "configmap.yaml")},
 		},
 		PolicyOptions: types.PolicyOptions{
 			PolicySets: []string{"policyset"},
+			// Policy-level enforcement is set, but generatePlacementWhenInSet defaults
+			// to false, so no policy-level enforcement Placement/PlacementBinding.
+			EnforcementPlacement: types.PlacementConfig{
+				LabelSelector: map[string]any{"env": "staging"},
+			},
 		},
-	}
-	p.Policies = append(p.Policies, policyConf)
+	})
 
 	p.applyDefaults(map[string]any{})
 
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}
+
+	assertEqual(t, p.Policies[0].GeneratePlacementWhenInSet, false)
 
 	expected := `
 ---
@@ -2795,15 +3208,52 @@ spec:
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 ---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+    name: my-enforcement-placement
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions:
+                    - key: env
+                      operator: In
+                      values:
+                        - prod
+    tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
 metadata:
-    name: my-placement-binding
+    name: binding-policyset
     namespace: my-policies
 placementRef:
     apiGroup: cluster.open-cluster-management.io
     kind: Placement
     name: my-placement
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: PolicySet
+      name: policyset
+---
+apiVersion: policy.open-cluster-management.io/v1
+bindingOverrides:
+    remediationAction: enforce
+kind: PlacementBinding
+metadata:
+    name: binding-policyset-enforcement
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: my-enforcement-placement
+subFilter: restricted
 subjects:
     - apiGroup: policy.open-cluster-management.io
       kind: PolicySet
@@ -2819,6 +3269,8 @@ subjects:
 	assertEqual(t, string(output), expected)
 }
 
+// TestGeneratePolicySetsOverridePlacement verifies policy-set overrides of
+// default primary and optional enforcement placement selectors.
 func TestGeneratePolicySetsOverridePlacement(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -2833,9 +3285,12 @@ func TestGeneratePolicySetsOverridePlacement(t *testing.T) {
 	}
 
 	p.PlacementBindingDefaults.Name = "my-placement-binding"
+	p.PlacementBindingDefaults.EnforcementName = "my-enforcement-binding"
 	p.PolicyDefaults.Placement.Name = "my-placement"
 	p.PolicyDefaults.Namespace = "my-policies"
 	p.PolicySetDefaults.Placement.Name = "other-placement"
+	p.PolicySetDefaults.EnforcementPlacement.Name = "other-enforcement-placement"
+	p.PolicySetDefaults.EnforcementPlacement.LabelSelector = map[string]any{"env": "staging"}
 
 	policyConf := types.PolicyConfig{
 		Name: "policy-app-config",
@@ -2857,6 +3312,11 @@ func TestGeneratePolicySetsOverridePlacement(t *testing.T) {
 				LabelSelector: map[string]any{
 					"my-label": "my-cluster",
 				},
+			},
+			// Override the default enforcement selector (env: staging -> env: prod).
+			// The placement name still comes from policySetDefaults.
+			EnforcementPlacement: types.PlacementConfig{
+				LabelSelector: map[string]any{"env": "prod"},
 			},
 		},
 	}
@@ -2932,15 +3392,52 @@ spec:
         - key: cluster.open-cluster-management.io/unreachable
           operator: Exists
 ---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+    name: other-enforcement-placement
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions:
+                    - key: env
+                      operator: In
+                      values:
+                        - prod
+    tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
 metadata:
-    name: my-placement-binding
+    name: binding-policyset-overrides
     namespace: my-policies
 placementRef:
     apiGroup: cluster.open-cluster-management.io
     kind: Placement
     name: other-placement
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: PolicySet
+      name: policyset-overrides
+---
+apiVersion: policy.open-cluster-management.io/v1
+bindingOverrides:
+    remediationAction: enforce
+kind: PlacementBinding
+metadata:
+    name: binding-policyset-overrides-enforcement
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: other-enforcement-placement
+subFilter: restricted
 subjects:
     - apiGroup: policy.open-cluster-management.io
       kind: PolicySet
@@ -2956,6 +3453,8 @@ subjects:
 	assertEqual(t, string(output), expected)
 }
 
+// TestGeneratePolicySetsWithoutPlacement verifies primary and optional
+// enforcement policy-set placements can both be disabled when configured.
 func TestGeneratePolicySetsWithoutPlacement(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -2972,6 +3471,7 @@ func TestGeneratePolicySetsWithoutPlacement(t *testing.T) {
 	p.PlacementBindingDefaults.Name = "my-placement-binding"
 	p.PolicyDefaults.Placement.Name = "my-placement-rule"
 	p.PolicyDefaults.Namespace = "my-policies"
+	p.PolicySetDefaults.EnforcementPlacement.LabelSelector = map[string]any{"env": "prod"}
 
 	policyConf := types.PolicyConfig{
 		Name: "policy-app-config",
@@ -2985,16 +3485,33 @@ func TestGeneratePolicySetsWithoutPlacement(t *testing.T) {
 		},
 	}
 	p.Policies = append(p.Policies, policyConf)
+	p.PolicySets = append(p.PolicySets, types.PolicySetConfig{
+		Name: "policyset",
+		PolicySetOptions: types.PolicySetOptions{
+			EnforcementPlacement: types.PlacementConfig{
+				Name:          "policyset-enforcement-placement",
+				LabelSelector: map[string]any{"my": "app"},
+			},
+		},
+	})
 
 	p.applyDefaults(map[string]any{
 		"policySetDefaults": map[string]any{
 			"generatePolicySetPlacement": false,
+		},
+		"policySets": []any{
+			map[string]any{
+				"generatePolicySetEnforcementPlacement": false,
+			},
 		},
 	})
 
 	if err := p.assertValidConfig(); err != nil {
 		t.Fatal(err.Error())
 	}
+
+	assertEqual(t, p.PolicySetDefaults.GeneratePolicySetPlacement, false)
+	assertEqual(t, p.PolicySets[0].GeneratePolicySetEnforcementPlacement, false)
 
 	expected := `
 ---
@@ -3050,6 +3567,9 @@ spec:
 	assertEqual(t, string(output), expected)
 }
 
+// TestGeneratePolicySetsWithPolicyPlacement verifies generatePlacementWhenInSet
+// generates policy-level primary and optional enforcement placements alongside
+// the policy-set placement.
 func TestGeneratePolicySetsWithPolicyPlacement(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -3076,6 +3596,9 @@ func TestGeneratePolicySetsWithPolicyPlacement(t *testing.T) {
 		},
 		PolicyOptions: types.PolicyOptions{
 			PolicySets: []string{"my-policyset"},
+			EnforcementPlacement: types.PlacementConfig{
+				LabelSelector: map[string]any{"env": "prod"},
+			},
 		},
 	}
 	p.Policies = append(p.Policies, policyConf)
@@ -3162,6 +3685,26 @@ spec:
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
+    name: placement-policy-app-config-enforcement
+    namespace: my-policies
+spec:
+    predicates:
+        - requiredClusterSelector:
+            labelSelector:
+                matchExpressions:
+                    - key: env
+                      operator: In
+                      values:
+                        - prod
+    tolerations:
+        - key: cluster.open-cluster-management.io/unavailable
+          operator: Exists
+        - key: cluster.open-cluster-management.io/unreachable
+          operator: Exists
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
     name: policyset-placement
     namespace: my-policies
 spec:
@@ -3196,7 +3739,7 @@ subjects:
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
 metadata:
-    name: my-placement-binding
+    name: binding-my-policyset
     namespace: my-policies
 placementRef:
     apiGroup: cluster.open-cluster-management.io
@@ -3206,6 +3749,23 @@ subjects:
     - apiGroup: policy.open-cluster-management.io
       kind: PolicySet
       name: my-policyset
+---
+apiVersion: policy.open-cluster-management.io/v1
+bindingOverrides:
+    remediationAction: enforce
+kind: PlacementBinding
+metadata:
+    name: binding-policy-app-config-enforcement
+    namespace: my-policies
+placementRef:
+    apiGroup: cluster.open-cluster-management.io
+    kind: Placement
+    name: placement-policy-app-config-enforcement
+subFilter: restricted
+subjects:
+    - apiGroup: policy.open-cluster-management.io
+      kind: Policy
+      name: policy-app-config
 `
 	expected = strings.TrimPrefix(expected, "\n")
 
@@ -3722,6 +4282,8 @@ func TestGenerateNonDNSPolicyName(t *testing.T) {
 	}
 }
 
+// TestGenerateNonDNSPlacementName verifies DNS validation for both
+// policyDefaults.placement.name and policyDefaults.enforcementPlacement.name.
 func TestGenerateNonDNSPlacementName(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -3747,45 +4309,70 @@ func TestGenerateNonDNSPlacementName(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
+	fields := []struct {
+		name     string
+		setField func(*Plugin, string)
+		errField string
+	}{
+		{
+			name: "placement",
+			setField: func(p *Plugin, placementName string) {
+				p.PolicyDefaults.Placement.Name = placementName
+			},
+			errField: "policyDefaults.placement.name",
+		},
+		{
+			name: "enforcementPlacement",
+			setField: func(p *Plugin, placementName string) {
+				p.PolicyDefaults.EnforcementPlacement.Name = placementName
+			},
+			errField: "policyDefaults.enforcementPlacement.name",
+		},
+	}
 
-			p := Plugin{}
-			var err error
+	for _, field := range fields {
+		for _, test := range tests {
+			t.Run(field.name+"/"+test.name, func(t *testing.T) {
+				t.Parallel()
 
-			p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
-			if err != nil {
-				t.Fatal(err.Error())
-			}
+				p := Plugin{}
+				var err error
 
-			p.PlacementBindingDefaults.Name = "my-placement-binding"
-			p.PolicyDefaults.Placement.Name = test.placementName
-			p.PolicyDefaults.Namespace = "my-policies"
-			policyConf := types.PolicyConfig{
-				Name: "policy-app-config",
-				Manifests: []types.Manifest{
-					{Path: path.Join(tmpDir, "configmap.yaml")},
-				},
-			}
-			p.Policies = append(p.Policies, policyConf)
-			p.applyDefaults(map[string]any{})
+				p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+				if err != nil {
+					t.Fatal(err.Error())
+				}
 
-			err = p.assertValidConfig()
-			if err == nil {
-				t.Fatal("Expected an error but did not get one")
-			}
+				p.PlacementBindingDefaults.Name = "my-placement-binding"
+				field.setField(&p, test.placementName)
+				p.PolicyDefaults.Namespace = "my-policies"
+				p.Policies = append(p.Policies, types.PolicyConfig{
+					Name: "policy-app-config",
+					Manifests: []types.Manifest{
+						{Path: path.Join(tmpDir, "configmap.yaml")},
+					},
+				})
+				p.applyDefaults(map[string]any{})
 
-			expected := fmt.Sprintf(
-				"policyDefaults placement.name `%s` is not DNS compliant. See "+
-					"https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names",
-				test.placementName,
-			)
-			assertEqual(t, err.Error(), expected)
-		})
+				err = p.assertValidConfig()
+				if err == nil {
+					t.Fatal("Expected an error but did not get one")
+				}
+
+				expected := fmt.Sprintf(
+					"%s `%s` is not DNS compliant. See "+
+						"https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names",
+					field.errField,
+					test.placementName,
+				)
+				assertEqual(t, err.Error(), expected)
+			})
+		}
 	}
 }
 
+// TestGenerateNonDNSBindingName verifies DNS validation for both
+// placementBindingDefaults.name and placementBindingDefaults.enforcementName.
 func TestGenerateNonDNSBindingName(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -3811,48 +4398,64 @@ func TestGenerateNonDNSBindingName(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
+	fields := []struct {
+		name     string
+		setField func(*Plugin, string)
+		errField string
+	}{
+		{
+			name: "Name",
+			setField: func(p *Plugin, bindingName string) {
+				p.PlacementBindingDefaults.Name = bindingName
+			},
+			errField: "PlacementBindingDefaults.Name",
+		},
+		{
+			name: "EnforcementName",
+			setField: func(p *Plugin, bindingName string) {
+				p.PlacementBindingDefaults.EnforcementName = bindingName
+			},
+			errField: "PlacementBindingDefaults.EnforcementName",
+		},
+	}
 
-			p := Plugin{}
-			var err error
+	for _, field := range fields {
+		for _, test := range tests {
+			t.Run(field.name+"/"+test.name, func(t *testing.T) {
+				t.Parallel()
 
-			p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
-			if err != nil {
-				t.Fatal(err.Error())
-			}
+				p := Plugin{}
+				var err error
 
-			p.PlacementBindingDefaults.Name = test.bindingName
-			p.PolicyDefaults.Placement.Name = "my-placement-rule"
-			p.PolicyDefaults.Namespace = "my-policies"
-			policyConf := types.PolicyConfig{
-				Name: "policy-app-config",
-				Manifests: []types.Manifest{
-					{Path: path.Join(tmpDir, "configmap.yaml")},
-				},
-			}
-			policyConf2 := types.PolicyConfig{
-				Name: "policy-app-config2",
-				Manifests: []types.Manifest{
-					{Path: path.Join(tmpDir, "configmap.yaml")},
-				},
-			}
-			p.Policies = append(p.Policies, policyConf, policyConf2)
-			p.applyDefaults(map[string]any{})
+				p.baseDirectory, err = filepath.EvalSymlinks(tmpDir)
+				if err != nil {
+					t.Fatal(err.Error())
+				}
 
-			err = p.assertValidConfig()
-			if err == nil {
-				t.Fatal("Expected an error but did not get one")
-			}
+				field.setField(&p, test.bindingName)
+				p.PolicyDefaults.Namespace = "my-policies"
+				p.Policies = append(p.Policies, types.PolicyConfig{
+					Name: "policy-app-config",
+					Manifests: []types.Manifest{
+						{Path: path.Join(tmpDir, "configmap.yaml")},
+					},
+				})
+				p.applyDefaults(map[string]any{})
 
-			expected := fmt.Sprintf(
-				"PlacementBindingDefaults.Name `%s` is not DNS compliant. See "+
-					"https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names",
-				test.bindingName,
-			)
-			assertEqual(t, err.Error(), expected)
-		})
+				err = p.assertValidConfig()
+				if err == nil {
+					t.Fatal("Expected an error but did not get one")
+				}
+
+				expected := fmt.Sprintf(
+					"%s `%s` is not DNS compliant. See "+
+						"https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names",
+					field.errField,
+					test.bindingName,
+				)
+				assertEqual(t, err.Error(), expected)
+			})
+		}
 	}
 }
 

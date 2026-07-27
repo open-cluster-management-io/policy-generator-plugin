@@ -241,6 +241,140 @@ policies:
 	assertReflectEqual(t, policy2.Standards, []string{"NIST SP 800-53"})
 }
 
+// TestConfigEnforcementPlacement verifies Config applies defaults and overrides for
+// both primary and enforcement placement fields on policies and policy sets.
+func TestConfigEnforcementPlacement(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createConfigMap(t, tmpDir, "configmap.yaml")
+	configMapPath := path.Join(tmpDir, "configmap.yaml")
+
+	config := fmt.Sprintf(
+		`
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-name
+placementBindingDefaults:
+  name: my-placement-binding
+  enforcementName: my-enforcement-binding
+policyDefaults:
+  namespace: my-policies
+  placement:
+    labelSelector:
+      cloud: red hat
+  enforcementPlacement:
+    labelSelector:
+      env: prod
+policySetDefaults:
+  placement:
+    placementName: policyset-placement
+  enforcementPlacement:
+    placementName: policyset-enforcement
+policies:
+- name: policy-app-config
+  manifests:
+    - path: %s
+- name: policy-app-config2
+  manifests:
+    - path: %s
+  placement:
+    placementName: existing-placement
+  enforcementPlacement:
+    placementName: existing-enforcement
+policySets:
+- name: my-policyset
+  policies:
+    - policy-app-config
+- name: my-policyset-override
+  policies:
+    - policy-app-config2
+  placement:
+    labelSelector:
+      region: west
+  enforcementPlacement:
+    labelSelector:
+      region: east
+`,
+		configMapPath,
+		configMapPath,
+	)
+
+	p := Plugin{}
+
+	err := p.Config([]byte(config), tmpDir)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	assertEqual(t, p.PlacementBindingDefaults.Name, "my-placement-binding")
+	assertEqual(t, p.PlacementBindingDefaults.EnforcementName, "my-enforcement-binding")
+	assertReflectEqual(
+		t,
+		p.PolicyDefaults.Placement.LabelSelector,
+		map[string]any{"cloud": "red hat"},
+	)
+	assertReflectEqual(
+		t,
+		p.PolicyDefaults.EnforcementPlacement.LabelSelector,
+		map[string]any{"env": "prod"},
+	)
+	assertEqual(t, p.PolicyDefaults.GeneratePolicyPlacement, true)
+	assertEqual(t, p.PolicyDefaults.GeneratePolicyEnforcementPlacement, true)
+	assertEqual(t, p.PolicySetDefaults.Placement.PlacementName, "policyset-placement")
+	assertEqual(t, p.PolicySetDefaults.EnforcementPlacement.PlacementName, "policyset-enforcement")
+	assertEqual(t, p.PolicySetDefaults.GeneratePolicySetPlacement, true)
+	assertEqual(t, p.PolicySetDefaults.GeneratePolicySetEnforcementPlacement, true)
+
+	policy1 := p.Policies[0]
+	assertReflectEqual(
+		t,
+		policy1.Placement.LabelSelector,
+		map[string]any{"cloud": "red hat"},
+	)
+	assertEqual(t, policy1.Placement.PlacementName, "")
+	assertReflectEqual(
+		t,
+		policy1.EnforcementPlacement.LabelSelector,
+		map[string]any{"env": "prod"},
+	)
+	assertEqual(t, policy1.EnforcementPlacement.PlacementName, "")
+	assertEqual(t, policy1.GeneratePolicyPlacement, true)
+	assertEqual(t, policy1.GeneratePolicyEnforcementPlacement, true)
+
+	policy2 := p.Policies[1]
+	assertEqual(t, len(policy2.Placement.LabelSelector), 0)
+	assertEqual(t, policy2.Placement.PlacementName, "existing-placement")
+	assertEqual(t, len(policy2.EnforcementPlacement.LabelSelector), 0)
+	assertEqual(t, policy2.EnforcementPlacement.PlacementName, "existing-enforcement")
+	assertEqual(t, policy2.GeneratePolicyPlacement, true)
+	assertEqual(t, policy2.GeneratePolicyEnforcementPlacement, true)
+
+	policySet1 := p.PolicySets[0]
+	assertEqual(t, policySet1.Placement.PlacementName, "policyset-placement")
+	assertEqual(t, len(policySet1.Placement.LabelSelector), 0)
+	assertEqual(t, policySet1.EnforcementPlacement.PlacementName, "policyset-enforcement")
+	assertEqual(t, len(policySet1.EnforcementPlacement.LabelSelector), 0)
+	assertEqual(t, policySet1.GeneratePolicySetPlacement, true)
+	assertEqual(t, policySet1.GeneratePolicySetEnforcementPlacement, true)
+
+	policySet2 := p.PolicySets[1]
+	assertReflectEqual(
+		t,
+		policySet2.Placement.LabelSelector,
+		map[string]any{"region": "west"},
+	)
+	assertEqual(t, policySet2.Placement.PlacementName, "")
+	assertReflectEqual(
+		t,
+		policySet2.EnforcementPlacement.LabelSelector,
+		map[string]any{"region": "east"},
+	)
+	assertEqual(t, policySet2.EnforcementPlacement.PlacementName, "")
+	assertEqual(t, policySet2.GeneratePolicySetPlacement, true)
+	assertEqual(t, policySet2.GeneratePolicySetEnforcementPlacement, true)
+}
+
 func TestConfigAllDefaults(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -281,6 +415,8 @@ policies:
 
 	assertEqual(t, p.PolicyDefaults.InformGatekeeperPolicies, true)
 	assertEqual(t, p.PolicyDefaults.InformKyvernoPolicies, true)
+	assertEqual(t, p.PolicyDefaults.GeneratePolicyPlacement, true)
+	assertEqual(t, p.PolicyDefaults.GeneratePolicyEnforcementPlacement, true)
 	assertReflectEqual(t, p.PolicyDefaults.NamespaceSelector, expectedNsSelector)
 	assertEqual(t, p.PolicyDefaults.Placement.PlacementPath, "")
 	assertEqual(t, len(p.PolicyDefaults.Placement.LabelSelector), 0)
@@ -307,6 +443,8 @@ policies:
 	assertReflectEqual(t, policy.Standards, []string{"NIST SP 800-53"})
 	assertEqual(t, policy.InformGatekeeperPolicies, true)
 	assertEqual(t, policy.InformKyvernoPolicies, true)
+	assertEqual(t, policy.GeneratePolicyPlacement, true)
+	assertEqual(t, policy.GeneratePolicyEnforcementPlacement, true)
 }
 
 func TestConfigNoNamespace(t *testing.T) {
@@ -429,11 +567,58 @@ policies:
 	assertEqual(t, err.Error(), expected)
 }
 
-func TestConfigMultiplePlacementsLabelSelectorAndPlPath(t *testing.T) {
+// TestConfigMultiplePlacements verifies placement and enforcementPlacement each
+// accept only one of labelSelector, placementPath, or placementName.
+func TestConfigMultiplePlacements(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
-	config := fmt.Sprintf(`
+	configMapPath := path.Join(tmpDir, "configmap.yaml")
+
+	tests := []struct {
+		name      string
+		field     string
+		extraYAML string
+	}{
+		{
+			name:  "placement/labelSelector and placementPath",
+			field: "placement",
+			extraYAML: `
+    labelSelector:
+      cloud: red hat
+    placementPath: path/to/pl.yaml`,
+		},
+		{
+			name:  "placement/labelSelector and placementName",
+			field: "placement",
+			extraYAML: `
+    labelSelector:
+      cloud: red hat
+    placementName: plexistingname`,
+		},
+		{
+			name:  "enforcementPlacement/labelSelector and placementPath",
+			field: "enforcementPlacement",
+			extraYAML: `
+    labelSelector:
+      cloud: red hat
+    placementPath: path/to/pl.yaml`,
+		},
+		{
+			name:  "enforcementPlacement/labelSelector and placementName",
+			field: "enforcementPlacement",
+			extraYAML: `
+    labelSelector:
+      cloud: red hat
+    placementName: plexistingname`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			config := fmt.Sprintf(`
 apiVersion: policy.open-cluster-management.io/v1
 kind: PolicyGenerator
 metadata:
@@ -442,66 +627,45 @@ policyDefaults:
   namespace: my-policies
 policies:
 - name: policy-app-config
-  placement:
-    labelSelector:
-      cloud: red hat
-    placementPath: path/to/pl.yaml
+  %s:%s
   manifests:
     - path: %s
 `,
-		path.Join(tmpDir, "configmap.yaml"),
-	)
-	p := Plugin{}
+				test.field,
+				test.extraYAML,
+				configMapPath,
+			)
+			p := Plugin{}
 
-	err := p.Config([]byte(config), tmpDir)
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
+			err := p.Config([]byte(config), tmpDir)
+			if err == nil {
+				t.Fatal("Expected an error but did not get one")
+			}
+
+			expected := fmt.Sprintf(
+				"policy policy-app-config.%s must specify only one of "+
+					"labelSelector, placementPath, or placementName",
+				test.field,
+			)
+			assertEqual(t, err.Error(), expected)
+		})
 	}
-
-	expected := "policy policy-app-config must specify only one of " +
-		"placement selector, placement path, or placement name"
-	assertEqual(t, err.Error(), expected)
 }
 
-func TestConfigMultiplePlacementsLabelSelectorAndPlName(t *testing.T) {
-	t.Parallel()
-	tmpDir := t.TempDir()
-	createConfigMap(t, tmpDir, "configmap.yaml")
-	config := fmt.Sprintf(`
-apiVersion: policy.open-cluster-management.io/v1
-kind: PolicyGenerator
-metadata:
-  name: policy-generator-name
-policyDefaults:
-  namespace: my-policies
-policies:
-- name: policy-app-config
-  placement:
-    labelSelector:
-      cloud: red hat
-    placementName: plexistingname
-  manifests:
-    - path: %s
-`,
-		path.Join(tmpDir, "configmap.yaml"),
-	)
-	p := Plugin{}
-
-	err := p.Config([]byte(config), tmpDir)
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
-	}
-
-	expected := "policy policy-app-config must specify only one of " +
-		"placement selector, placement path, or placement name"
-	assertEqual(t, err.Error(), expected)
-}
-
+// TestConfigPlacementPathNotFound verifies a missing placementPath is rejected
+// for both placement and enforcementPlacement.
 func TestConfigPlacementPathNotFound(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
-	config := fmt.Sprintf(`
+	configMapPath := path.Join(tmpDir, "configmap.yaml")
+
+	fields := []string{"placement", "enforcementPlacement"}
+	for _, field := range fields {
+		t.Run(field, func(t *testing.T) {
+			t.Parallel()
+
+			config := fmt.Sprintf(`
 apiVersion: policy.open-cluster-management.io/v1
 kind: PolicyGenerator
 metadata:
@@ -510,22 +674,28 @@ policyDefaults:
   namespace: my-policies
 policies:
 - name: policy-app-config
-  placement:
+  %s:
     placementPath: path/to/pl.yaml
   manifests:
     - path: %s
 `,
-		path.Join(tmpDir, "configmap.yaml"),
-	)
-	p := Plugin{}
+				field,
+				configMapPath,
+			)
+			p := Plugin{}
 
-	err := p.Config([]byte(config), tmpDir)
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
+			err := p.Config([]byte(config), tmpDir)
+			if err == nil {
+				t.Fatal("Expected an error but did not get one")
+			}
+
+			expected := fmt.Sprintf(
+				"policy policy-app-config.%s.placementPath could not read the path path/to/pl.yaml",
+				field,
+			)
+			assertEqual(t, err.Error(), expected)
+		})
 	}
-
-	expected := "policy policy-app-config placement.placementPath could not read the path path/to/pl.yaml"
-	assertEqual(t, err.Error(), expected)
 }
 
 func TestConfigDuplicateNames(t *testing.T) {
@@ -913,8 +1083,26 @@ func TestPolicySetConfig(t *testing.T) {
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
-				"placement name",
+			expectedErrMsg: "policySet my-policyset.placement must specify only one of labelSelector, " +
+				"placementPath, or placementName",
+		},
+		{
+			name: "policySet may not specify a label selector and enforcementPlacement path together",
+			setupFunc: func(p *Plugin) {
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Name: "my-policyset",
+						PolicySetOptions: types.PolicySetOptions{
+							EnforcementPlacement: types.PlacementConfig{
+								PlacementPath: "../config/plc.yaml",
+								LabelSelector: map[string]any{"cloud": "red hat"},
+							},
+						},
+					},
+				}
+			},
+			expectedErrMsg: "policySet my-policyset.enforcementPlacement must specify only one of labelSelector, " +
+				"placementPath, or placementName",
 		},
 		{
 			name: "policySet may not specify a label selector and placement name together",
@@ -931,25 +1119,26 @@ func TestPolicySetConfig(t *testing.T) {
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset must specify only one of placement selector, placement path, or " +
-				"placement name",
+			expectedErrMsg: "policySet my-policyset.placement must specify only one of labelSelector, " +
+				"placementPath, or placementName",
 		},
 		{
-			name: "policySet placementrule path not resolvable",
+			name: "policySet may not specify a label selector and enforcementPlacement name together",
 			setupFunc: func(p *Plugin) {
 				p.PolicySets = []types.PolicySetConfig{
 					{
 						Name: "my-policyset",
 						PolicySetOptions: types.PolicySetOptions{
-							Placement: types.PlacementConfig{
-								PlacementPath: "../config/plc.yaml",
+							EnforcementPlacement: types.PlacementConfig{
+								PlacementName: "plexistingname",
+								LabelSelector: map[string]any{"cloud": "red hat"},
 							},
 						},
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset placement.placementPath " +
-				"could not read the path ../config/plc.yaml",
+			expectedErrMsg: "policySet my-policyset.enforcementPlacement must specify only one of labelSelector, " +
+				"placementPath, or placementName",
 		},
 		{
 			name: "policySet placement path not resolvable",
@@ -965,7 +1154,24 @@ func TestPolicySetConfig(t *testing.T) {
 					},
 				}
 			},
-			expectedErrMsg: "policySet my-policyset placement.placementPath could not read the path ../config/plc.yaml",
+			expectedErrMsg: "policySet my-policyset.placement.placementPath could not read the path ../config/plc.yaml",
+		},
+		{
+			name: "policySet enforcementPlacement path not resolvable",
+			setupFunc: func(p *Plugin) {
+				p.PolicySets = []types.PolicySetConfig{
+					{
+						Name: "my-policyset",
+						PolicySetOptions: types.PolicySetOptions{
+							EnforcementPlacement: types.PlacementConfig{
+								PlacementPath: "../config/plc.yaml",
+							},
+						},
+					},
+				}
+			},
+			expectedErrMsg: "policySet my-policyset.enforcementPlacement.placementPath " +
+				"could not read the path ../config/plc.yaml",
 		},
 	}
 
@@ -1061,6 +1267,8 @@ policies:
 	assertEqual(t, disabledPolicy.Disabled, true)
 }
 
+// TestConflictingPlacementSelectors verifies invalid label selectors are rejected
+// for both placement and enforcementPlacement.
 func TestConflictingPlacementSelectors(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -1068,15 +1276,21 @@ func TestConflictingPlacementSelectors(t *testing.T) {
 	configMapPath := path.Join(tmpDir, "configmap.yaml")
 	policyNS := "my-policies"
 	policyName := "policy-app"
-	defaultsConfig := fmt.Sprintf(
-		`
+
+	fields := []string{"placement", "enforcementPlacement"}
+	for _, field := range fields {
+		t.Run(field, func(t *testing.T) {
+			t.Parallel()
+
+			defaultsConfig := fmt.Sprintf(
+				`
 apiVersion: policy.open-cluster-management.io/v1
 kind: PolicyGenerator
 metadata:
   name: policy-generator-name
 policyDefaults:
   namespace: %s
-  placement:
+  %s:
     labelSelector:
       matchExpressions:
       - key: cloud
@@ -1091,17 +1305,22 @@ policies:
   manifests:
     - path: %s
 `,
-		policyNS, policyName, configMapPath,
-	)
+				policyNS, field, policyName, configMapPath,
+			)
 
-	p := Plugin{}
+			p := Plugin{}
 
-	err := p.Config([]byte(defaultsConfig), tmpDir)
-	if err == nil {
-		t.Fatal("Expected an error but did not get one")
+			err := p.Config([]byte(defaultsConfig), tmpDir)
+			if err == nil {
+				t.Fatal("Expected an error but did not get one")
+			}
+
+			expected := fmt.Sprintf(
+				"policyDefaults.%s has invalid selectors: "+
+					"the input is not a valid label selector or key-value label matching map",
+				field,
+			)
+			assertEqual(t, err.Error(), expected)
+		})
 	}
-
-	expected := "policyDefaults placement has invalid selectors: " +
-		"the input is not a valid label selector or key-value label matching map"
-	assertEqual(t, err.Error(), expected)
 }
