@@ -1,4 +1,3 @@
-// Copyright Contributors to the Open Cluster Management project
 package internal
 
 import (
@@ -24,13 +23,13 @@ import (
 // getManifests will get all of the manifest files associated with the input policy configuration
 // separated by policyConf.Manifests entries. An error is returned if a manifest path cannot
 // be read.
-func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, error) {
-	manifests := [][]map[string]interface{}{}
+func getManifests(policyConf *types.PolicyConfig) ([][]map[string]any, error) {
+	manifests := [][]map[string]any{}
 	hasKustomize := map[string]bool{}
 
 	for _, manifest := range policyConf.Manifests {
 		manifestPaths := []string{}
-		manifestFiles := []map[string]interface{}{}
+		manifestFiles := []map[string]any{}
 		readErr := fmt.Errorf("failed to read the manifest path %s", manifest.Path)
 
 		manifestPathInfo, err := os.Stat(manifest.Path)
@@ -84,8 +83,8 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 			// Allowing replace the original manifest metadata.name and/or metadata.namespace if it is a single
 			// yaml structure in the manifest path
 			if len(manifestFile) == 1 && len(manifest.Patches) == 1 {
-				if patchMetadata, ok := manifest.Patches[0]["metadata"].(map[string]interface{}); ok {
-					if metadata, ok := manifestFile[0]["metadata"].(map[string]interface{}); ok {
+				if patchMetadata, ok := manifest.Patches[0]["metadata"].(map[string]any); ok {
+					if metadata, ok := manifestFile[0]["metadata"].(map[string]any); ok {
 						name, ok := patchMetadata["name"].(string)
 						if ok && name != "" {
 							metadata["name"] = name
@@ -105,7 +104,7 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 		}
 
 		for _, manifestPath := range manifestPaths {
-			var manifestFile []map[string]interface{}
+			var manifestFile []map[string]any
 			var err error
 
 			if hasKustomize[manifestPath] {
@@ -154,7 +153,7 @@ func getManifests(policyConf *types.PolicyConfig) ([][]map[string]interface{}, e
 // policyConf.ConsolidateManifests = false will generate a policy templates slice
 // that each template includes a single manifest specified in policyConf.
 // An error is returned if one or more manifests cannot be read or are invalid.
-func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{}, error) {
+func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]any, error) {
 	manifestGroups, err := getManifests(policyConf)
 	if err != nil {
 		return nil, err
@@ -168,8 +167,8 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 		objectTemplatesLength = 0
 	}
 
-	objectTemplates := make([]map[string]interface{}, 0, objectTemplatesLength)
-	policyTemplates := make([]map[string]interface{}, 0, policyTemplatesLength)
+	objectTemplates := make([]map[string]any, 0, objectTemplatesLength)
+	policyTemplates := make([]map[string]any, 0, policyTemplatesLength)
 
 	var consolidatedPolicyName string
 
@@ -208,7 +207,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 			}
 
 			if isPolicyTypeManifest {
-				var policyTemplate map[string]interface{}
+				var policyTemplate map[string]any
 
 				_, found, _ := unstructured.NestedString(manifest, "object-templates-raw")
 				if found {
@@ -220,7 +219,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 						getConfigurationPolicyName(policyName, policyNameCounter[policyName]),
 					)
 				} else {
-					policyTemplate = map[string]interface{}{"objectDefinition": manifest}
+					policyTemplate = map[string]any{"objectDefinition": manifest}
 				}
 
 				// Only set dependency options if it's an OCM policy
@@ -247,7 +246,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 				continue
 			}
 
-			objTemplate := map[string]interface{}{
+			objTemplate := map[string]any{
 				"complianceType":   complianceType,
 				"objectDefinition": manifest,
 			}
@@ -280,7 +279,7 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]interface{
 				// build policyTemplate for each objectTemplates
 				policyTemplate := buildPolicyTemplate(
 					policyConf,
-					[]map[string]interface{}{objTemplate},
+					[]map[string]any{objTemplate},
 					&policyConf.Manifests[i].ConfigurationPolicyOptions,
 					getConfigurationPolicyName(policyName, policyNameCounter[policyName]),
 				)
@@ -357,7 +356,7 @@ func getConfigurationPolicyName(name string, count int) string {
 }
 
 // setGatekeeperEnforcementAction function override gatekeeper.constraint.enforcementAction
-func setGatekeeperEnforcementAction(manifest map[string]interface{}, enforcementAction string) error {
+func setGatekeeperEnforcementAction(manifest map[string]any, enforcementAction string) error {
 	if enforcementAction == "" {
 		return nil
 	}
@@ -374,7 +373,7 @@ func setGatekeeperEnforcementAction(manifest map[string]interface{}, enforcement
 	return nil
 }
 
-func setTemplateOptions(tmpl map[string]interface{}, ignorePending bool, extraDeps []types.PolicyDependency) {
+func setTemplateOptions(tmpl map[string]any, ignorePending bool, extraDeps []types.PolicyDependency) {
 	if ignorePending {
 		tmpl["ignorePending"] = ignorePending
 	}
@@ -390,7 +389,7 @@ func setTemplateOptions(tmpl map[string]interface{}, ignorePending bool, extraDe
 // - apiVersion and kind fields can't be determined
 // - the manifest is a root policy manifest
 // - the manifest is invalid because it is missing a name
-func isPolicyTypeManifest(manifest map[string]interface{}, informGatekeeperPolicies bool) (bool, bool, error) {
+func isPolicyTypeManifest(manifest map[string]any, informGatekeeperPolicies bool) (bool, bool, error) {
 	// check for object-templates-raw separate from policies since they have separate requirements
 	_, found, _ := unstructured.NestedString(manifest, "object-templates-raw")
 	if found {
@@ -439,21 +438,21 @@ func isPolicyTypeManifest(manifest map[string]interface{}, informGatekeeperPolic
 // setNamespaceSelector sets the namespace selector, if set, on the input policy template.
 func setNamespaceSelector(
 	policyConf *types.ConfigurationPolicyOptions,
-	policyTemplate map[string]interface{},
+	policyTemplate map[string]any,
 ) {
 	selector := policyConf.NamespaceSelector
 	if selector.Exclude != nil ||
 		selector.Include != nil ||
 		selector.MatchLabels != nil ||
 		selector.MatchExpressions != nil {
-		objDef := policyTemplate["objectDefinition"].(map[string]interface{})
-		spec := objDef["spec"].(map[string]interface{})
+		objDef := policyTemplate["objectDefinition"].(map[string]any)
+		spec := objDef["spec"].(map[string]any)
 		spec["namespaceSelector"] = selector
 	}
 }
 
 // processKustomizeDir runs a provided directory through Kustomize in order to generate the manifests within it.
-func processKustomizeDir(path string) ([]map[string]interface{}, error) {
+func processKustomizeDir(path string) ([]map[string]any, error) {
 	kustomizeOpts := krusty.MakeDefaultOptions()
 
 	if os.Getenv("POLICY_GEN_ENABLE_HELM") == "true" {
@@ -490,11 +489,11 @@ func processKustomizeDir(path string) ([]map[string]interface{}, error) {
 // one then the configuration policy name will have policyNum appended to it.
 func buildPolicyTemplate(
 	policyConf *types.PolicyConfig,
-	objectTemplates interface{},
+	objectTemplates any,
 	configPolicyOptionsOverrides *types.ConfigurationPolicyOptions,
 	configPolicyName string,
-) map[string]interface{} {
-	policySpec := map[string]interface{}{
+) map[string]any {
+	policySpec := map[string]any{
 		"remediationAction": policyConf.RemediationAction,
 		"severity":          policyConf.Severity,
 	}
@@ -502,15 +501,15 @@ func buildPolicyTemplate(
 	switch objectTemplates.(type) {
 	case string:
 		policySpec["object-templates-raw"] = objectTemplates
-	case []map[string]interface{}:
+	case []map[string]any:
 		policySpec["object-templates"] = objectTemplates
 	}
 
-	policyTemplate := map[string]interface{}{
-		"objectDefinition": map[string]interface{}{
+	policyTemplate := map[string]any{
+		"objectDefinition": map[string]any{
 			"apiVersion": policyAPIVersion,
 			"kind":       configPolicyKind,
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name": configPolicyName,
 			},
 			"spec": policySpec,
@@ -521,18 +520,18 @@ func buildPolicyTemplate(
 	setNamespaceSelector(&policyConf.ConfigurationPolicyOptions, policyTemplate)
 
 	if len(policyConf.ConfigurationPolicyAnnotations) > 0 {
-		objDef := policyTemplate["objectDefinition"].(map[string]interface{})
-		metadata := objDef["metadata"].(map[string]interface{})
+		objDef := policyTemplate["objectDefinition"].(map[string]any)
+		metadata := objDef["metadata"].(map[string]any)
 		metadata["annotations"] = policyConf.ConfigurationPolicyAnnotations
 	}
 
-	objDef := policyTemplate["objectDefinition"].(map[string]interface{})
-	configSpec := objDef["spec"].(map[string]interface{})
+	objDef := policyTemplate["objectDefinition"].(map[string]any)
+	configSpec := objDef["spec"].(map[string]any)
 
 	// Set EvaluationInterval with manifest overrides
 	evaluationInterval := configPolicyOptionsOverrides.EvaluationInterval
 	if evaluationInterval.Compliant != "" || evaluationInterval.NonCompliant != "" {
-		evalInterval := map[string]interface{}{}
+		evalInterval := map[string]any{}
 
 		if evaluationInterval.Compliant != "" {
 			evalInterval["compliant"] = evaluationInterval.Compliant
@@ -548,7 +547,7 @@ func buildPolicyTemplate(
 	// Set customMessage with manifest overrides
 	customMessage := configPolicyOptionsOverrides.CustomMessage
 	if customMessage.Compliant != "" || customMessage.NonCompliant != "" {
-		customMessageJSON := map[string]interface{}{}
+		customMessageJSON := map[string]any{}
 
 		if customMessage.Compliant != "" {
 			customMessageJSON["compliant"] = customMessage.Compliant
@@ -584,8 +583,8 @@ func buildPolicyTemplate(
 
 // handleExpanders will go through all the enabled expanders and generate additional
 // policy templates to include in the policy.
-func handleExpanders(manifests []map[string]interface{}, policyConf types.PolicyConfig) []map[string]interface{} {
-	policyTemplates := []map[string]interface{}{}
+func handleExpanders(manifests []map[string]any, policyConf types.PolicyConfig) []map[string]any {
+	policyTemplates := []map[string]any{}
 
 	for _, expander := range expanders.GetExpanders() {
 		for _, m := range manifests {
@@ -603,7 +602,7 @@ func handleExpanders(manifests []map[string]interface{}, policyConf types.Policy
 // a slice in order to account for multiple YAML documents in the same file.
 // If the file cannot be decoded or each document is not a map, an error will
 // be returned.
-func unmarshalManifestFile(manifestPath string) ([]map[string]interface{}, error) {
+func unmarshalManifestFile(manifestPath string) ([]map[string]any, error) {
 	// #nosec G304
 	manifestBytes, err := os.ReadFile(manifestPath)
 	if err != nil {
@@ -621,12 +620,12 @@ func unmarshalManifestFile(manifestPath string) ([]map[string]interface{}, error
 // unmarshalManifestBytes unmarshals the input bytes slice of an object manifest/definition file
 // into a slice of maps in order to account for multiple YAML documents in the bytes slice. If each
 // document is not a map, an error will be returned.
-func unmarshalManifestBytes(manifestBytes []byte) ([]map[string]interface{}, error) {
-	yamlDocs := []map[string]interface{}{}
+func unmarshalManifestBytes(manifestBytes []byte) ([]map[string]any, error) {
+	yamlDocs := []map[string]any{}
 	d := yaml.NewDecoder(bytes.NewReader(manifestBytes))
 
 	for {
-		var obj interface{}
+		var obj any
 
 		err := d.Decode(&obj)
 		if err != nil {
@@ -638,14 +637,14 @@ func unmarshalManifestBytes(manifestBytes []byte) ([]map[string]interface{}, err
 			return nil, err
 		}
 
-		if _, ok := obj.(map[string]interface{}); !ok && obj != nil {
+		if _, ok := obj.(map[string]any); !ok && obj != nil {
 			err := errors.New("the input manifests must be in the format of YAML objects")
 
 			return nil, err
 		}
 
 		if obj != nil {
-			yamlDocs = append(yamlDocs, obj.(map[string]interface{}))
+			yamlDocs = append(yamlDocs, obj.(map[string]any))
 		}
 	}
 
@@ -692,12 +691,12 @@ func verifyFilePath(baseDirectory string, filePath, fileType string) error {
 }
 
 // Check policy-templates to see if all the remediation actions match, if so return the root policy remediation action
-func getRootRemediationAction(policyTemplates []map[string]interface{}) string {
+func getRootRemediationAction(policyTemplates []map[string]any) string {
 	var action string
 
 	for _, value := range policyTemplates {
-		objDef := value["objectDefinition"].(map[string]interface{})
-		if spec, ok := objDef["spec"].(map[string]interface{}); ok {
+		objDef := value["objectDefinition"].(map[string]any)
+		if spec, ok := objDef["spec"].(map[string]any); ok {
 			if _, ok = spec["remediationAction"].(string); ok {
 				if action == "" {
 					action = spec["remediationAction"].(string)

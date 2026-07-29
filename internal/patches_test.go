@@ -1,4 +1,3 @@
-// Copyright Contributors to the Open Cluster Management project
 package internal
 
 import (
@@ -14,11 +13,11 @@ import (
 	"open-cluster-management.io/policy-generator-plugin/internal/types"
 )
 
-func createExConfigMap(name string) *map[string]interface{} {
-	return &map[string]interface{}{
+func createExConfigMap(name string) *map[string]any {
+	return &map[string]any{
 		"apiVersion": "v1",
 		"kind":       "ConfigMap",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":      name,
 			"namespace": "default",
 		},
@@ -32,15 +31,15 @@ func createExConfigMap(name string) *map[string]interface{} {
 func TestValidate(t *testing.T) {
 	t.Parallel()
 
-	manifests := []map[string]interface{}{}
+	manifests := []map[string]any{}
 	manifests = append(
 		manifests, *createExConfigMap("configmap1"), *createExConfigMap("configmap2"),
 	)
-	patches := []map[string]interface{}{
+	patches := []map[string]any{
 		{
 			"apiVersion": "v1",
 			"kind":       "ConfigMap",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "configmap2",
 				"namespace": "default",
 				"labels": map[string]string{
@@ -61,10 +60,10 @@ func TestValidate(t *testing.T) {
 func TestValidateDefaults(t *testing.T) {
 	t.Parallel()
 
-	manifests := []map[string]interface{}{*createExConfigMap("configmap1")}
-	patches := []map[string]interface{}{
+	manifests := []map[string]any{*createExConfigMap("configmap1")}
+	patches := []map[string]any{
 		{
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"labels": map[string]string{
 					"chandler": "bing",
 				},
@@ -82,7 +81,7 @@ func TestValidateNoManifests(t *testing.T) {
 	t.Parallel()
 
 	patcher := manifestPatcher{
-		manifests: []map[string]interface{}{}, patches: []map[string]interface{}{},
+		manifests: []map[string]any{}, patches: []map[string]any{},
 	}
 	err := patcher.Validate()
 
@@ -113,9 +112,9 @@ func TestValidateManifestMissingData(t *testing.T) {
 					t.Fatal(err.Error())
 				}
 
-				manifests := []map[string]interface{}{configmap}
+				manifests := []map[string]any{configmap}
 
-				patcher := manifestPatcher{manifests: manifests, patches: []map[string]interface{}{}}
+				patcher := manifestPatcher{manifests: manifests, patches: []map[string]any{}}
 				err = patcher.Validate()
 
 				expected := fmt.Sprintf(
@@ -145,14 +144,14 @@ func TestValidatePatchMissingData(t *testing.T) {
 			func(t *testing.T) {
 				t.Parallel()
 
-				manifests := []map[string]interface{}{
+				manifests := []map[string]any{
 					*createExConfigMap("configmap1"), *createExConfigMap("configmap2"),
 				}
 
-				patch := map[string]interface{}{
+				patch := map[string]any{
 					"apiVersion": "v1",
 					"kind":       "ConfigMap",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name":      "configmap2",
 						"namespace": "default",
 						"labels": map[string]string{
@@ -166,7 +165,7 @@ func TestValidatePatchMissingData(t *testing.T) {
 					t.Fatal(err.Error())
 				}
 
-				patches := []map[string]interface{}{patch}
+				patches := []map[string]any{patch}
 
 				patcher := manifestPatcher{manifests: manifests, patches: patches}
 				err = patcher.Validate()
@@ -197,11 +196,11 @@ func TestValidatePatchInvalidSingleManifest(t *testing.T) {
 			func(t *testing.T) {
 				t.Parallel()
 
-				manifests := []map[string]interface{}{*createExConfigMap("configmap1")}
-				patch := map[string]interface{}{
+				manifests := []map[string]any{*createExConfigMap("configmap1")}
+				patch := map[string]any{
 					"apiVersion": "v1",
 					"kind":       "ConfigMap",
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name":      "configmap2",
 						"namespace": "default",
 						"labels": map[string]string{
@@ -215,7 +214,7 @@ func TestValidatePatchInvalidSingleManifest(t *testing.T) {
 					t.Fatal(err.Error())
 				}
 
-				patches := []map[string]interface{}{patch}
+				patches := []map[string]any{patch}
 
 				patcher := manifestPatcher{manifests: manifests, patches: patches}
 				err = patcher.Validate()
@@ -237,15 +236,15 @@ func TestValidatePatchInvalidSingleManifest(t *testing.T) {
 func TestApplyPatches(t *testing.T) {
 	t.Parallel()
 
-	manifests := []map[string]interface{}{}
+	manifests := []map[string]any{}
 	manifests = append(
 		manifests, *createExConfigMap("configmap1"), *createExConfigMap("configmap2"),
 	)
-	patches := []map[string]interface{}{
+	patches := []map[string]any{
 		{
 			"apiVersion": "v1",
 			"kind":       "ConfigMap",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "configmap2",
 				"namespace": "default",
 				"labels": map[string]string{
@@ -278,15 +277,15 @@ func TestApplyPatches(t *testing.T) {
 func TestApplyPatchesInvalidPatch(t *testing.T) {
 	t.Parallel()
 
-	manifests := []map[string]interface{}{}
+	manifests := []map[string]any{}
 	manifests = append(
 		manifests, *createExConfigMap("configmap1"), *createExConfigMap("configmap2"),
 	)
-	patches := []map[string]interface{}{
+	patches := []map[string]any{
 		{
 			"apiVersion": "v1",
 			"kind":       "ToasterOven",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "configmap2",
 				"namespace": "default",
 				"labels": map[string]string{

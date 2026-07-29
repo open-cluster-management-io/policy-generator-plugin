@@ -20,7 +20,7 @@ func addFieldNotFoundHelp(err error) error {
 	repl := func(line string) string {
 		match := re.FindStringSubmatch(line)
 
-		fieldType := reflect.TypeOf(Plugin{})
+		fieldType := reflect.TypeFor[Plugin]()
 		fieldTag := "PolicyGenerator"
 
 		if match[2] != fieldType.String() {

@@ -1,4 +1,3 @@
-// Copyright Contributors to the Open Cluster Management project
 package internal
 
 import (
@@ -22,7 +21,7 @@ import (
 	"open-cluster-management.io/policy-generator-plugin/internal/types"
 )
 
-func assertEqual(t *testing.T, a interface{}, b interface{}) {
+func assertEqual(t *testing.T, a any, b any) {
 	t.Helper()
 
 	diff := cmp.Diff(a, b, cmpopts.EquateErrors())
@@ -39,10 +38,10 @@ func assertEqualYaml(t *testing.T, a, b []byte) {
 	bDec := yaml.NewDecoder(bytes.NewReader(b))
 
 	for {
-		aOut := map[string]interface{}{}
+		aOut := map[string]any{}
 		aErr := aDec.Decode(aOut)
 
-		bOut := map[string]interface{}{}
+		bOut := map[string]any{}
 		bErr := bDec.Decode(bOut)
 
 		aDone := errors.Is(aErr, io.EOF)
@@ -62,7 +61,7 @@ func assertEqualYaml(t *testing.T, a, b []byte) {
 	}
 }
 
-func assertReflectEqual(t *testing.T, a interface{}, b interface{}) {
+func assertReflectEqual(t *testing.T, a any, b any) {
 	t.Helper()
 
 	if !reflect.DeepEqual(a, b) {
@@ -70,7 +69,7 @@ func assertReflectEqual(t *testing.T, a interface{}, b interface{}) {
 	}
 }
 
-func assertSelectorEqual(t *testing.T, a map[string]interface{}, b types.NamespaceSelector) {
+func assertSelectorEqual(t *testing.T, a map[string]any, b types.NamespaceSelector) {
 	t.Helper()
 
 	if !compareSelectors(a, b) {
@@ -78,7 +77,7 @@ func assertSelectorEqual(t *testing.T, a map[string]interface{}, b types.Namespa
 	}
 }
 
-func compareStringArrays(a []interface{}, b []string) bool {
+func compareStringArrays(a []any, b []string) bool {
 	// Account for when b is []string(nil)
 	if len(a) == 0 && len(b) == 0 {
 		return true
@@ -93,8 +92,8 @@ func compareStringArrays(a []interface{}, b []string) bool {
 	return reflect.DeepEqual(aTyped, b)
 }
 
-func compareSelectors(a map[string]interface{}, b types.NamespaceSelector) bool {
-	if includeA, ok := a["include"].([]interface{}); ok {
+func compareSelectors(a map[string]any, b types.NamespaceSelector) bool {
+	if includeA, ok := a["include"].([]any); ok {
 		if !compareStringArrays(includeA, b.Include) {
 			return false
 		}
@@ -102,7 +101,7 @@ func compareSelectors(a map[string]interface{}, b types.NamespaceSelector) bool 
 		return false
 	}
 
-	if excludeA, ok := a["exclude"].([]interface{}); ok {
+	if excludeA, ok := a["exclude"].([]any); ok {
 		if !compareStringArrays(excludeA, b.Exclude) {
 			return false
 		}
@@ -118,7 +117,7 @@ func compareSelectors(a map[string]interface{}, b types.NamespaceSelector) bool 
 		return false
 	}
 
-	if matchExpressionsA, ok := a["matchExpressions"].([]interface{}); ok {
+	if matchExpressionsA, ok := a["matchExpressions"].([]any); ok {
 		if a["matchExpressions"] != b.MatchExpressions {
 			if b.MatchExpressions == nil {
 				return false
@@ -130,11 +129,11 @@ func compareSelectors(a map[string]interface{}, b types.NamespaceSelector) bool 
 
 			for i := range matchExpressionsA {
 				meA := matchExpressionsA[i]
-				valuesA := meA.(map[string]interface{})["values"].([]interface{})
+				valuesA := meA.(map[string]any)["values"].([]any)
 				meB := (*b.MatchExpressions)[i]
 
-				if meA.(map[string]interface{})["key"].(string) != meB.Key ||
-					meA.(map[string]interface{})["operator"].(string) != string(meB.Operator) ||
+				if meA.(map[string]any)["key"].(string) != meB.Key ||
+					meA.(map[string]any)["operator"].(string) != string(meB.Operator) ||
 					!compareStringArrays(valuesA, meB.Values) {
 					return false
 				}
@@ -264,11 +263,11 @@ data:
 			assertEqual(t, len(policyTemplates), 1)
 
 			policyTemplate := policyTemplates[0]
-			objdef := policyTemplate["objectDefinition"].(map[string]interface{})
+			objdef := policyTemplate["objectDefinition"].(map[string]any)
 
-			assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
+			assertEqual(t, objdef["metadata"].(map[string]any)["name"].(string), "policy-app-config")
 
-			spec, ok := objdef["spec"].(map[string]interface{})
+			spec, ok := objdef["spec"].(map[string]any)
 			if !ok {
 				t.Fatal("The spec field is an invalid format")
 			}
@@ -276,7 +275,7 @@ data:
 			assertEqual(t, spec["remediationAction"], "inform")
 			assertEqual(t, spec["severity"], "low")
 
-			objTemplates, ok := spec["object-templates"].([]map[string]interface{})
+			objTemplates, ok := spec["object-templates"].([]map[string]any)
 			if !ok {
 				t.Fatal("The object-templates field is an invalid format")
 			}
@@ -296,7 +295,7 @@ data:
 				assertEqual(t, objTemplates[0]["recordDiff"], nil)
 			}
 
-			kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
+			kind1, ok := objTemplates[0]["objectDefinition"].(map[string]any)["kind"]
 			if !ok {
 				t.Fatal("The objectDefinition field is an invalid format")
 			}
@@ -316,7 +315,7 @@ data:
 				assertEqual(t, objTemplates[1]["recordDiff"], nil)
 			}
 
-			kind2, ok := objTemplates[1]["objectDefinition"].(map[string]interface{})["kind"]
+			kind2, ok := objTemplates[1]["objectDefinition"].(map[string]any)["kind"]
 			if !ok {
 				t.Fatal("The objectDefinition field is an invalid format")
 			}
@@ -445,11 +444,11 @@ resources:
 		assertEqual(t, len(policyTemplates), 1)
 
 		policyTemplate := policyTemplates[0]
-		objdef := policyTemplate["objectDefinition"].(map[string]interface{})
+		objdef := policyTemplate["objectDefinition"].(map[string]any)
 
-		assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-kustomize")
+		assertEqual(t, objdef["metadata"].(map[string]any)["name"].(string), "policy-kustomize")
 
-		spec, ok := objdef["spec"].(map[string]interface{})
+		spec, ok := objdef["spec"].(map[string]any)
 		if !ok {
 			t.Fatal("The spec field is an invalid format")
 		}
@@ -457,7 +456,7 @@ resources:
 		assertEqual(t, spec["remediationAction"], "inform")
 		assertEqual(t, spec["severity"], "low")
 
-		objTemplates, ok := spec["object-templates"].([]map[string]interface{})
+		objTemplates, ok := spec["object-templates"].([]map[string]any)
 		if !ok {
 			t.Fatal("The object-templates field is an invalid format")
 		}
@@ -465,7 +464,7 @@ resources:
 		assertEqual(t, len(objTemplates), 2)
 		assertEqual(t, objTemplates[0]["complianceType"], test.ExpectedComplianceType)
 
-		kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
+		kind1, ok := objTemplates[0]["objectDefinition"].(map[string]any)["kind"]
 		if !ok {
 			t.Fatal("The objectDefinition field is an invalid format")
 		}
@@ -473,7 +472,7 @@ resources:
 		assertEqual(t, kind1, "ConfigMap")
 		assertEqual(t, objTemplates[1]["complianceType"], test.ExpectedComplianceType)
 
-		kind2, ok := objTemplates[1]["objectDefinition"].(map[string]interface{})["kind"]
+		kind2, ok := objTemplates[1]["objectDefinition"].(map[string]any)["kind"]
 		if !ok {
 			t.Fatal("The objectDefinition field is an invalid format")
 		}
@@ -653,16 +652,16 @@ data:
 
 		for i := range policyTemplates {
 			policyTemplate := policyTemplates[i]
-			objdef := policyTemplate["objectDefinition"].(map[string]interface{})
+			objdef := policyTemplate["objectDefinition"].(map[string]any)
 			name := "policy-app-config"
 
 			if i > 0 {
 				name += strconv.Itoa(i + 1)
 			}
 
-			assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), name)
+			assertEqual(t, objdef["metadata"].(map[string]any)["name"].(string), name)
 
-			spec, ok := objdef["spec"].(map[string]interface{})
+			spec, ok := objdef["spec"].(map[string]any)
 			if !ok {
 				t.Fatal("The spec field is an invalid format")
 			}
@@ -670,7 +669,7 @@ data:
 			assertEqual(t, spec["remediationAction"], "inform")
 			assertEqual(t, spec["severity"], "low")
 
-			objTemplates, ok := spec["object-templates"].([]map[string]interface{})
+			objTemplates, ok := spec["object-templates"].([]map[string]any)
 			if !ok {
 				t.Fatal("The object-templates field is an invalid format")
 			}
@@ -679,7 +678,7 @@ data:
 			assertEqual(t, objTemplates[0]["complianceType"], "musthave")
 			assertEqual(t, objTemplates[0]["metadataComplianceType"], "mustonlyhave")
 
-			kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
+			kind1, ok := objTemplates[0]["objectDefinition"].(map[string]any)["kind"]
 			if !ok {
 				t.Fatal("The objectDefinition field is an invalid format")
 			}
@@ -693,17 +692,17 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		manifest                 map[string]interface{}
+		manifest                 map[string]any
 		informGatekeeperPolicies bool
 		wantIsPolicy             bool
 		wantIsOcmPolicy          bool
 		wantErr                  string
 	}{
 		"valid RandomPolicy": {
-			manifest: map[string]interface{}{
+			manifest: map[string]any{
 				"apiVersion": policyAPIVersion,
 				"kind":       "RandomPolicy",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "foo",
 				},
 			},
@@ -712,10 +711,10 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantErr:         "",
 		},
 		"valid ConfigurationPolicy": {
-			manifest: map[string]interface{}{
+			manifest: map[string]any{
 				"apiVersion": policyAPIVersion,
 				"kind":       "ConfigurationPolicy",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "foo",
 				},
 			},
@@ -724,10 +723,10 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantErr:         "",
 		},
 		"valid Gatekeeper Constraint with expander": {
-			manifest: map[string]interface{}{
+			manifest: map[string]any{
 				"apiVersion": "constraints.gatekeeper.sh",
 				"kind":       "Foo",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "foo",
 				},
 			},
@@ -737,10 +736,10 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantErr:                  "",
 		},
 		"valid Gatekeeper ConstraintTemplate with expander": {
-			manifest: map[string]interface{}{
+			manifest: map[string]any{
 				"apiVersion": "templates.gatekeeper.sh",
 				"kind":       "ConstraintTemplate",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "foo",
 				},
 			},
@@ -750,10 +749,10 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantErr:                  "",
 		},
 		"valid Gatekeeper Constraint without expander": {
-			manifest: map[string]interface{}{
+			manifest: map[string]any{
 				"apiVersion": "constraints.gatekeeper.sh",
 				"kind":       "Foo",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "foo",
 				},
 			},
@@ -762,10 +761,10 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantErr:         "",
 		},
 		"valid Gatekeeper ConstraintTemplate without expander": {
-			manifest: map[string]interface{}{
+			manifest: map[string]any{
 				"apiVersion": "templates.gatekeeper.sh",
 				"kind":       "ConstraintTemplate",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "foo",
 				},
 			},
@@ -774,10 +773,10 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantErr:         "",
 		},
 		"valid Policy": {
-			manifest: map[string]interface{}{
+			manifest: map[string]any{
 				"apiVersion": policyAPIVersion,
 				"kind":       "Policy",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "foo",
 				},
 			},
@@ -787,10 +786,10 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 				"the manifest should be applied to the hub cluster directly",
 		},
 		"valid PlacementRule": {
-			manifest: map[string]interface{}{
+			manifest: map[string]any{
 				"apiVersion": "apps.open-cluster-management.io/v1",
 				"kind":       "PlacementRule",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "foo",
 				},
 			},
@@ -799,10 +798,10 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantErr:         "",
 		},
 		"wrong ApiVersion": {
-			manifest: map[string]interface{}{
+			manifest: map[string]any{
 				"apiVersion": "fake.test.io/v3alpha2",
 				"kind":       "RandomPolicy",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "foo",
 				},
 			},
@@ -811,10 +810,10 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantErr:         "",
 		},
 		"invalid kind": {
-			manifest: map[string]interface{}{
+			manifest: map[string]any{
 				"apiVersion": policyAPIVersion,
-				"kind":       []interface{}{"foo", "bar", "baz"},
-				"metadata": map[string]interface{}{
+				"kind":       []any{"foo", "bar", "baz"},
+				"metadata": map[string]any{
 					"name": "foo",
 				},
 			},
@@ -823,9 +822,9 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantErr:         "invalid or not found kind",
 		},
 		"missing apiVersion": {
-			manifest: map[string]interface{}{
+			manifest: map[string]any{
 				"kind": "ConfigurationPolicy",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "foo",
 				},
 			},
@@ -834,10 +833,10 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantErr:         "invalid or not found apiVersion",
 		},
 		"missing name in ConfigurationPolicy": {
-			manifest: map[string]interface{}{
+			manifest: map[string]any{
 				"apiVersion": policyAPIVersion,
 				"kind":       "ConfigurationPolicy",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"namespace": "foo",
 				},
 			},
@@ -846,10 +845,10 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantErr:         "invalid or not found metadata.name",
 		},
 		"missing name in non-policy": {
-			manifest: map[string]interface{}{
+			manifest: map[string]any{
 				"apiVersion": "apps.open-cluster-management.io/v1",
 				"kind":       "PlacementRule",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name": "foo",
 				},
 			},
@@ -917,15 +916,15 @@ func TestGetPolicyTemplateFromPolicyTypeManifest(t *testing.T) {
 		assertEqual(t, len(policyTemplates), 1)
 
 		CertificatePolicyTemplate := policyTemplates[0]
-		CertObjdef := CertificatePolicyTemplate["objectDefinition"].(map[string]interface{})
+		CertObjdef := CertificatePolicyTemplate["objectDefinition"].(map[string]any)
 		assertEqual(t, CertObjdef["apiVersion"], "policy.open-cluster-management.io/v1")
 		// kind will not be overridden by "ConfigurationPolicy".
 		assertEqual(t, CertObjdef["kind"], "CertificatePolicy")
-		assertEqual(t, CertObjdef["metadata"].(map[string]interface{})["name"], "certpolicy-minduration")
+		assertEqual(t, CertObjdef["metadata"].(map[string]any)["name"], "certpolicy-minduration")
 		// The namespace is removed
-		assertEqual(t, CertObjdef["metadata"].(map[string]interface{})["namespace"], nil)
+		assertEqual(t, CertObjdef["metadata"].(map[string]any)["namespace"], nil)
 
-		CertSpec, ok := CertObjdef["spec"].(map[string]interface{})
+		CertSpec, ok := CertObjdef["spec"].(map[string]any)
 		if !ok {
 			t.Fatal("The spec field is an invalid format")
 		}
@@ -936,13 +935,13 @@ func TestGetPolicyTemplateFromPolicyTypeManifest(t *testing.T) {
 		assertEqual(t, CertSpec["severity"], "medium")
 		assertEqual(t, CertSpec["minimumDuration"], "720h")
 
-		namespaceSelector, ok := CertSpec["namespaceSelector"].(map[string]interface{})
+		namespaceSelector, ok := CertSpec["namespaceSelector"].(map[string]any)
 		if !ok {
 			t.Fatal("The namespaceSelector field is an invalid format")
 		}
 
-		assertReflectEqual(t, namespaceSelector["include"], []interface{}{"*"})
-		assertReflectEqual(t, namespaceSelector["exclude"], []interface{}{"kube-*", "openshift-*"})
+		assertReflectEqual(t, namespaceSelector["include"], []any{"*"})
+		assertReflectEqual(t, namespaceSelector["exclude"], []any{"kube-*", "openshift-*"})
 	}
 }
 
@@ -964,14 +963,14 @@ data:
 		t.Fatalf("Failed to write %s", manifestPath)
 	}
 
-	patches := []map[string]interface{}{
+	patches := []map[string]any{
 		{
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"labels": map[string]string{"chandler": "bing"},
 			},
 		},
 		{
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"annotations": map[string]string{"monica": "geller"},
 			},
 		},
@@ -992,44 +991,44 @@ data:
 	assertEqual(t, len(policyTemplates), 1)
 
 	policyTemplate := policyTemplates[0]
-	objdef := policyTemplate["objectDefinition"].(map[string]interface{})
-	assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
+	objdef := policyTemplate["objectDefinition"].(map[string]any)
+	assertEqual(t, objdef["metadata"].(map[string]any)["name"].(string), "policy-app-config")
 
-	spec, ok := objdef["spec"].(map[string]interface{})
+	spec, ok := objdef["spec"].(map[string]any)
 	if !ok {
 		t.Fatal("The spec field is an invalid format")
 	}
 
-	objTemplates, ok := spec["object-templates"].([]map[string]interface{})
+	objTemplates, ok := spec["object-templates"].([]map[string]any)
 	if !ok {
 		t.Fatal("The object-templates field is an invalid format")
 	}
 
 	assertEqual(t, len(objTemplates), 1)
 
-	objDef, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})
+	objDef, ok := objTemplates[0]["objectDefinition"].(map[string]any)
 	if !ok {
 		t.Fatal("The objectDefinition field is an invalid format")
 	}
 
-	metadata, ok := objDef["metadata"].(map[string]interface{})
+	metadata, ok := objDef["metadata"].(map[string]any)
 	if !ok {
 		t.Fatal("The metadata field is an invalid format")
 	}
 
-	labels, ok := metadata["labels"].(map[string]interface{})
+	labels, ok := metadata["labels"].(map[string]any)
 	if !ok {
 		t.Fatal("The labels field is an invalid format")
 	}
 
-	assertReflectEqual(t, labels, map[string]interface{}{"chandler": "bing"})
+	assertReflectEqual(t, labels, map[string]any{"chandler": "bing"})
 
-	annotations, ok := metadata["annotations"].(map[string]interface{})
+	annotations, ok := metadata["annotations"].(map[string]any)
 	if !ok {
 		t.Fatal("The annotations field is an invalid format")
 	}
 
-	assertReflectEqual(t, annotations, map[string]interface{}{"monica": "geller"})
+	assertReflectEqual(t, annotations, map[string]any{"monica": "geller"})
 }
 
 func TestGetPolicyTemplateMetadataPatches(t *testing.T) {
@@ -1052,13 +1051,13 @@ data:
 		t.Fatalf("Failed to write %s", manifestPath)
 	}
 
-	patches := []map[string]interface{}{
+	patches := []map[string]any{
 		{
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "patch-configmap",
 				"namespace": "patch-namespace",
 			},
-			"data": map[string]interface{}{
+			"data": map[string]any{
 				"image": "quay.io/potatos2",
 			},
 		},
@@ -1080,28 +1079,28 @@ data:
 	assertEqual(t, len(policyTemplates), 1)
 
 	policyTemplate := policyTemplates[0]
-	objdef := policyTemplate["objectDefinition"].(map[string]interface{})
+	objdef := policyTemplate["objectDefinition"].(map[string]any)
 
-	assertEqual(t, objdef["metadata"].(map[string]interface{})["name"].(string), "policy-app-config")
+	assertEqual(t, objdef["metadata"].(map[string]any)["name"].(string), "policy-app-config")
 
-	spec, ok := objdef["spec"].(map[string]interface{})
+	spec, ok := objdef["spec"].(map[string]any)
 	if !ok {
 		t.Fatal("The spec field is an invalid format")
 	}
 
-	objTemplates, ok := spec["object-templates"].([]map[string]interface{})
+	objTemplates, ok := spec["object-templates"].([]map[string]any)
 	if !ok {
 		t.Fatal("The object-templates field is an invalid format")
 	}
 
 	assertEqual(t, len(objTemplates), 1)
 
-	objDef, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})
+	objDef, ok := objTemplates[0]["objectDefinition"].(map[string]any)
 	if !ok {
 		t.Fatal("The objectDefinition field is an invalid format")
 	}
 
-	metadata, ok := objDef["metadata"].(map[string]interface{})
+	metadata, ok := objDef["metadata"].(map[string]any)
 	if !ok {
 		t.Fatal("The metadata field is an invalid format")
 	}
@@ -1120,7 +1119,7 @@ data:
 
 	assertEqual(t, namespace, "patch-namespace")
 
-	data, ok := objDef["data"].(map[string]interface{})
+	data, ok := objDef["data"].(map[string]any)
 	if !ok {
 		t.Fatal("The data field is an invalid format")
 	}
@@ -1161,13 +1160,13 @@ data:
 		t.Fatalf("Failed to write %s", manifestPath)
 	}
 
-	patches := []map[string]interface{}{
+	patches := []map[string]any{
 		{
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "patch-configmap",
 				"namespace": "patch-namespace",
 			},
-			"data": map[string]interface{}{
+			"data": map[string]any{
 				"image": "quay.io/potatos2",
 			},
 		},
@@ -1223,14 +1222,14 @@ metadata:
 	// This is not an in-depth test since the Kyverno expansion is tested elsewhere. This is
 	// to test that glue code is working as expected.
 	expandedPolicyTemplate := policyTemplates[1]
-	objdef := expandedPolicyTemplate["objectDefinition"].(map[string]interface{})
+	objdef := expandedPolicyTemplate["objectDefinition"].(map[string]any)
 
-	spec, ok := objdef["spec"].(map[string]interface{})
+	spec, ok := objdef["spec"].(map[string]any)
 	if !ok {
 		t.Fatal("The spec field is an invalid format")
 	}
 
-	objTemplates, ok := spec["object-templates"].([]map[string]interface{})
+	objTemplates, ok := spec["object-templates"].([]map[string]any)
 	if !ok {
 		t.Fatal("The object-templates field is an invalid format")
 	}
@@ -1239,7 +1238,7 @@ metadata:
 	assertEqual(t, objTemplates[0]["complianceType"], "mustnothave")
 	assertEqual(t, objTemplates[0]["metadataComplianceType"], nil)
 
-	kind1, ok := objTemplates[0]["objectDefinition"].(map[string]interface{})["kind"]
+	kind1, ok := objTemplates[0]["objectDefinition"].(map[string]any)["kind"]
 	if !ok {
 		t.Fatal("The objectDefinition field is an invalid format")
 	}
@@ -1249,7 +1248,7 @@ metadata:
 	assertEqual(t, objTemplates[1]["complianceType"], "mustnothave")
 	assertEqual(t, objTemplates[1]["metadataComplianceType"], nil)
 
-	kind2, ok := objTemplates[1]["objectDefinition"].(map[string]interface{})["kind"]
+	kind2, ok := objTemplates[1]["objectDefinition"].(map[string]any)["kind"]
 	if !ok {
 		t.Fatal("The objectDefinition field is an invalid format")
 	}
@@ -1381,9 +1380,9 @@ object-templates-raw: |
 	assertEqual(t, len(policyTemplates), 2)
 
 	policyTemplate1 := policyTemplates[0]
-	objdef := policyTemplate1["objectDefinition"].(map[string]interface{})
+	objdef := policyTemplate1["objectDefinition"].(map[string]any)
 
-	spec, ok := objdef["spec"].(map[string]interface{})
+	spec, ok := objdef["spec"].(map[string]any)
 	if !ok {
 		t.Fatal("The spec field is an invalid format")
 	}
@@ -1396,9 +1395,9 @@ object-templates-raw: |
 	assertEqual(t, objectTemplatesRaw, manifestYAMLContent1)
 
 	policyTemplate2 := policyTemplates[1]
-	objdef = policyTemplate2["objectDefinition"].(map[string]interface{})
+	objdef = policyTemplate2["objectDefinition"].(map[string]any)
 
-	spec, ok = objdef["spec"].(map[string]interface{})
+	spec, ok = objdef["spec"].(map[string]any)
 	if !ok {
 		t.Fatal("The spec field is an invalid format")
 	}
@@ -1738,7 +1737,7 @@ data:
 
 	for _, manifest := range manifests {
 		if metadata, ok := manifest["metadata"]; ok {
-			ns := metadata.(map[string]interface{})["namespace"]
+			ns := metadata.(map[string]any)["namespace"]
 			assertEqual(t, ns, "kustomize-test")
 		}
 	}
@@ -1747,14 +1746,14 @@ data:
 func TestGetRootRemediationAction(t *testing.T) {
 	t.Parallel()
 
-	policyTemplates := []map[string]interface{}{{
-		"objectDefinition": map[string]interface{}{
+	policyTemplates := []map[string]any{{
+		"objectDefinition": map[string]any{
 			"apiVersion": policyAPIVersion,
 			"kind":       configPolicyKind,
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name": "my-template",
 			},
-			"spec": map[string]interface{}{
+			"spec": map[string]any{
 				"remediationAction": "inform",
 				"severity":          "low",
 			},
@@ -1764,16 +1763,16 @@ func TestGetRootRemediationAction(t *testing.T) {
 	expected := getRootRemediationAction(policyTemplates)
 	assertEqual(t, "inform", expected)
 
-	objDef := policyTemplates[0]["objectDefinition"].(map[string]interface{})
-	objDef["spec"].(map[string]interface{})["remediationAction"] = "enforce"
+	objDef := policyTemplates[0]["objectDefinition"].(map[string]any)
+	objDef["spec"].(map[string]any)["remediationAction"] = "enforce"
 	expected = getRootRemediationAction(policyTemplates)
 	assertEqual(t, "enforce", expected)
 
-	objDef["spec"].(map[string]interface{})["remediationAction"] = "InformOnly"
+	objDef["spec"].(map[string]any)["remediationAction"] = "InformOnly"
 	expected = getRootRemediationAction(policyTemplates)
 	assertEqual(t, "inform", expected)
 
-	objDef["spec"].(map[string]interface{})["remediationAction"] = "iNfOrMoNlY"
+	objDef["spec"].(map[string]any)["remediationAction"] = "iNfOrMoNlY"
 	expected = getRootRemediationAction(policyTemplates)
 	assertEqual(t, "inform", expected)
 }

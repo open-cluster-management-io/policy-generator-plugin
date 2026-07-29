@@ -1,4 +1,3 @@
-// Copyright Contributors to the Open Cluster Management project
 package internal
 
 import (
@@ -187,7 +186,7 @@ policies:
 	assertReflectEqual(
 		t,
 		p.PolicyDefaults.Placement.LabelSelector,
-		map[string]interface{}{"cloud": "red hat"},
+		map[string]any{"cloud": "red hat"},
 	)
 	assertEqual(t, p.PolicyDefaults.RemediationAction, "enforce")
 	assertEqual(t, p.PolicyDefaults.Severity, "medium")
@@ -213,7 +212,7 @@ policies:
 	assertReflectEqual(
 		t,
 		policy1.Placement.LabelSelector,
-		map[string]interface{}{"cloud": "red hat"},
+		map[string]any{"cloud": "red hat"},
 	)
 	assertEqual(t, policy1.RemediationAction, "inform")
 	assertEqual(t, policy1.Severity, "medium")
@@ -235,7 +234,7 @@ policies:
 	assertReflectEqual(
 		t,
 		policy2.Placement.LabelSelector,
-		map[string]interface{}{"cloud": "weather"},
+		map[string]any{"cloud": "weather"},
 	)
 	assertEqual(t, policy2.RemediationAction, "enforce")
 	assertEqual(t, policy2.Severity, "medium")
@@ -877,7 +876,7 @@ func TestPolicySetConfig(t *testing.T) {
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
 								Name:          "policyset-placement",
-								LabelSelector: map[string]interface{}{"my": "app"},
+								LabelSelector: map[string]any{"my": "app"},
 							},
 						},
 					},
@@ -908,7 +907,7 @@ func TestPolicySetConfig(t *testing.T) {
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
 								PlacementPath: "../config/plc.yaml",
-								LabelSelector: map[string]interface{}{"cloud": "red hat"},
+								LabelSelector: map[string]any{"cloud": "red hat"},
 							},
 						},
 					},
@@ -926,7 +925,7 @@ func TestPolicySetConfig(t *testing.T) {
 						PolicySetOptions: types.PolicySetOptions{
 							Placement: types.PlacementConfig{
 								PlacementName: "plexistingname",
-								LabelSelector: map[string]interface{}{"cloud": "red hat"},
+								LabelSelector: map[string]any{"cloud": "red hat"},
 							},
 						},
 					},
@@ -1004,7 +1003,7 @@ func TestPolicySetConfig(t *testing.T) {
 			}
 			p.Policies = append(p.Policies, policyConf1, policyConf2)
 			tc.setupFunc(&p)
-			p.applyDefaults(map[string]interface{}{})
+			p.applyDefaults(map[string]any{})
 
 			err = p.assertValidConfig()
 			if err == nil {

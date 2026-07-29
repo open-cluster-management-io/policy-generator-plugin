@@ -1,4 +1,3 @@
-// Copyright Contributors to the Open Cluster Management project
 package internal
 
 import (
@@ -17,24 +16,24 @@ import (
 )
 
 type kustomizeFile struct {
-	OpenAPI   types.Filepath   `json:"openapi,omitempty" yaml:"openapi,omitempty"`
-	Patches   []types.Filepath `json:"patches"           yaml:"patches"`
-	Resources []string         `json:"resources"         yaml:"resources"`
+	OpenAPI   types.Filepath   `json:"openapi"   yaml:"openapi"`
+	Patches   []types.Filepath `json:"patches"   yaml:"patches"`
+	Resources []string         `json:"resources" yaml:"resources"`
 }
 
 type manifestPatcher struct {
 	// The manifests to patch.
-	manifests []map[string]interface{}
+	manifests []map[string]any
 	// The Kustomize patches to apply on the manifests. Note that modifications are made
 	// to the input maps. If this is an issue, provide a deep copy of the patches.
-	patches []map[string]interface{}
+	patches []map[string]any
 	openAPI types.Filepath
 }
 
 // validateManifestInfo verifies that the apiVersion, kind, metadata.name fields from a manifest
 // are set. If at least one is not present, an error is returned based on the input error template
 // which accepts the field name.
-func validateManifestInfo(manifest map[string]interface{}, errTemplate string) error {
+func validateManifestInfo(manifest map[string]any, errTemplate string) error {
 	apiVersion, _, _ := unstructured.NestedString(manifest, "apiVersion")
 	if apiVersion == "" {
 		return fmt.Errorf(errTemplate, "apiVersion")
@@ -113,7 +112,7 @@ func (m *manifestPatcher) Validate() error {
 // setPatchDefaults is a helper function for Validate that sets any missing values on the patches
 // that can be derived. An error is returned if a patch is in an invalid format.
 func setPatchDefaults(
-	apiVersion, kind, name, namespace string, patch map[string]interface{},
+	apiVersion, kind, name, namespace string, patch map[string]any,
 ) error {
 	errTemplate := `failed to retrieve the "%s" field from the manifest of name "` + name +
 		`"` + ` and kind "` + kind + `": %v`
@@ -174,7 +173,7 @@ func setPatchDefaults(
 // ApplyPatches applies the Kustomize patches on the input manifests using Kustomize and returns
 // the patched manifests. An error is returned if the patches can't be applied. This should be
 // run after the Validate method.
-func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
+func (m *manifestPatcher) ApplyPatches() ([]map[string]any, error) {
 	const (
 		localSchemaFileName = "schema.json"
 		kustomizeDir        = "kustomize"
@@ -196,7 +195,7 @@ func (m *manifestPatcher) ApplyPatches() ([]map[string]interface{}, error) {
 	options := []struct {
 		optionType   string
 		kustomizeKey string
-		objects      []map[string]interface{}
+		objects      []map[string]any
 	}{
 		{"manifest", "resources", m.manifests},
 		{"patch", "patches", m.patches},

@@ -1,4 +1,3 @@
-// // Copyright Contributors to the Open Cluster Management project
 package expanders
 
 import (
@@ -22,10 +21,10 @@ func TestGatekeeperCanHandle(t *testing.T) {
 			func(t *testing.T) {
 				t.Parallel()
 
-				manifest := map[string]interface{}{
+				manifest := map[string]any{
 					"apiVersion": gatekeeperConstraintAPIVersion,
 					"kind":       test.kind,
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name": "my-awesome-constraint",
 					},
 				}
@@ -51,10 +50,10 @@ func TestGatekeeperCanHandleInvalid(t *testing.T) {
 			func(t *testing.T) {
 				t.Parallel()
 
-				manifest := map[string]interface{}{
+				manifest := map[string]any{
 					"apiVersion": test.apiVersion,
 					"kind":       test.kind,
-					"metadata": map[string]interface{}{
+					"metadata": map[string]any{
 						"name": test.name,
 					},
 				}
@@ -84,37 +83,37 @@ func TestGatekeeperExpand(t *testing.T) {
 	t.Parallel()
 
 	g := GatekeeperPolicyExpander{}
-	manifest := map[string]interface{}{
+	manifest := map[string]any{
 		"apiVersion": gatekeeperConstraintAPIVersion,
 		"kind":       "MyConstraint",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name": "my-awesome-constraint",
 		},
 	}
 
-	expected := []map[string]interface{}{
+	expected := []map[string]any{
 		{
-			"objectDefinition": map[string]interface{}{
+			"objectDefinition": map[string]any{
 				"apiVersion": configPolicyAPIVersion,
 				"kind":       configPolicyKind,
-				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-audit-my-awesome-constraint"},
-				"spec": map[string]interface{}{
-					"namespaceSelector": map[string]interface{}{
+				"metadata":   map[string]any{"name": "inform-gatekeeper-audit-my-awesome-constraint"},
+				"spec": map[string]any{
+					"namespaceSelector": map[string]any{
 						"exclude": []string{"kube-*"},
 						"include": []string{"*"},
 					},
 					"remediationAction": "inform",
 					"severity":          "medium",
-					"object-templates": []map[string]interface{}{
+					"object-templates": []map[string]any{
 						{
 							"complianceType": "musthave",
-							"objectDefinition": map[string]interface{}{
+							"objectDefinition": map[string]any{
 								"apiVersion": gatekeeperConstraintAPIVersion,
 								"kind":       "MyConstraint",
-								"metadata": map[string]interface{}{
+								"metadata": map[string]any{
 									"name": "my-awesome-constraint",
 								},
-								"status": map[string]interface{}{
+								"status": map[string]any{
 									"totalViolations": 0,
 								},
 							},
@@ -124,24 +123,24 @@ func TestGatekeeperExpand(t *testing.T) {
 			},
 		},
 		{
-			"objectDefinition": map[string]interface{}{
+			"objectDefinition": map[string]any{
 				"apiVersion": configPolicyAPIVersion,
 				"kind":       configPolicyKind,
-				"metadata":   map[string]interface{}{"name": "inform-gatekeeper-admission-my-awesome-constraint"},
-				"spec": map[string]interface{}{
-					"namespaceSelector": map[string]interface{}{
+				"metadata":   map[string]any{"name": "inform-gatekeeper-admission-my-awesome-constraint"},
+				"spec": map[string]any{
+					"namespaceSelector": map[string]any{
 						"exclude": []string{"kube-*"},
 						"include": []string{"*"},
 					},
 					"remediationAction": "inform",
 					"severity":          "medium",
-					"object-templates": []map[string]interface{}{
+					"object-templates": []map[string]any{
 						{
 							"complianceType": "mustnothave",
-							"objectDefinition": map[string]interface{}{
+							"objectDefinition": map[string]any{
 								"apiVersion": "v1",
 								"kind":       "Event",
-								"annotations": map[string]interface{}{
+								"annotations": map[string]any{
 									"constraint_action": "deny",
 									"constraint_kind":   "MyConstraint",
 									"constraint_name":   "my-awesome-constraint",

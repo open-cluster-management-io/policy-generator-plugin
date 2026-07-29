@@ -1,4 +1,3 @@
-// Copyright Contributors to the Open Cluster Management project
 package expanders
 
 import (
@@ -14,7 +13,7 @@ const (
 )
 
 // CanHandle determines if the manifest is a Gatekeeper policy that can be expanded.
-func (g GatekeeperPolicyExpander) CanHandle(manifest map[string]interface{}) bool {
+func (g GatekeeperPolicyExpander) CanHandle(manifest map[string]any) bool {
 	// Verify the APIVersion
 	if a, _, _ := unstructured.NestedString(manifest, "apiVersion"); a != gatekeeperConstraintAPIVersion {
 		return false
@@ -45,36 +44,36 @@ func (g GatekeeperPolicyExpander) Enabled(policyConf *types.PolicyConfig) bool {
 // for auditing purposes through Open Cluster Management. This should be run after the CanHandle
 // method.
 func (g GatekeeperPolicyExpander) Expand(
-	manifest map[string]interface{}, severity string,
-) []map[string]interface{} {
-	templates := []map[string]interface{}{}
+	manifest map[string]any, severity string,
+) []map[string]any {
+	templates := []map[string]any{}
 	// These were previously validated in the CanHandle method.
 	constraintName, _, _ := unstructured.NestedString(manifest, "metadata", "name")
 	constraintKind, _, _ := unstructured.NestedString(manifest, "kind")
 
 	auditConfigPolicyName := "inform-gatekeeper-audit-" + constraintName
-	auditConfigurationPolicy := map[string]interface{}{
-		"objectDefinition": map[string]interface{}{
+	auditConfigurationPolicy := map[string]any{
+		"objectDefinition": map[string]any{
 			"apiVersion": configPolicyAPIVersion,
 			"kind":       configPolicyKind,
-			"metadata":   map[string]interface{}{"name": auditConfigPolicyName},
-			"spec": map[string]interface{}{
-				"namespaceSelector": map[string]interface{}{
+			"metadata":   map[string]any{"name": auditConfigPolicyName},
+			"spec": map[string]any{
+				"namespaceSelector": map[string]any{
 					"exclude": []string{"kube-*"},
 					"include": []string{"*"},
 				},
 				"remediationAction": "inform",
 				"severity":          severity,
-				"object-templates": []map[string]interface{}{
+				"object-templates": []map[string]any{
 					{
 						"complianceType": "musthave",
-						"objectDefinition": map[string]interface{}{
+						"objectDefinition": map[string]any{
 							"apiVersion": gatekeeperConstraintAPIVersion,
 							"kind":       constraintKind,
-							"metadata": map[string]interface{}{
+							"metadata": map[string]any{
 								"name": constraintName,
 							},
-							"status": map[string]interface{}{
+							"status": map[string]any{
 								"totalViolations": 0,
 							},
 						},
@@ -86,25 +85,25 @@ func (g GatekeeperPolicyExpander) Expand(
 	// Further improvements here could be made by having the user specify the Gatekeeper namespace and
 	// targeting the events for the constraint kind to just that namespace.
 	admissionConfigPolicyName := "inform-gatekeeper-admission-" + constraintName
-	admissionConfigurationPolicy := map[string]interface{}{
-		"objectDefinition": map[string]interface{}{
+	admissionConfigurationPolicy := map[string]any{
+		"objectDefinition": map[string]any{
 			"apiVersion": configPolicyAPIVersion,
 			"kind":       configPolicyKind,
-			"metadata":   map[string]interface{}{"name": admissionConfigPolicyName},
-			"spec": map[string]interface{}{
-				"namespaceSelector": map[string]interface{}{
+			"metadata":   map[string]any{"name": admissionConfigPolicyName},
+			"spec": map[string]any{
+				"namespaceSelector": map[string]any{
 					"exclude": []string{"kube-*"},
 					"include": []string{"*"},
 				},
 				"remediationAction": "inform",
 				"severity":          severity,
-				"object-templates": []map[string]interface{}{
+				"object-templates": []map[string]any{
 					{
 						"complianceType": "mustnothave",
-						"objectDefinition": map[string]interface{}{
+						"objectDefinition": map[string]any{
 							"apiVersion": "v1",
 							"kind":       "Event",
-							"annotations": map[string]interface{}{
+							"annotations": map[string]any{
 								"constraint_action": "deny",
 								"constraint_kind":   constraintKind,
 								"constraint_name":   constraintName,

@@ -1,3 +1,5 @@
+// Package internal implements the policy generator plugin.
+//
 // Copyright Contributors to the Open Cluster Management project
 package internal
 
@@ -6,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -94,7 +97,7 @@ func (p *Plugin) Config(config []byte, baseDirectory string) error {
 		return fmt.Errorf(errTemplate, addFieldNotFoundHelp(err))
 	}
 
-	var unmarshaledConfig map[string]interface{}
+	var unmarshaledConfig map[string]any
 
 	err = yaml.Unmarshal(config, &unmarshaledConfig)
 	if err != nil {
@@ -247,16 +250,16 @@ func (p *Plugin) Generate() ([]byte, error) {
 	return p.outputBuffer.Bytes(), nil
 }
 
-func getPolicyDefaultBool(config map[string]interface{}, key string) (value bool, set bool) {
+func getPolicyDefaultBool(config map[string]any, key string) (value bool, set bool) {
 	return getDefaultBool(config, "policyDefaults", key)
 }
 
-func getPolicySetDefaultBool(config map[string]interface{}, key string) (value bool, set bool) {
+func getPolicySetDefaultBool(config map[string]any, key string) (value bool, set bool) {
 	return getDefaultBool(config, "policySetDefaults", key)
 }
 
-func getDefaultBool(config map[string]interface{}, defaultKey string, key string) (value bool, set bool) {
-	defaults, ok := config[defaultKey].(map[string]interface{})
+func getDefaultBool(config map[string]any, defaultKey string, key string) (value bool, set bool) {
+	defaults, ok := config[defaultKey].(map[string]any)
 	if ok {
 		value, set = defaults[key].(bool)
 
@@ -267,7 +270,7 @@ func getDefaultBool(config map[string]interface{}, defaultKey string, key string
 }
 
 func getPolicyBool(
-	config map[string]interface{}, policyIndex int, key string,
+	config map[string]any, policyIndex int, key string,
 ) (value bool, set bool) {
 	policy := getPolicy(config, policyIndex)
 	if policy == nil {
@@ -280,7 +283,7 @@ func getPolicyBool(
 }
 
 func getPolicySetBool(
-	config map[string]interface{}, policySetIndex int, key string,
+	config map[string]any, policySetIndex int, key string,
 ) (value bool, set bool) {
 	policySet := getPolicySet(config, policySetIndex)
 	if policySet == nil {
@@ -292,8 +295,8 @@ func getPolicySetBool(
 	return value, set
 }
 
-func getArrayObject(config map[string]interface{}, key string, idx int) map[string]interface{} {
-	array, ok := config[key].([]interface{})
+func getArrayObject(config map[string]any, key string, idx int) map[string]any {
+	array, ok := config[key].([]any)
 	if !ok {
 		return nil
 	}
@@ -302,7 +305,7 @@ func getArrayObject(config map[string]interface{}, key string, idx int) map[stri
 		return nil
 	}
 
-	object, ok := array[idx].(map[string]interface{})
+	object, ok := array[idx].(map[string]any)
 	if !ok {
 		return nil
 	}
@@ -311,22 +314,22 @@ func getArrayObject(config map[string]interface{}, key string, idx int) map[stri
 }
 
 // getPolicy will return a policy at the specified index in the Policy Generator configuration YAML.
-func getPolicy(config map[string]interface{}, policyIndex int) map[string]interface{} {
+func getPolicy(config map[string]any, policyIndex int) map[string]any {
 	return getArrayObject(config, "policies", policyIndex)
 }
 
 // getPolicySet will return a policy at the specified index in the Policy Generator configuration YAML.
-func getPolicySet(config map[string]interface{}, policySetIndex int) map[string]interface{} {
+func getPolicySet(config map[string]any, policySetIndex int) map[string]any {
 	return getArrayObject(config, "policySets", policySetIndex)
 }
 
-func isComplianceConfigSet(config map[string]interface{}, policyIndex int, field, complianceType string) bool {
+func isComplianceConfigSet(config map[string]any, policyIndex int, field, complianceType string) bool {
 	policy := getPolicy(config, policyIndex)
 	if policy == nil {
 		return false
 	}
 
-	evaluationInterval, ok := policy[field].(map[string]interface{})
+	evaluationInterval, ok := policy[field].(map[string]any)
 	if !ok {
 		return false
 	}
@@ -338,25 +341,25 @@ func isComplianceConfigSet(config map[string]interface{}, policyIndex int, field
 
 // isEvaluationIntervalSet will return if the evaluation interval is set for the specified policy in the Policy
 // Generator configuration YAML.
-func isEvaluationIntervalSet(config map[string]interface{}, policyIndex int, complianceType string) bool {
+func isEvaluationIntervalSet(config map[string]any, policyIndex int, complianceType string) bool {
 	return isComplianceConfigSet(config, policyIndex, "evaluationInterval", complianceType)
 }
 
 // isCustomMessageSet will return if the custom message is set for the specified policy in the Policy
 // Generator configuration YAML.
-func isCustomMessageSet(config map[string]interface{}, policyIndex int, complianceType string) bool {
+func isCustomMessageSet(config map[string]any, policyIndex int, complianceType string) bool {
 	return isComplianceConfigSet(config, policyIndex, "customMessage", complianceType)
 }
 
 func isComplianceConfigSetManifest(
-	config map[string]interface{}, policyIndex int, manifestIndex int, field, complianceType string,
+	config map[string]any, policyIndex int, manifestIndex int, field, complianceType string,
 ) bool {
 	policy := getPolicy(config, policyIndex)
 	if policy == nil {
 		return false
 	}
 
-	manifests, ok := policy["manifests"].([]interface{})
+	manifests, ok := policy["manifests"].([]any)
 	if !ok {
 		return false
 	}
@@ -365,12 +368,12 @@ func isComplianceConfigSetManifest(
 		return false
 	}
 
-	manifest, ok := manifests[manifestIndex].(map[string]interface{})
+	manifest, ok := manifests[manifestIndex].(map[string]any)
 	if !ok {
 		return false
 	}
 
-	fieldValue, ok := manifest[field].(map[string]interface{})
+	fieldValue, ok := manifest[field].(map[string]any)
 	if !ok {
 		return false
 	}
@@ -383,7 +386,7 @@ func isComplianceConfigSetManifest(
 // isEvaluationIntervalSetManifest will return whether the evaluation interval of the specified manifest
 // of the specified policy is set in the Policy Generator configuration YAML.
 func isEvaluationIntervalSetManifest(
-	config map[string]interface{}, policyIndex int, manifestIndex int, complianceType string,
+	config map[string]any, policyIndex int, manifestIndex int, complianceType string,
 ) bool {
 	return isComplianceConfigSetManifest(config, policyIndex, manifestIndex, "evaluationInterval", complianceType)
 }
@@ -391,12 +394,12 @@ func isEvaluationIntervalSetManifest(
 // isCustomMessageSetManifest will return whether the compliance message of the specified manifest
 // of the specified policy is set in the Policy Generator configuration YAML.
 func isCustomMessageSetManifest(
-	config map[string]interface{}, policyIndex int, manifestIndex int, complianceType string,
+	config map[string]any, policyIndex int, manifestIndex int, complianceType string,
 ) bool {
 	return isComplianceConfigSetManifest(config, policyIndex, manifestIndex, "customMessage", complianceType)
 }
 
-func isPolicyFieldSet(config map[string]interface{}, policyIndex int, field string) bool {
+func isPolicyFieldSet(config map[string]any, policyIndex int, field string) bool {
 	policy := getPolicy(config, policyIndex)
 	if policy == nil {
 		return false
@@ -407,13 +410,13 @@ func isPolicyFieldSet(config map[string]interface{}, policyIndex int, field stri
 	return set
 }
 
-func isManifestFieldSet(config map[string]interface{}, policyIdx, manifestIdx int, field string) bool {
+func isManifestFieldSet(config map[string]any, policyIdx, manifestIdx int, field string) bool {
 	policy := getPolicy(config, policyIdx)
 	if policy == nil {
 		return false
 	}
 
-	manifests, ok := policy["manifests"].([]interface{})
+	manifests, ok := policy["manifests"].([]any)
 	if !ok {
 		return false
 	}
@@ -422,7 +425,7 @@ func isManifestFieldSet(config map[string]interface{}, policyIdx, manifestIdx in
 		return false
 	}
 
-	manifest, ok := manifests[manifestIdx].(map[string]interface{})
+	manifest, ok := manifests[manifestIdx].(map[string]any)
 	if !ok {
 		return false
 	}
@@ -437,7 +440,7 @@ func isManifestFieldSet(config map[string]interface{}, policyIdx, manifestIdx in
 // defaults on each policy and policyset entry if they are not overridden by the user. The
 // input unmarshaledConfig is used in situations where it is necessary to know if an explicit
 // false is provided rather than rely on the default Go value on the Plugin struct.
-func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
+func (p *Plugin) applyDefaults(unmarshaledConfig map[string]any) {
 	if len(p.Policies) == 0 {
 		return
 	}
@@ -537,18 +540,14 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 		if policy.PolicyAnnotations == nil {
 			annotations := map[string]string{}
-			for k, v := range p.PolicyDefaults.PolicyAnnotations {
-				annotations[k] = v
-			}
+			maps.Copy(annotations, p.PolicyDefaults.PolicyAnnotations)
 
 			policy.PolicyAnnotations = annotations
 		}
 
 		if policy.PolicyLabels == nil {
 			labels := map[string]string{}
-			for k, v := range p.PolicyDefaults.PolicyLabels {
-				labels[k] = v
-			}
+			maps.Copy(labels, p.PolicyDefaults.PolicyLabels)
 
 			policy.PolicyLabels = labels
 		}
@@ -559,9 +558,7 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 
 		if policy.ConfigurationPolicyAnnotations == nil {
 			annotations := map[string]string{}
-			for k, v := range p.PolicyDefaults.ConfigurationPolicyAnnotations {
-				annotations[k] = v
-			}
+			maps.Copy(annotations, p.PolicyDefaults.ConfigurationPolicyAnnotations)
 
 			policy.ConfigurationPolicyAnnotations = annotations
 		}
@@ -727,7 +724,7 @@ func (p *Plugin) applyDefaults(unmarshaledConfig map[string]interface{}) {
 		defNsSelector := p.PolicyDefaults.NamespaceSelector
 
 		if nsSelector.Exclude == nil && nsSelector.Include == nil &&
-			nsSelector.LabelSelector.IsUnset() {
+			nsSelector.IsUnset() {
 			policy.NamespaceSelector = defNsSelector
 		}
 
@@ -1314,7 +1311,7 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 	)
 	policyConf.PolicyAnnotations["policy.open-cluster-management.io/description"] = policyConf.Description
 
-	spec := map[string]interface{}{
+	spec := map[string]any{
 		"disabled":         policyConf.Disabled,
 		"policy-templates": policyTemplates,
 	}
@@ -1345,10 +1342,10 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 		spec["copyPolicyMetadata"] = false
 	}
 
-	policy := map[string]interface{}{
+	policy := map[string]any{
 		"apiVersion": policyAPIVersion,
 		"kind":       policyKind,
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"annotations": policyConf.PolicyAnnotations,
 			"name":        policyConf.Name,
 			"namespace":   p.PolicyDefaults.Namespace,
@@ -1357,12 +1354,12 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 	}
 
 	if len(policyConf.PolicyLabels) != 0 {
-		policy["metadata"].(map[string]interface{})["labels"] = policyConf.PolicyLabels
+		policy["metadata"].(map[string]any)["labels"] = policyConf.PolicyLabels
 	}
 
 	// set the root policy remediation action if all the remediation actions match
 	if rootRemediationAction := getRootRemediationAction(policyTemplates); rootRemediationAction != "" {
-		policy["spec"].(map[string]interface{})["remediationAction"] = rootRemediationAction
+		policy["spec"].(map[string]any)["remediationAction"] = rootRemediationAction
 	}
 
 	policyYAML, err := yaml.Marshal(policy)
@@ -1382,14 +1379,14 @@ func (p *Plugin) createPolicy(policyConf *types.PolicyConfig) error {
 // The generated policyset is written to the plugin's output buffer. An error is returned if the
 // manifests specified in the configuration are invalid or can't be read.
 func (p *Plugin) createPolicySet(policySetConf *types.PolicySetConfig) error {
-	policyset := map[string]interface{}{
+	policyset := map[string]any{
 		"apiVersion": policySetAPIVersion,
 		"kind":       policySetKind,
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":      policySetConf.Name,
 			"namespace": p.PolicyDefaults.Namespace, // policyset should be generated in the same namespace of policy
 		},
-		"spec": map[string]interface{}{
+		"spec": map[string]any{
 			"description": policySetConf.Description,
 			"policies":    policySetConf.Policies,
 		},
@@ -1411,14 +1408,14 @@ func (p *Plugin) createPolicySet(policySetConf *types.PolicySetConfig) error {
 // getPlcFromPath finds the placement manifest in the input manifest file. It will return the name
 // of the placement, the unmarshaled placement manifest, and an error. An error is returned if the
 // placement manifest cannot be found or is invalid.
-func (p *Plugin) getPlcFromPath(plcPath string) (string, map[string]interface{}, error) {
+func (p *Plugin) getPlcFromPath(plcPath string) (string, map[string]any, error) {
 	manifests, err := unmarshalManifestFile(plcPath)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to read the placement: %w", err)
 	}
 
 	var name string
-	var placement map[string]interface{}
+	var placement map[string]any
 
 	for _, manifest := range manifests {
 		kind, _, _ := unstructured.NestedString(manifest, "kind")
@@ -1539,7 +1536,7 @@ func (p *Plugin) createPlacement(
 	}
 
 	plcPath := placementConfig.PlacementPath
-	var placement map[string]interface{}
+	var placement map[string]any
 	// If a path to a placement is provided, find the placement and reuse it.
 	if plcPath != "" {
 		name, placement, err = p.getPlcFromPath(plcPath)
@@ -1569,22 +1566,22 @@ func (p *Plugin) createPlacement(
 			return "", err
 		}
 
-		placement = map[string]interface{}{
+		placement = map[string]any{
 			"apiVersion": placementAPIVersion,
 			"kind":       placementKind,
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      name,
 				"namespace": p.PolicyDefaults.Namespace,
 			},
-			"spec": map[string]interface{}{
-				"predicates": []map[string]interface{}{
+			"spec": map[string]any{
+				"predicates": []map[string]any{
 					{
-						"requiredClusterSelector": map[string]interface{}{
+						"requiredClusterSelector": map[string]any{
 							"labelSelector": selectorObj,
 						},
 					},
 				},
-				"tolerations": []map[string]interface{}{
+				"tolerations": []map[string]any{
 					{
 						"key":      "cluster.open-cluster-management.io/unavailable",
 						"operator": "Exists",
@@ -1627,10 +1624,10 @@ func (p *Plugin) createPlacement(
 // generateSelector determines the type of input and creates a map of selectors to be used in the
 // labelSelector field
 func (p *Plugin) generateSelector(
-	resolvedSelectors map[string]interface{},
-) (map[string]interface{}, error) {
+	resolvedSelectors map[string]any,
+) (map[string]any, error) {
 	if resolvedSelectors == nil {
-		return map[string]interface{}{"matchExpressions": []interface{}{}}, nil
+		return map[string]any{"matchExpressions": []any{}}, nil
 	}
 
 	resolvedSelectorsJSON, err := json.Marshal(resolvedSelectors)
@@ -1707,10 +1704,10 @@ func (p *Plugin) createPlacementBinding(
 		subjects = append(subjects, subject)
 	}
 
-	binding := map[string]interface{}{
+	binding := map[string]any{
 		"apiVersion": placementBindingAPIVersion,
 		"kind":       placementBindingKind,
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":      bindingName,
 			"namespace": p.PolicyDefaults.Namespace,
 		},

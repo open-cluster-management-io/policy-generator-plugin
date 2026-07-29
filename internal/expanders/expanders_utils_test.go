@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func assertEqual(t *testing.T, a interface{}, b interface{}) {
+func assertEqual(t *testing.T, a any, b any) {
 	t.Helper()
 
 	if a != b {
@@ -15,7 +15,7 @@ func assertEqual(t *testing.T, a interface{}, b interface{}) {
 	}
 }
 
-func assertReflectEqual(t *testing.T, a interface{}, b interface{}) {
+func assertReflectEqual(t *testing.T, a any, b any) {
 	t.Helper()
 
 	if !reflect.DeepEqual(a, b) {

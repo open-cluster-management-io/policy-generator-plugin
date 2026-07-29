@@ -1,4 +1,3 @@
-// Copyright Contributors to the Open Cluster Management project
 package expanders
 
 import (
@@ -42,7 +41,7 @@ func isValidKyvernoKind(apiVersion, kind string) bool {
 }
 
 // CanHandle determines if the manifest is a Kyverno policy that can be expanded.
-func (k KyvernoPolicyExpander) CanHandle(manifest map[string]interface{}) bool {
+func (k KyvernoPolicyExpander) CanHandle(manifest map[string]any) bool {
 	apiVersion, _, _ := unstructured.NestedString(manifest, "apiVersion")
 	kind, _, _ := unstructured.NestedString(manifest, "kind")
 
@@ -65,32 +64,32 @@ func (k KyvernoPolicyExpander) Enabled(policyConf *types.PolicyConfig) bool {
 // Expand will generate additional policy templates for the Kyverno policy for auditing purposes
 // through Open Cluster Management. This should be run after the CanHandle method.
 func (k KyvernoPolicyExpander) Expand(
-	manifest map[string]interface{}, severity string,
-) []map[string]interface{} {
-	templates := []map[string]interface{}{}
+	manifest map[string]any, severity string,
+) []map[string]any {
+	templates := []map[string]any{}
 	// This was previously validated in the CanHandle method.
 	policyName, _, _ := unstructured.NestedString(manifest, "metadata", "name")
 
 	configPolicyName := "inform-kyverno-" + policyName
-	configurationPolicy := map[string]interface{}{
-		"objectDefinition": map[string]interface{}{
+	configurationPolicy := map[string]any{
+		"objectDefinition": map[string]any{
 			"apiVersion": configPolicyAPIVersion,
 			"kind":       configPolicyKind,
-			"metadata":   map[string]interface{}{"name": configPolicyName},
-			"spec": map[string]interface{}{
-				"namespaceSelector": map[string]interface{}{
+			"metadata":   map[string]any{"name": configPolicyName},
+			"spec": map[string]any{
+				"namespaceSelector": map[string]any{
 					"exclude": []string{"kube-*"},
 					"include": []string{"*"},
 				},
 				"remediationAction": "inform",
 				"severity":          severity,
-				"object-templates": []map[string]interface{}{
+				"object-templates": []map[string]any{
 					{
 						"complianceType": "mustnothave",
-						"objectDefinition": map[string]interface{}{
+						"objectDefinition": map[string]any{
 							"apiVersion": kyvernoPolicyReportAPIVersion,
 							"kind":       clusterPolicyReportKind,
-							"results": []map[string]interface{}{
+							"results": []map[string]any{
 								{
 									"policy": policyName,
 									"result": "fail",
@@ -100,10 +99,10 @@ func (k KyvernoPolicyExpander) Expand(
 					},
 					{
 						"complianceType": "mustnothave",
-						"objectDefinition": map[string]interface{}{
+						"objectDefinition": map[string]any{
 							"apiVersion": kyvernoPolicyReportAPIVersion,
 							"kind":       namespacedPolicyReportKind,
-							"results": []map[string]interface{}{
+							"results": []map[string]any{
 								{
 									"policy": policyName,
 									"result": "fail",
