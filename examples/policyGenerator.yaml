@@ -58,6 +58,11 @@ policies:
   manifests:
     - path: input-object-templates-raw/
   remediationAction: enforce
+- name: policy-object-templates
+  disabled: true
+  manifests:
+    - path: input-object-templates/
+  remediationAction: enforce
 - name: policy-require-ns-labels
   manifests:
     - path: input-gatekeeper/

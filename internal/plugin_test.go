@@ -1571,6 +1571,73 @@ spec:
 	assertEqual(t, output, expected)
 }
 
+func TestCreatePolicyFromObjectTemplatesManifest(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	createObjectTemplatesManifest(t, tmpDir, "objectTemplatesPluginTest.yaml")
+
+	p := Plugin{}
+	p.PolicyDefaults.Namespace = "my-policies"
+	policyConf := types.PolicyConfig{
+		PolicyOptions: types.PolicyOptions{
+			Categories: []string{"AC Access Control"},
+			Controls:   []string{"AC-3 Access Enforcement"},
+			Standards:  []string{"NIST SP 800-53"},
+		},
+		Name: "policy-app-config",
+		Manifests: []types.Manifest{
+			{Path: path.Join(tmpDir, "objectTemplatesPluginTest.yaml")},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf)
+	p.applyDefaults(map[string]any{})
+
+	err := p.createPolicy(&p.Policies[0])
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	output := p.outputBuffer.String()
+
+	expected := `
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+    annotations:
+        policy.open-cluster-management.io/categories: AC Access Control
+        policy.open-cluster-management.io/controls: AC-3 Access Enforcement
+        policy.open-cluster-management.io/description: ""
+        policy.open-cluster-management.io/standards: NIST SP 800-53
+    name: policy-app-config
+    namespace: my-policies
+spec:
+    disabled: false
+    policy-templates:
+        - objectDefinition:
+            apiVersion: policy.open-cluster-management.io/v1
+            kind: ConfigurationPolicy
+            metadata:
+                name: policy-app-config
+            spec:
+                object-templates:
+                    - complianceType: musthave
+                      objectDefinition:
+                        apiVersion: v1
+                        data:
+                            extraData: data
+                        kind: ConfigMap
+                        metadata:
+                            name: example
+                            namespace: default
+                remediationAction: inform
+                severity: low
+    remediationAction: inform
+`
+	expected = strings.TrimPrefix(expected, "\n")
+	assertEqual(t, output, expected)
+}
+
 func TestCreatePolicyWithGkConstraintTemplate(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -3323,6 +3390,7 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
 	createObjectTemplatesRawManifest(t, tmpDir, "object-templates-raw.yaml")
+	createObjectTemplatesManifest(t, tmpDir, "object-templates.yaml")
 
 	p := Plugin{}
 	var err error
@@ -3391,7 +3459,14 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 			{Path: path.Join(tmpDir, "object-templates-raw.yaml")},
 		},
 	}
-	p.Policies = append(p.Policies, policyConf, policyConf2, policyConf3, policyConf4)
+	// Test that the policy defaults get inherited with object-templates.
+	policyConf5 := types.PolicyConfig{
+		Name: "policy-app-config5",
+		Manifests: []types.Manifest{
+			{Path: path.Join(tmpDir, "object-templates.yaml")},
+		},
+	}
+	p.Policies = append(p.Policies, policyConf, policyConf2, policyConf3, policyConf4, policyConf5)
 	p.applyDefaults(
 		map[string]any{
 			"policies": []any{
@@ -3415,6 +3490,8 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 						"noncompliant": "",
 					},
 				},
+				map[string]any{},
+				map[string]any{},
 			},
 		},
 	)
@@ -3433,7 +3510,7 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	assertEqual(t, len(generatedManifests), 12)
+	assertEqual(t, len(generatedManifests), 15)
 
 	for _, manifest := range generatedManifests {
 		kind, _ := manifest["kind"].(string)
@@ -3462,7 +3539,7 @@ func TestGenerateEvaluationInterval(t *testing.T) {
 			evaluationInterval = getYAMLEvaluationInterval(t, policyTemplates[2], true)
 			assertEqual(t, len(evaluationInterval), 0)
 
-		case "policy-app-config2", "policy-app-config4":
+		case "policy-app-config2", "policy-app-config4", "policy-app-config5":
 			assertEqual(t, len(policyTemplates), 1)
 			evaluationInterval := getYAMLEvaluationInterval(t, policyTemplates[0], false)
 			assertEqual(t, evaluationInterval["compliant"], "never")
