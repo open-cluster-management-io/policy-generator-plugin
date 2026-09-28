@@ -209,6 +209,30 @@ object-templates-raw: |-
       data:
         extraData: data
 `
+	objTemplatesPath := path.Join(tmpDir, "object-templates.yaml")
+	objTemplatesYamlContent := `
+object-templates:
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: example
+      namespace: default
+    data:
+      extraData: data
+---
+object-templates:
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: example
+      namespace: default
+    data:
+      extraData: data
+`
 
 	err := os.WriteFile(manifestsPath, []byte(yamlContent), 0o666)
 	if err != nil {
@@ -218,6 +242,11 @@ object-templates-raw: |-
 	err = os.WriteFile(rawPath, []byte(rawYamlContent), 0o666)
 	if err != nil {
 		t.Fatalf("Failed to write %s", manifestsPath)
+	}
+
+	err = os.WriteFile(objTemplatesPath, []byte(objTemplatesYamlContent), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", objTemplatesPath)
 	}
 
 	tests := map[string]genOutTest{
@@ -351,6 +380,95 @@ policies:
 			wantFile: "testdata/ordering/manifest-level-name-raw-consolidate-true-with-name.yaml",
 			wantErr:  "",
 		},
+		"complicated policies with object-templates and consolidateManifests false": {
+			tmpDir: tmpDir,
+			generator: `
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PolicyGenerator
+    metadata:
+      name: test
+    policyDefaults:
+      orderPolicies: true
+      namespace: my-policies
+      consolidateManifests: false
+    policies:
+    - name: one
+      manifests:
+      - path: {{printf "%v/%v" .Dir "object-templates.yaml"}}
+      - path: {{printf "%v/%v" .Dir "object-templates.yaml"}}
+        name: tiger
+    `,
+			wantFile: "testdata/ordering/manifest-level-name-object-templates-consolidate-false.yaml",
+			wantErr:  "",
+		},
+		"consolidateManifests true and objTemplate with object-templates": {
+			tmpDir: tmpDir,
+			generator: `
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PolicyGenerator
+    metadata:
+      name: test
+    policyDefaults:
+      orderPolicies: true
+      namespace: my-policies
+      consolidateManifests: true
+    policies:
+    - name: one
+      manifests:
+      - path: {{printf "%v/%v" .Dir "object-templates.yaml"}}
+        name: bird
+      - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+        name: tiger
+    `,
+			wantFile: "testdata/ordering/manifest-level-name-object-templates-consolidate-true.yaml",
+			wantErr:  "",
+		},
+		"consolidateManifests true and objTemplate with empty name (object-templates)": {
+			tmpDir: tmpDir,
+			generator: `
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PolicyGenerator
+    metadata:
+      name: test
+    policyDefaults:
+      orderPolicies: true
+      namespace: my-policies
+      consolidateManifests: true
+    policies:
+    - name: one
+      manifests:
+      - path: {{printf "%v/%v" .Dir "object-templates.yaml"}}
+      - path: {{printf "%v/%v" .Dir "object-templates.yaml"}}
+        name: bird
+      - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+      - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+    `,
+			wantFile: "testdata/ordering/manifest-level-name-object-templates-consolidate-true-empty-name.yaml",
+			wantErr:  "",
+		},
+		"consolidateManifests true and objTemplate with name (object-templates)": {
+			tmpDir: tmpDir,
+			generator: `
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PolicyGenerator
+    metadata:
+      name: test
+    policyDefaults:
+      orderPolicies: true
+      namespace: my-policies
+      consolidateManifests: true
+    policies:
+    - name: one
+      manifests:
+      - path: {{printf "%v/%v" .Dir "object-templates.yaml"}}
+        name: bird
+      - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+      - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+        name: tiger
+    `,
+			wantFile: "testdata/ordering/manifest-level-name-object-templates-consolidate-true-with-name.yaml",
+			wantErr:  "",
+		},
 	}
 
 	for name := range tests {
@@ -466,6 +584,7 @@ func TestIgnorePending(t *testing.T) {
 	tmpDir := t.TempDir()
 	createConfigMap(t, tmpDir, "configmap.yaml")
 	createObjectTemplatesRawManifest(t, tmpDir, "object-templates-raw.yaml")
+	createObjectTemplatesManifest(t, tmpDir, "object-templates.yaml")
 
 	tests := map[string]genOutTest{
 		"policyDefaults.ignorePending is propagated to all manifests": {
@@ -585,6 +704,30 @@ policies:
   - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
 `,
 			wantFile: "testdata/ordering/ignore-pending-object-templates-raw.yaml",
+			wantErr:  "",
+		},
+		"policyDefaults.ignorePending is propagated with object-templates": {
+			tmpDir: tmpDir,
+			generator: `
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PolicyGenerator
+    metadata:
+      name: test
+    policyDefaults:
+      consolidateManifests: false
+      ignorePending: true
+      namespace: my-policies
+    policies:
+    - name: one
+      manifests:
+      - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+      - path: {{printf "%v/%v" .Dir "object-templates.yaml"}}
+    - name: two
+      manifests:
+      - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+      - path: {{printf "%v/%v" .Dir "object-templates.yaml"}}
+    `,
+			wantFile: "testdata/ordering/ignore-pending-object-templates.yaml",
 			wantErr:  "",
 		},
 	}
@@ -764,6 +907,7 @@ func TestExtraDependencies(t *testing.T) {
 	createConfigMap(t, tmpDir, "configmap.yaml")
 	createConfigPolicyManifest(t, tmpDir, "configpolicy.yaml")
 	createObjectTemplatesRawManifest(t, tmpDir, "object-templates-raw.yaml")
+	createObjectTemplatesManifest(t, tmpDir, "object-templates.yaml")
 
 	tests := map[string]genOutTest{
 		"policyDefaults.extraDependencies are propagated to all manifests": {
@@ -989,6 +1133,31 @@ policies:
   - path: {{printf "%v/%v" .Dir "object-templates-raw.yaml"}}
 `,
 			wantFile: "testdata/ordering/default-extradeps-object-templates-raw.yaml",
+			wantErr:  "",
+		},
+		"policyDefaults.extraDependencies are propagated with object-templates": {
+			tmpDir: tmpDir,
+			generator: `
+    apiVersion: policy.open-cluster-management.io/v1
+    kind: PolicyGenerator
+    metadata:
+      name: test
+    policyDefaults:
+      consolidateManifests: false
+      namespace: my-policies
+      extraDependencies:
+      - name: extrafoo
+    policies:
+    - name: one
+      manifests:
+      - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+      - path: {{printf "%v/%v" .Dir "object-templates.yaml"}}
+    - name: two
+      manifests:
+      - path: {{printf "%v/%v" .Dir "configmap.yaml"}}
+      - path: {{printf "%v/%v" .Dir "object-templates.yaml"}}
+    `,
+			wantFile: "testdata/ordering/default-extradeps-object-templates.yaml",
 			wantErr:  "",
 		},
 	}

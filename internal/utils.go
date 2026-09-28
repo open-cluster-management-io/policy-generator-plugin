@@ -207,19 +207,9 @@ func getPolicyTemplates(policyConf *types.PolicyConfig) ([]map[string]any, error
 			}
 
 			if isPolicyTypeManifest {
-				var policyTemplate map[string]any
-
-				_, found, _ := unstructured.NestedString(manifest, "object-templates-raw")
-				if found {
-					policyNameCounter[policyName]++
-					policyTemplate = buildPolicyTemplate(
-						policyConf,
-						manifest["object-templates-raw"],
-						&policyConf.Manifests[i].ConfigurationPolicyOptions,
-						getConfigurationPolicyName(policyName, policyNameCounter[policyName]),
-					)
-				} else {
-					policyTemplate = map[string]any{"objectDefinition": manifest}
+				policyTemplate, err := buildPolicyTypeTemplate(policyConf, manifest, i, policyName, policyNameCounter)
+				if err != nil {
+					return nil, err
 				}
 
 				// Only set dependency options if it's an OCM policy
@@ -390,10 +380,11 @@ func setTemplateOptions(tmpl map[string]any, ignorePending bool, extraDeps []typ
 // - the manifest is a root policy manifest
 // - the manifest is invalid because it is missing a name
 func isPolicyTypeManifest(manifest map[string]any, informGatekeeperPolicies bool) (bool, bool, error) {
-	// check for object-templates-raw separate from policies since they have separate requirements
-	_, found, _ := unstructured.NestedString(manifest, "object-templates-raw")
-	if found {
-		// return true for isPolicyType, since object-templates-raw is in a ConfigurationPolicy
+	_, foundTemplatesRaw, _ := unstructured.NestedString(manifest, "object-templates-raw")
+	_, foundTemplates, _ := unstructured.NestedFieldNoCopy(manifest, "object-templates")
+
+	if foundTemplatesRaw || foundTemplates {
+		// return true for isPolicyType, since object-templates-raw and object-templates are in a ConfigurationPolicy
 		return true, true, nil
 	}
 
@@ -713,4 +704,79 @@ func getRootRemediationAction(policyTemplates []map[string]any) string {
 	}
 
 	return action
+}
+
+// buildPolicyTypeTemplate builds the policyTemplate entry for a manifest that is itself a
+// policy type (e.g. a ConfigurationPolicy). It handles object-templates-raw, object-templates, and
+// falls back to wrapping the manifest as objectDefinition when neither is present.
+//
+// Note: this increments policyNameCounter[policyName] as a side effect when a ConfigurationPolicy
+// template is built, mirroring the naming behavior for non-policy-type manifests elsewhere in
+// getPolicyTemplates.
+func buildPolicyTypeTemplate(
+	policyConf *types.PolicyConfig,
+	manifest map[string]any,
+	manifestIndex int,
+	policyName string,
+	policyNameCounter map[string]int,
+) (map[string]any, error) {
+	manifestPath := policyConf.Manifests[manifestIndex].Path
+
+	var objectTemplates any
+
+	foundPolicyTemplates := false
+
+	templatesRaw, foundTemplatesRaw, _ := unstructured.NestedString(manifest, "object-templates-raw")
+	if foundTemplatesRaw {
+		objectTemplates = templatesRaw
+		foundPolicyTemplates = true
+	}
+
+	templates, foundTemplates, err := unstructured.NestedSlice(manifest, "object-templates")
+	if err != nil {
+		return nil, fmt.Errorf("invalid object-templates in manifest path: %s: %w", manifestPath, err)
+	}
+
+	if foundTemplates {
+		converted, err := convertObjectTemplates(templates, manifestPath)
+		if err != nil {
+			return nil, err
+		}
+
+		objectTemplates = converted
+		foundPolicyTemplates = true
+	}
+
+	if !foundPolicyTemplates {
+		return map[string]any{"objectDefinition": manifest}, nil
+	}
+
+	policyNameCounter[policyName]++
+
+	return buildPolicyTemplate(
+		policyConf,
+		objectTemplates,
+		&policyConf.Manifests[manifestIndex].ConfigurationPolicyOptions,
+		getConfigurationPolicyName(policyName, policyNameCounter[policyName]),
+	), nil
+}
+
+// convertObjectTemplates converts the raw []any from unstructured.NestedSlice into []map[string]any,
+// returning an error that identifies the offending index if any entry is not an object.
+func convertObjectTemplates(templates []any, manifestPath string) ([]map[string]any, error) {
+	converted := make([]map[string]any, 0, len(templates))
+
+	for idx, item := range templates {
+		m, ok := item.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf(
+				"invalid object-templates entry at index %d in manifest path: %s: expected an object",
+				idx, manifestPath,
+			)
+		}
+
+		converted = append(converted, m)
+	}
+
+	return converted, nil
 }

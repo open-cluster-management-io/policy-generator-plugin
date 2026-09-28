@@ -106,6 +106,29 @@ object-templates-raw: |-
 	}
 }
 
+func createObjectTemplatesManifest(t *testing.T, tmpDir, filename string) {
+	t.Helper()
+
+	manifestPath := path.Join(tmpDir, filename)
+	manifestYAML := `
+object-templates:
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: example
+      namespace: default
+    data:
+      extraData: data
+`
+
+	err := os.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestPath)
+	}
+}
+
 func TestConfig(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
