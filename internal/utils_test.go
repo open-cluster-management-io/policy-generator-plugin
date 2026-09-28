@@ -856,6 +856,26 @@ func TestIsPolicyTypeManifest(t *testing.T) {
 			wantIsOcmPolicy: false,
 			wantErr:         "",
 		},
+		"valid object-templates-raw": {
+			manifest: map[string]any{
+				"object-templates-raw": "content",
+			},
+			wantIsPolicy:    true,
+			wantIsOcmPolicy: true,
+			wantErr:         "",
+		},
+		"valid object-templates": {
+			manifest: map[string]any{
+				"object-templates": []any{
+					map[string]any{
+						"complianceType": "musthave",
+					},
+				},
+			},
+			wantIsPolicy:    true,
+			wantIsOcmPolicy: true,
+			wantErr:         "",
+		},
 	}
 
 	for name, test := range tests {
@@ -1408,6 +1428,169 @@ object-templates-raw: |
 	}
 
 	assertEqual(t, objectTemplatesRaw, manifestYAMLContent2)
+}
+
+func TestGetPolicyTemplateObjectTemplates(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestPath := path.Join(tmpDir, "object-templates.yaml")
+	manifestYAML := `
+object-templates:
+- complianceType: musthave
+  objectDefinition:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: my-configmap
+    data:
+      game.properties: enemies=goldfish
+`
+
+	err := os.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestPath)
+	}
+
+	policyConf := types.PolicyConfig{
+		PolicyOptions: types.PolicyOptions{
+			ConsolidateManifests: true,
+		},
+		ConfigurationPolicyOptions: types.ConfigurationPolicyOptions{
+			ComplianceType:    "musthave",
+			RemediationAction: "enforce",
+			Severity:          "low",
+		},
+		Manifests: []types.Manifest{{Path: manifestPath}},
+		Name:      "configpolicy-object-templates-config",
+	}
+
+	policyTemplates, err := getPolicyTemplates(&policyConf)
+	if err != nil {
+		t.Fatalf("Failed to get the policy templates: %v", err)
+	}
+
+	assertEqual(t, len(policyTemplates), 1)
+
+	policyTemplate := policyTemplates[0]
+	objdef := policyTemplate["objectDefinition"].(map[string]any)
+
+	spec, ok := objdef["spec"].(map[string]any)
+	if !ok {
+		t.Fatal("The spec field is an invalid format")
+	}
+
+	objTemplates, ok := spec["object-templates"].([]map[string]any)
+	if !ok {
+		t.Fatal("The object-templates field is an invalid format")
+	}
+
+	assertEqual(t, len(objTemplates), 1)
+	assertEqual(t, objTemplates[0]["complianceType"], "musthave")
+
+	objDef, ok := objTemplates[0]["objectDefinition"].(map[string]any)
+	if !ok {
+		t.Fatal("The objectDefinition field is an invalid format")
+	}
+
+	assertEqual(t, objDef["kind"], "ConfigMap")
+	assertEqual(t, objDef["metadata"].(map[string]any)["name"], "my-configmap")
+}
+
+func TestGetPolicyTemplateObjectTemplatesString(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestPath := path.Join(tmpDir, "object-templates-invalid.yaml")
+	manifestYAML := `
+object-templates: |
+  - complianceType: mustonlyhave
+    objectDefinition:
+      apiVersion: test/v1
+      kind: Test
+      metadata:
+        name: object-templates
+`
+
+	err := os.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestPath)
+	}
+
+	policyConf := types.PolicyConfig{
+		Manifests: []types.Manifest{{Path: manifestPath}},
+		Name:      "configpolicy-object-templates-invalid",
+	}
+
+	_, err = getPolicyTemplates(&policyConf)
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	if !strings.Contains(err.Error(), "invalid object-templates in manifest path") {
+		t.Fatalf("Expected an 'invalid object-templates' error, got: %v", err)
+	}
+}
+
+func TestGetPolicyTemplateObjectTemplatesInvalidEntry(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestPath := path.Join(tmpDir, "object-templates-invalid-entry.yaml")
+	manifestYAML := `
+object-templates:
+- "not an object"
+`
+
+	err := os.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestPath)
+	}
+
+	policyConf := types.PolicyConfig{
+		Manifests: []types.Manifest{{Path: manifestPath}},
+		Name:      "configpolicy-object-templates-invalid-entry",
+	}
+
+	_, err = getPolicyTemplates(&policyConf)
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	if !strings.Contains(err.Error(), "invalid object-templates entry at index 0 in manifest path") {
+		t.Fatalf("Expected an 'invalid object-templates entry' error, got: %v", err)
+	}
+}
+
+func TestGetPolicyTemplateObjectTemplatesNotASlice(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	manifestPath := path.Join(tmpDir, "object-templates-not-a-slice.yaml")
+	manifestYAML := `
+object-templates:
+  complianceType: mustonlyhave
+  objectDefinition:
+    apiVersion: test/v1
+    kind: Test
+    metadata:
+      name: object-templates
+`
+
+	err := os.WriteFile(manifestPath, []byte(manifestYAML), 0o666)
+	if err != nil {
+		t.Fatalf("Failed to write %s", manifestPath)
+	}
+
+	policyConf := types.PolicyConfig{
+		Manifests: []types.Manifest{{Path: manifestPath}},
+		Name:      "configpolicy-object-templates-not-a-slice",
+	}
+
+	_, err = getPolicyTemplates(&policyConf)
+	if err == nil {
+		t.Fatal("Expected an error but did not get one")
+	}
+
+	if !strings.Contains(err.Error(), "invalid object-templates in manifest path") {
+		t.Fatalf("Expected an 'invalid object-templates' error, got: %v", err)
+	}
 }
 
 func TestUnmarshalManifestFile(t *testing.T) {
